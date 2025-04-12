@@ -1,113 +1,92 @@
+// App.tsx
+import React from "react";
 import { StatusBar } from "expo-status-bar";
-import { StyleSheet, Text, View } from "react-native";
+import { Platform, StyleSheet, Text, View } from "react-native";
+import { NavigationContainer } from "@react-navigation/native";
+import Toast, { ToastConfigParams } from "react-native-toast-message";
+import { AuthProvider, AuthContext } from "./context/AuthContext";
+import { useCallback, useContext, useEffect, useState } from "react";
+import { auth } from "./configs/FireBaseConfigs";
+import axios from "axios";
+import * as SplashScreen from "expo-splash-screen";
+import LoadingScreen from "./screens/loadingScreen";
 import {
   StackNavigator,
   AuthenticatedStack,
 } from "./navigation/StackNavigator";
-import Toast from "react-native-toast-message";
-import { AuthProvider } from "./context/AuthContext";
-import { useCallback, useContext, useEffect, useState } from "react";
-import { AuthContext } from "./context/AuthContext";
-import { auth } from "./configs/FireBaseConfigs";
-import axios from "axios";
-import * as SplashScreen from "expo-splash-screen";
-// @ts-ignore
-import { NavigationContainer } from "@react-navigation/native";
-SplashScreen.preventAutoHideAsync();
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { User } from "firebase/auth";
+
+// Define navigation types
+export type RootStackParamList = {
+  Landing: undefined;
+  TabLayout: undefined;
+  SignIn: undefined;
+  Event: undefined;
+  Clubs: undefined;
+  "Add-Post": undefined;
+  // Add other screens as needed
+};
 
 export default function App() {
   const [isTryingLogin, setIsTryingLogin] = useState(true);
-  const onLayoutRootView = useCallback(async () => {
-    if (!isTryingLogin) {
-      console.log("hiding splash screen");
-      await SplashScreen.hideAsync();
-    }
-  }, [isTryingLogin]);
-  // Toast config with custom styling
-  const toastConfig = {
-    success: ({ text1, text2 }: { text1: string; text2: string }) => (
-      <View style={[styles.toastContainer, styles.successToast]}>
-        <Text style={styles.toastText}>{text1}</Text>
-        <Text style={styles.toastSubText}>{text2}</Text>
-      </View>
-    ),
-    error: ({ text1, text2 }: { text1: string; text2: string }) => (
-      <View style={[styles.toastContainer, styles.errorToast]}>
-        <Text style={styles.toastText}>{text1}</Text>
-        <Text style={styles.toastSubText}>{text2}</Text>
-      </View>
-    ),
-    info: ({ text1, text2 }: { text1: string; text2: string }) => (
-      <View style={[styles.toastContainer, styles.infoToast]}>
-        <Text style={styles.toastText}>{text1}</Text>
-        <Text style={styles.toastSubText}>{text2}</Text>
-      </View>
-    ),
-  };
+  const [user, setUser] = useState<User | null>(null);
 
-  function Navigation() {
-    const { user } = useContext(AuthContext);
-    if (user) {
-      return <AuthenticatedStack />;
-    } else {
-      return <StackNavigator />;
-    }
-  }
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        setUser(user);
 
-  function Root() {
-    const { setUser } = useContext(AuthContext);
-    useEffect(() => {
-      const unsubscribe = auth.onAuthStateChanged(async (user) => {
-        if (user?.email) {
-          const response = await axios.get(
-            `${process.env.EXPO_PUBLIC_SERVER_URL}/user/${user.email}`
-          );
-          console.log(response.data.data[0]);
-          setUser(response.data.data[0]);
-          setIsTryingLogin(false);
-        } else {
-          setIsTryingLogin(false);
-        }
-      });
-      return unsubscribe;
-    }, []);
+        setIsTryingLogin(false);
+      } else {
+        setUser(null);
+        setIsTryingLogin(false);
+      }
+    });
+    return unsubscribe;
+  }, []);
 
-    
-
-    if (isTryingLogin) {
-      return (
-        <View style={styles.loadingContainer}>
-          <Text>Loading...</Text>
-        </View>
-      );
-    }
-
-    return <Navigation />;
-  }
   return (
-    <AuthProvider>
-      <View style={styles.container}>
-        <StatusBar style="auto" />
-        <NavigationContainer onReady={onLayoutRootView}>
-          <Root />
-        </NavigationContainer>
-        {/* Initialize Toast with ref and custom config */}
-        {/* @ts-ignore */}
-        <Toast config={toastConfig} />
-      </View>
-    </AuthProvider>
+    <>
+      <StatusBar style="auto" />
+      <AuthProvider>
+        {isTryingLogin ? (
+          <LoadingScreen />
+        ) : user ? (
+          <AuthenticatedStack />
+        ) : (
+          <StackNavigator />
+        )}
+      </AuthProvider>
+      <Toast config={toastConfig} />
+    </>
   );
 }
+
+const toastConfig = {
+  success: (params: ToastConfigParams<{ text1: string; text2: string }>) => (
+    <View style={[styles.toastContainer, styles.successToast]}>
+      <Text style={styles.toastText}>{params.text1}</Text>
+      <Text style={styles.toastSubText}>{params.text2}</Text>
+    </View>
+  ),
+  error: (params: ToastConfigParams<{ text1: string; text2: string }>) => (
+    <View style={[styles.toastContainer, styles.errorToast]}>
+      <Text style={styles.toastText}>{params.text1}</Text>
+      <Text style={styles.toastSubText}>{params.text2}</Text>
+    </View>
+  ),
+  info: (params: ToastConfigParams<{ text1: string; text2: string }>) => (
+    <View style={[styles.toastContainer, styles.infoToast]}>
+      <Text style={styles.toastText}>{params.text1}</Text>
+      <Text style={styles.toastSubText}>{params.text2}</Text>
+    </View>
+  ),
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    backgroundColor: "white",
-    alignItems: "center",
-    justifyContent: "center",
   },
   toastContainer: {
     padding: 15,
@@ -127,12 +106,12 @@ const styles = StyleSheet.create({
     color: "white",
   },
   successToast: {
-    backgroundColor: "#4BB543", // Green for success
+    backgroundColor: "#4BB543",
   },
   errorToast: {
-    backgroundColor: "#D9534F", // Red for error
+    backgroundColor: "#D9534F",
   },
   infoToast: {
-    backgroundColor: "#5BC0DE", // Blue for info
+    backgroundColor: "#5BC0DE",
   },
 });

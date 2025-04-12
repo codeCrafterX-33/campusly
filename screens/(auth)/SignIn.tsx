@@ -19,7 +19,7 @@ import { AuthContext } from "../../context/AuthContext";
 
 export default function SignIn({ navigation }: { navigation: any }) {
   const [isLoading, setIsLoading] = useState(false);
-  const { user, setUser } = useContext(AuthContext);
+  const { user, setUser, authenticate } = useContext(AuthContext);
 
   function signinHandler({
     email,
@@ -33,7 +33,9 @@ export default function SignIn({ navigation }: { navigation: any }) {
       .then(async (userCredential) => {
         if (userCredential.user) {
           const userEmail = userCredential.user?.email;
+          const token = await userCredential.user.getIdToken();
 
+          console.log(userEmail);
           Toast.show({
             type: "success",
             text1: "Success!🎉",
@@ -46,8 +48,9 @@ export default function SignIn({ navigation }: { navigation: any }) {
             );
 
             setUser(response.data.data[0]);
+
             setIsLoading(false);
-            navigation.navigate("Home");
+            navigation.navigate("TabLayout");
           }
         }
       })

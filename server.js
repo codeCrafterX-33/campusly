@@ -35,7 +35,7 @@ app.get("/user/:email", async (req, res) => {
     );
     res.status(200).json({
       message: "Users fetched successfully",
-      data: result.rows,
+      data: result.rows, 
     });
   } catch (error) {
     res.status(500).json({

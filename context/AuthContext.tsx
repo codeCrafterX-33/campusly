@@ -1,6 +1,14 @@
 import { createContext, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { signOut, User } from "firebase/auth";
+import { auth } from "../configs/FireBaseConfigs";
+import axios from "axios";
 
-const AuthContext = createContext<any>(undefined);
+const AuthContext = createContext<any>({
+  user: null,
+  setUser: () => {},
+  logout: () => {},
+});
 
 interface USER {
   id: number;
@@ -10,13 +18,23 @@ interface USER {
 }
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<USER | undefined>(undefined);
+  const [userData, setUserData] = useState<USER>();
 
-  return (
-    <AuthContext.Provider value={{ user, setUser }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const logout = async () => {
+    await signOut(auth);
+    setUserData(undefined);
+
+    console.log("logged out");
+  };
+
+
+  const value = {
+    user: userData,
+    setUser: setUserData,
+    logout: logout,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
 export { AuthContext, AuthProvider };

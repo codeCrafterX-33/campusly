@@ -77,7 +77,7 @@ export default function SignUp({ navigation }: { navigation: any }) {
 
             setIsLoading(false);
             // navigate to home screen
-            navigation.navigate("Home");
+            navigation.navigate("TabLayout");
           },
         });
       })
