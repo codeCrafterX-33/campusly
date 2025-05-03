@@ -6,8 +6,13 @@ import { auth } from "../configs/FireBaseConfigs";
 import AppLoading from "expo-app-loading";
 import Header from "../components/Home/Header";
 import Category from "../components/Home/Category";
+import LatestPost from "../components/Home/LatestPost";
+import { FlatList } from "react-native-gesture-handler";
+import { PostContext } from "../context/PostContext";
 function Home() {
   const { user, setUser } = useContext(AuthContext);
+
+  const { refreshing, onRefresh } = useContext(PostContext);
 
   useEffect(() => {
     if (user) {
@@ -32,9 +37,9 @@ function Home() {
 
   return (
     <View style={styles.container}>
-      <Header />
-      {/* {Category} */}
       <Category />
+      {/* Latest Post */}
+      <LatestPost />
     </View>
   );
 }
@@ -43,7 +48,7 @@ export default Home;
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    paddingTop: 40,
+    padding: 10,
+    paddingTop: 0,
   },
 });

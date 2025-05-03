@@ -35,7 +35,7 @@ app.get("/user/:email", async (req, res) => {
     );
     res.status(200).json({
       message: "Users fetched successfully",
-      data: result.rows, 
+      data: result.rows,
     });
   } catch (error) {
     res.status(500).json({
@@ -65,17 +65,56 @@ app.post("/user", async (req, res) => {
   }
 });
 
-app.post("/user/login", async (req, res) => {
-  const { email, password } = req.body;
+app.post("/post", async (req, res) => {
+  const { content, imageUrl, visibleIn, email } = req.body;
 
-  res.status(200).json({
-    message: "User logged in successfully",
-    data: { email, password },
-  });
+  try {
+    const result = await client.query(
+      `INSERT INTO POSTS VALUES(DEFAULT, '${content}', '${imageUrl}', '${visibleIn}', DEFAULT, '${email}')`
+    );
+
+    res.status(201).json({
+      message: "Post created successfully",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Post creation failed",
+      error: error.message,
+    });
+  }
 });
 
-await client.connect();
-console.log("Connected to database");
+app.get("/posts", async (req, res) => {
+  const { visibleIn, orderField } = req.query;
+  try {
+    const result = await client.query(
+      `select * from posts
+INNER JOIN users
+ON posts.createdby=users.email
+ where visiblein='${visibleIn}' ORDER BY ${orderField} DESC ;`
+    );
+
+    res.status(200).json({
+      message: "Posts fetched successfully",
+      data: result.rows,
+    });
+
+    console.log(result.rows);
+  } catch (error) {
+    res.status(500).json({
+      message: "Posts fetching failed",
+      error: error.message,
+    });
+    console.log(error);
+  }
+});
+
+if (client.connect()) {
+  console.log("Connected to database");
+} else {
+  console.log("Failed to connect to database");
+}
 
 const PORT = process.env.PORT || 5000;
 

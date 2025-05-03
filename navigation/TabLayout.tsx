@@ -1,18 +1,16 @@
 import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
 import Clubs from "../screens/(tab)/Clubs";
-import Profile from "../screens/(tab)/Profile";
 import Event from "../screens/(tab)/Event";
 import Home from "../screens/Home";
-import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { AuthContext } from "../context/AuthContext";
-import { useContext } from "react";
-import { Image } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import Colors from "../constants/Colors";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 const Tab = createBottomTabNavigator();
 
-export default function TabLayout() {
-  const { user } = useContext(AuthContext);
+interface TabLayoutProps {
+  navigation: NativeStackNavigationProp<any>;
+}
+
+export default function TabLayout({ navigation }: TabLayoutProps) {
 
   return (
     <Tab.Navigator
@@ -49,6 +47,7 @@ export default function TabLayout() {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" color={color} size={size} />
           ),
+          headerShown: false,
         }}
       />
       <Tab.Screen
@@ -69,18 +68,7 @@ export default function TabLayout() {
           ),
         }}
       />
-      <Tab.Screen
-        name="Profile"
-        component={Profile}
-        options={{
-          tabBarIcon: ({ color, size }) => (
-            <Image
-              source={{ uri: user?.image }}
-              style={{ width: 24, height: size, borderRadius: 99 }}
-            />
-          ),
-        }}
-      />
+      
     </Tab.Navigator>
   );
 }

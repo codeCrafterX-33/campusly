@@ -1,5 +1,5 @@
 // App.tsx
-import React from "react";
+import * as React from "react";
 import { StatusBar } from "expo-status-bar";
 import { Platform, StyleSheet, Text, View } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
@@ -16,16 +16,26 @@ import {
 } from "./navigation/StackNavigator";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { User } from "firebase/auth";
-
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { PostProvider } from "./context/PostContext";
+import DrawerNavigator from "./navigation/DrawerNavigator";
 // Define navigation types
 export type RootStackParamList = {
   Landing: undefined;
-  TabLayout: undefined;
+  TabLayout: {
+    screen?: keyof RootTabParamList;
+  };
   SignIn: undefined;
   Event: undefined;
   Clubs: undefined;
   "Add-Post": undefined;
-  // Add other screens as needed
+};
+
+export type RootTabParamList = {
+  Home: undefined;
+  Clubs: undefined;
+  Event: undefined;
+  Profile: undefined;
 };
 
 export default function App() {
@@ -47,19 +57,21 @@ export default function App() {
   }, []);
 
   return (
-    <>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <StatusBar style="auto" />
       <AuthProvider>
-        {isTryingLogin ? (
-          <LoadingScreen />
-        ) : user ? (
-          <AuthenticatedStack />
-        ) : (
-          <StackNavigator />
-        )}
+        <PostProvider>
+          {isTryingLogin ? (
+            <LoadingScreen />
+          ) : user ? (
+            <AuthenticatedStack />
+          ) : (
+            <StackNavigator />
+          )}
+        </PostProvider>
       </AuthProvider>
       <Toast config={toastConfig} />
-    </>
+    </GestureHandlerRootView>
   );
 }
 

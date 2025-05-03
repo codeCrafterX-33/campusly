@@ -59,7 +59,7 @@ export default function SignUp({ navigation }: { navigation: any }) {
               }
             }
 
-            // save to database
+            // send data to backend
             const result = await axios.post(
               `${process.env.EXPO_PUBLIC_SERVER_URL}/user`,
               {

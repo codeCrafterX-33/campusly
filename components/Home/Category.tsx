@@ -32,6 +32,8 @@ const categories = [
     banner: require("../../assets/images/add-post.png"),
     navigateTo: "AddPost",
   },
+
+  
 ];
 
 export default function Category() {

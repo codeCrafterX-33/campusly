@@ -16,3 +16,10 @@ export const options = {
   unsigned: true,
   folder: "profile-images",
 };
+
+export const postOptions = {
+  upload_preset: "my-school-event",
+  tags: ["school-event"],
+  unsigned: true,
+  folder: "posts",
+};
