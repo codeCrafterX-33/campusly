@@ -1,5 +1,5 @@
 import express from "express";
-import { Client } from "node-postgres";
+import { Client } from "pg";
 import cors from "cors";
 import bodyParser from "body-parser";
 import dotenv from "dotenv";
@@ -9,7 +9,6 @@ dotenv.config();
 const app = express();
 
 app.use(cors());
-
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
@@ -17,8 +16,7 @@ const client = new Client({
   user: process.env.EXPO_PUBLIC_DB_USERNAME,
   password: process.env.EXPO_PUBLIC_DB_PASSWORD,
   host: process.env.EXPO_PUBLIC_DB_HOST,
-
-  port: process.env.EXPO_PUBLIC_DB_PORT,
+  port: parseInt(process.env.EXPO_PUBLIC_DB_PORT || "5432"),
   database: process.env.EXPO_PUBLIC_DB_DATABASE,
 });
 
@@ -30,9 +28,9 @@ app.get("/user/:email", async (req, res) => {
   const { email } = req.params;
 
   try {
-    const result = await client.query(
-      `SELECT * FROM USERS WHERE email = '${email}'`
-    );
+    const result = await client.query(`SELECT * FROM USERS WHERE email = $1`, [
+      email,
+    ]);
     res.status(200).json({
       message: "Users fetched successfully",
       data: result.rows,
@@ -49,13 +47,13 @@ app.post("/user", async (req, res) => {
   const { name, email, image } = req.body;
 
   try {
-    const result = await client.query(
-      `INSERT INTO USERS VALUES(DEFAULT, '${name}', '${email}', '${image}')`
+    await client.query(
+      `INSERT INTO USERS (name, email, image) VALUES ($1, $2, $3)`,
+      [name, email, image]
     );
 
     res.status(201).json({
       message: "User created successfully",
-      data: result.rows[0],
     });
   } catch (error) {
     res.status(500).json({
@@ -67,10 +65,13 @@ app.post("/user", async (req, res) => {
 
 app.post("/post", async (req, res) => {
   const { content, imageUrl, visibleIn, email } = req.body;
+  console.log(content, imageUrl, visibleIn, email);
 
   try {
     const result = await client.query(
-      `INSERT INTO POSTS VALUES(DEFAULT, '${content}', '${imageUrl}', '${visibleIn}', DEFAULT, '${email}')`
+      `INSERT INTO POSTS (content, imageurl, visiblein, createdon, createdby)
+       VALUES ($1, $2, $3, DEFAULT, $4) RETURNING *`,
+      [content, imageUrl, visibleIn, email]
     );
 
     res.status(201).json({
@@ -86,35 +87,37 @@ app.post("/post", async (req, res) => {
 });
 
 app.get("/posts", async (req, res) => {
-  const { visibleIn, orderField } = req.query;
+  const { visibleIn, orderField = "createdon" } = req.query;
+
   try {
     const result = await client.query(
-      `select * from posts
-INNER JOIN users
-ON posts.createdby=users.email
- where visiblein='${visibleIn}' ORDER BY ${orderField} DESC ;`
+      `SELECT * FROM posts
+       INNER JOIN users ON posts.createdby = users.email
+       WHERE visiblein = $1
+       ORDER BY ${orderField} DESC`,
+      [visibleIn]
     );
 
     res.status(200).json({
       message: "Posts fetched successfully",
       data: result.rows,
     });
-
-    console.log(result.rows);
   } catch (error) {
     res.status(500).json({
       message: "Posts fetching failed",
       error: error.message,
     });
-    console.log(error);
   }
 });
 
-if (client.connect()) {
-  console.log("Connected to database");
-} else {
-  console.log("Failed to connect to database");
-}
+client
+  .connect()
+  .then(() => {
+    console.log("Connected to database");
+  })
+  .catch((err) => {
+    console.error("Database connection failed:", err);
+  });
 
 const PORT = process.env.PORT || 5000;
 

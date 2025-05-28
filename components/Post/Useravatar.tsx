@@ -1,20 +1,26 @@
+
 import React from "react";
-import { View, Text, Image, StyleSheet } from "react-native";
+import { View, Text, Image, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
+import { useTheme } from "react-native-paper";
 
 interface UserAvatarProps {
   name: string;
   image: string;
   date: string;
+  style?: StyleProp<ViewStyle>;
 }
 
-const UserAvatar = ({ name, image, date }: UserAvatarProps) => {
+const UserAvatar = ({ name, image, date, style }: UserAvatarProps) => {
+  const { colors } = useTheme();
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, style]}>
       <View style={styles.avatarContainer}>
         <Image source={{ uri: image }} style={styles.image} />
         <View>
-          <Text style={styles.name}>{name}</Text>
+          <Text style={[styles.name, { color: colors.onBackground }]}>
+            {name}
+          </Text>
           <Text style={styles.date}>{date}</Text>
         </View>
       </View>

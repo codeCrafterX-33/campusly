@@ -1,24 +1,22 @@
-// App.tsx
 import * as React from "react";
 import { StatusBar } from "expo-status-bar";
-import { Platform, StyleSheet, Text, View } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
+import { StyleSheet, Text, View } from "react-native";
+import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import Toast, { ToastConfigParams } from "react-native-toast-message";
-import { AuthProvider, AuthContext } from "./context/AuthContext";
-import { useCallback, useContext, useEffect, useState } from "react";
+import { AuthProvider } from "./context/AuthContext";
+import { useEffect, useState } from "react";
 import { auth } from "./configs/FireBaseConfigs";
-import axios from "axios";
-import * as SplashScreen from "expo-splash-screen";
 import LoadingScreen from "./screens/loadingScreen";
 import {
   StackNavigator,
   AuthenticatedStack,
 } from "./navigation/StackNavigator";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { User } from "firebase/auth";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PostProvider } from "./context/PostContext";
-import DrawerNavigator from "./navigation/DrawerNavigator";
+import { ThemeProvider, ThemeContext } from "./context/ThemeContext";
+import { User } from "firebase/auth";
+import { Provider as PaperProvider } from "react-native-paper";
+import ThemedStatusBar from "./components/ThemedStatusBar";
 // Define navigation types
 export type RootStackParamList = {
   Landing: undefined;
@@ -26,9 +24,11 @@ export type RootStackParamList = {
     screen?: keyof RootTabParamList;
   };
   SignIn: undefined;
+  SignUp: undefined;
   Event: undefined;
   Clubs: undefined;
   "Add-Post": undefined;
+  DrawerNavigator: undefined;
 };
 
 export type RootTabParamList = {
@@ -44,34 +44,39 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        setUser(user);
-
-        setIsTryingLogin(false);
-      } else {
-        setUser(null);
-        setIsTryingLogin(false);
-      }
+      setUser(user);
+      setIsTryingLogin(false);
     });
     return unsubscribe;
   }, []);
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <StatusBar style="auto" />
-      <AuthProvider>
-        <PostProvider>
-          {isTryingLogin ? (
-            <LoadingScreen />
-          ) : user ? (
-            <AuthenticatedStack />
-          ) : (
-            <StackNavigator />
+    <ThemeProvider>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <ThemedStatusBar />
+        <ThemeContext.Consumer>
+          {({ theme }) => (
+            <PaperProvider theme={theme}>
+              <NavigationContainer theme={DefaultTheme}>
+                <AuthProvider>
+                  <PostProvider>
+                    {isTryingLogin ? (
+                      <LoadingScreen />
+                    ) : user ? (
+                      <AuthenticatedStack />
+                    ) : (
+                      <StackNavigator />
+                    )}
+                  </PostProvider>
+                </AuthProvider>
+              </NavigationContainer>
+            </PaperProvider>
           )}
-        </PostProvider>
-      </AuthProvider>
-      <Toast config={toastConfig} />
-    </GestureHandlerRootView>
+        </ThemeContext.Consumer>
+
+        <Toast config={toastConfig} />
+      </GestureHandlerRootView>
+    </ThemeProvider>
   );
 }
 

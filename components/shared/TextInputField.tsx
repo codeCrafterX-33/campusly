@@ -18,25 +18,32 @@ interface TextInputFieldProps {
   isInvalid?: boolean;
   keyboardType?: "default" | "email-address" | "numeric" | "phone-pad";
   inputStyle?: ViewStyle | TextStyle;
+  placeholderTextColor?: string;
+  labelStyle?: TextStyle;
 }
 
 const TextInputField = ({
   label,
   placeholder,
+  placeholderTextColor,
   value,
   onChangeText,
   secure,
   isInvalid,
   keyboardType,
   inputStyle,
+  labelStyle,
 }: TextInputFieldProps) => {
   return (
     <View style={styles.container}>
-      <Text style={[styles.label, isInvalid && styles.labelInvalid]}>
+      <Text style={[styles.label, labelStyle, isInvalid && styles.labelInvalid]}>
         {label}
       </Text>
       <TextInput
         placeholder={placeholder ?? `Enter your ${label}`}
+        placeholderTextColor={
+          placeholderTextColor ? placeholderTextColor : Colors.GRAY
+        }
         value={value}
         onChangeText={onChangeText}
         secureTextEntry={secure}
@@ -64,7 +71,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: "bold",
     marginBottom: 5,
-    color: Colors.GRAY,
+    color: "black",
   },
 
   inputInvalid: {

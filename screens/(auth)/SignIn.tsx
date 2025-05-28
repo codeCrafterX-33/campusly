@@ -50,7 +50,7 @@ export default function SignIn({ navigation }: { navigation: any }) {
             setUser(response.data.data[0]);
 
             setIsLoading(false);
-            navigation.navigate("TabLayout");
+            navigation.navigate("DrawerNavigator");
           }
         }
       })
@@ -66,6 +66,7 @@ export default function SignIn({ navigation }: { navigation: any }) {
       });
   }
 
+  
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>

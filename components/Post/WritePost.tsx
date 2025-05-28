@@ -4,13 +4,17 @@ import {
   TextInput,
   StyleSheet,
   Image,
-  Alert,
   TouchableOpacity,
+  ActivityIndicator,
 } from "react-native";
-import React, { useContext, useState } from "react";
+import React, {
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import Colors from "../../constants/Colors";
-import DropDownPicker from "react-native-dropdown-picker";
-import Button from "../ui/Button";
 import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
 import { upload } from "cloudinary-react-native";
@@ -22,6 +26,10 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { CompositeNavigationProp } from "@react-navigation/native";
 import { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { RootStackParamList, RootTabParamList } from "../../App";
+import ModalDropdown from "./ModalDropdown";
+import { useTheme } from "react-native-paper";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { PostContext } from "../../context/PostContext";
 
 interface UploadResponse {
   url: string;
@@ -29,8 +37,10 @@ interface UploadResponse {
 }
 
 export default function WritePost() {
+  const { colors } = useTheme();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const { user } = useContext(AuthContext);
+  const { getPosts } = useContext(PostContext);
   const navigation =
     useNavigation<
       CompositeNavigationProp<
@@ -38,29 +48,70 @@ export default function WritePost() {
         BottomTabNavigationProp<RootTabParamList>
       >
     >();
-  const [item, setItems] = useState<{ label: string; value: string }[]>([
-    { label: "Public", value: "public" },
-    { label: "Code Crafter Club", value: "codeCrafterClub" },
+  const [item, setItems] = useState<{ id: string; label: string }[]>([
+    { id: "1", label: "Code Crafter Club" },
+    { id: "2", label: "Nigerian Students" },
   ]);
-  const [open, setOpen] = useState(false);
-  const [value, setValue] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [value, setValue] = useState("Public");
   const [content, setContent] = useState("");
-  const [email, setEmail] = useState("");
+  const inputRef = useRef<TextInput>(null);
+
   const [loading, setLoading] = useState(false);
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerLeft: () => (
+        <TouchableOpacity
+          style={{ marginLeft: 10 }}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons name="close" size={24} color={colors.onBackground} />
+        </TouchableOpacity>
+      ),
+
+      headerStyle: {
+        backgroundColor: colors.background,
+      },
+      headerRight: () => (
+        <TouchableOpacity onPress={() => onPostBtnClick()}>
+          <Text style={[styles.postBtn, { color: colors.onBackground }]}>
+            {loading ? (
+              <ActivityIndicator size="small" color={colors.onBackground} />
+            ) : (
+              "Post"
+            )}
+          </Text>
+        </TouchableOpacity>
+      ),
+      headerTitle: "",
+    });
+  }, [content, value, colors, loading]);
+
+  useEffect(() => {
+    if (!modalVisible) {
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 500);
+    }
+  }, [modalVisible]);
 
   const onPostBtnClick = async () => {
     if (!content) {
       Toast.show({
         text1: "Please enter some content",
-
         type: "error",
       });
       return;
     }
+
     setLoading(true);
 
-    if (selectedImage) {
-      try {
+    try {
+      let imageUrl = null;
+
+      // Upload image if one is selected
+      if (selectedImage) {
         const uploadImage = await new Promise<UploadResponse>(
           (resolve, reject) => {
             upload(cld, {
@@ -76,28 +127,37 @@ export default function WritePost() {
             });
           }
         );
-
-        // send data to backend
-
-        try {
-          const result = await axios.post(
-            `${process.env.EXPO_PUBLIC_SERVER_URL}/post`,
-            {
-              content: content,
-              imageUrl: uploadImage.url,
-              visibleIn: value,
-              email: user?.email,
-            }
-          );
-          console.log(result.data);
-          navigation.navigate("TabLayout", { screen: "Home" });
-        } catch (error) {
-          console.log(error);
-        }
-      } catch (error) {
-        console.error("Error uploading image", error);
-        setLoading(false);
+        imageUrl = uploadImage.url;
       }
+
+      // Post data to backend
+      const result = await axios.post(
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/post`,
+        {
+          content: content,
+          imageUrl: imageUrl, // Will be null if no image
+          visibleIn: value,
+          email: user?.email,
+        }
+      );
+
+      if (result.status === 201) {
+        Toast.show({
+          text1: "Your post was sent",
+          type: "success",
+        });
+
+        getPosts();
+        navigation.navigate("DrawerNavigator");
+      }
+    } catch (error) {
+      console.error("Post submission error:", error);
+      Toast.show({
+        text1: "Error creating post",
+        type: "error",
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -115,10 +175,15 @@ export default function WritePost() {
   };
 
   return (
-    <View>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TextInput
+        ref={inputRef}
         placeholder="What's on your mind?"
-        style={styles.input}
+        placeholderTextColor={Colors.GRAY}
+        style={[
+          styles.input,
+          { backgroundColor: colors.background, color: colors.onBackground },
+        ]}
         multiline={true}
         numberOfLines={4}
         maxLength={1000}
@@ -132,27 +197,25 @@ export default function WritePost() {
         {!selectedImage && (
           <Image
             source={require("../../assets/images/image.png")}
-            style={styles.image}
+            style={[
+              styles.image,
+              { borderColor: Colors.PRIMARY, borderWidth: 2 },
+            ]}
           />
         )}
       </TouchableOpacity>
 
       <View style={styles.dropdownContainer}>
-        <DropDownPicker
-          open={open}
+        <ModalDropdown
+          modalVisible={modalVisible}
           value={value}
           items={item}
-          setOpen={setOpen}
+          setModalVisible={setModalVisible}
           setValue={setValue}
           setItems={setItems}
-          placeholder="Select an item"
-          style={styles.dropdown}
+          header="Choose audience"
         />
       </View>
-
-      <Button isLoading={loading} onPress={() => onPostBtnClick()}>
-        Post
-      </Button>
     </View>
   );
 }
@@ -178,18 +241,29 @@ const styles = StyleSheet.create({
     marginTop: 15,
     borderRadius: 15,
   },
-  dropdown: {
-    backgroundColor: Colors.WHITE,
-    borderRadius: 15,
-    padding: 10,
+
+  dropdownContainer: {
+    marginTop: 15,
+  },
+  container: {
+    flex: 1,
+    width: "100%",
+    paddingHorizontal: 10,
+  },
+  postBtn: {
+    fontSize: 16,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginRight: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 5,
+    borderRadius: 99,
     elevation: 10,
     shadowColor: Colors.GRAY,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    borderWidth: 0,
+    backgroundColor: Colors.PRIMARY,
   },
-  dropdownContainer: {
+  postBtnContainer: {
     marginTop: 15,
   },
 });

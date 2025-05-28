@@ -3,27 +3,57 @@ import {
   StyleSheet,
   TouchableWithoutFeedback,
   Keyboard,
+  BackHandler,
 } from "react-native";
 import UserAvatar from "../components/Post/Useravatar";
 import { AuthContext } from "../context/AuthContext";
-import { useContext } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+} from "react";
 import WritePost from "../components/Post/WritePost";
-
+import { useTheme, IconButton } from "react-native-paper";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
 export default function AddPost() {
   const { user } = useContext(AuthContext);
+  const { colors } = useTheme();
+
+  const navigation = useNavigation();
+
+  useEffect(() => {
+    const handleBackPress = () => {
+      navigation.goBack();
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      handleBackPress
+    );
+
+    return () => backHandler.remove();
+  }, [navigation]);
+
+  
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.container}>
-        <UserAvatar name={user?.name} image={user?.image} date="Now" />
-        <WritePost />
-      </View>
-    </TouchableWithoutFeedback>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <UserAvatar
+        name={user?.name}
+        image={user?.image}
+        date="Now"
+        style={{ backgroundColor: colors.background }}
+      />
+      <WritePost />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
+    paddingTop: 10,
   },
 });

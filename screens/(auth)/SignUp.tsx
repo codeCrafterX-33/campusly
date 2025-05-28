@@ -69,15 +69,17 @@ export default function SignUp({ navigation }: { navigation: any }) {
               }
             );
 
-            const userData = await axios.get(
-              `${process.env.EXPO_PUBLIC_SERVER_URL}/user/${email}`
-            );
+            if (result.status === 201) {
+              const userData = await axios.get(
+                `${process.env.EXPO_PUBLIC_SERVER_URL}/user/${email}`
+              );
 
             setUser(userData.data.data[0]);
 
-            setIsLoading(false);
-            // navigate to home screen
-            navigation.navigate("TabLayout");
+              setIsLoading(false);
+              // navigate to home screen
+              navigation.navigate("DrawerNavigator");
+            }
           },
         });
       })

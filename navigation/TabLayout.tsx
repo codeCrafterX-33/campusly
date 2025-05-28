@@ -4,6 +4,16 @@ import Event from "../screens/(tab)/Event";
 import Home from "../screens/Home";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import Colors from "../constants/Colors";
+import Message from "../screens/(tab)/Message";
+import { DrawerNavigationProp } from "@react-navigation/drawer";
+import { TouchableOpacity, View } from "react-native";
+import { Avatar, useTheme } from "react-native-paper";
+import { useNavigation } from "@react-navigation/native";
+import { AuthContext } from "../context/AuthContext";
+import { useContext, useMemo } from "react";
+import { PostContext } from "../context/PostContext";
+
 const Tab = createBottomTabNavigator();
 
 interface TabLayoutProps {
@@ -11,26 +21,26 @@ interface TabLayoutProps {
 }
 
 export default function TabLayout({ navigation }: TabLayoutProps) {
+  const authCtx = useContext(AuthContext);
+  const { colors } = useTheme();
+  const { getPosts } = useContext(PostContext);
+
 
   return (
     <Tab.Navigator
       initialRouteName="Home"
       screenOptions={{
-        tabBarActiveTintColor: "black",
+        tabBarActiveTintColor: Colors.PRIMARY,
         tabBarInactiveTintColor: "gray",
         tabBarStyle: {
-          marginBottom: 20,
+          backgroundColor: colors.background,
+          opacity: 0.8,
           height: 70,
-          borderRadius: 20,
-          marginHorizontal: 10,
+          position: "absolute",
           alignItems: "center",
           justifyContent: "center",
-          shadowColor: "black",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.25,
-          shadowRadius: 3.84,
-          elevation: 5,
         },
+
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "bold",
@@ -47,7 +57,28 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="home" color={color} size={size} />
           ),
-          headerShown: false,
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerLeft: () => {
+            const navigation = useNavigation<DrawerNavigationProp<any>>();
+            return (
+              <TouchableOpacity
+                onPress={() => navigation.openDrawer()}
+                style={{ marginLeft: 10 }}
+              >
+                <Avatar.Image size={34} source={{ uri: authCtx.user?.image }} />
+              </TouchableOpacity>
+            );
+          },
+          headerTitle: "",
+
+        }}
+        listeners={{
+          tabPress: () => {
+            getPosts();
+          },
         }}
       />
       <Tab.Screen
@@ -68,7 +99,16 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
           ),
         }}
       />
-      
+
+      <Tab.Screen
+        name="message"
+        component={Message}
+        options={{
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="chatbox-ellipses" color={color} size={size} />
+          ),
+        }}
+      />
     </Tab.Navigator>
   );
 }

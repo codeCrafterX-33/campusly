@@ -32,9 +32,9 @@ const categories = [
     banner: require("../../assets/images/add-post.png"),
     navigateTo: "AddPost",
   },
-
-  
 ];
+
+
 
 export default function Category() {
   const navigation = useNavigation();
@@ -45,9 +45,7 @@ export default function Category() {
         renderItem={({ item, index }) => (
           <TouchableOpacity
             style={styles.cardContainer}
-            onPress={() =>
-              navigation.navigate(item.navigateTo as never)
-            }
+            onPress={() => navigation.navigate(item.navigateTo as never)}
           >
             <Image source={item.banner} style={styles.banner} />
             <Text style={styles.cardText}>{item.name}</Text>

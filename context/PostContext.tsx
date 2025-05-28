@@ -1,6 +1,6 @@
-import { createContext, useState } from "react";
-import usePersistedState from "../util/PersistedState";
+import { createContext, useContext, useEffect, useState } from "react";
 import axios from "axios";
+import { AuthContext } from "./AuthContext";
 const PostContext = createContext<any>({
   posts: [],
   setPosts: () => {},
@@ -10,12 +10,13 @@ const PostContext = createContext<any>({
 });
 
 function PostProvider({ children }: { children: React.ReactNode }) {
-  const [posts, setPosts] = usePersistedState("posts", []);
+  const [posts, setPosts] = useState<any>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const { user } = useContext(AuthContext);
 
   const GetPosts = async () => {
     const orderField = "posts.id";
-    const visibleIn = "public";
+    const visibleIn = "Public";
 
     try {
       const response = await axios.get(
@@ -24,7 +25,7 @@ function PostProvider({ children }: { children: React.ReactNode }) {
       if (response.status === 200) {
         const data = response.data;
         setPosts(data.data);
-        console.log(data);
+        console.log("Posts fetched successfully");
       } else {
         console.log("Error fetching posts");
       }
@@ -33,10 +34,16 @@ function PostProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  useEffect(() => {
+    if (user) {
+      GetPosts();
+    }
+  }, [user]);
+
   const onRefresh = () => {
     setRefreshing(true);
     GetPosts();
-    setRefreshing(false);
+    posts && setRefreshing(false);
   };
 
   const value = {

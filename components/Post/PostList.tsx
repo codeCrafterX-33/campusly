@@ -6,14 +6,16 @@ import { PostContext } from "../../context/PostContext";
 const PostList = ({ posts }: { posts: any }) => {
   const { refreshing, onRefresh } = useContext(PostContext);
   return (
-    <View>
+    <View style={styles.container}>
       <FlatList
         data={posts}
         renderItem={({ item, index }) => <PostCard post={item} />}
-        keyExtractor={(item, index) => index.toString()}
+        keyExtractor={(item, index) => item.id + index.toString()}
         refreshing={refreshing}
         onRefresh={onRefresh}
+        contentContainerStyle={{ paddingBottom: 100 }}
       />
+      {posts.length === 0 && <Text>No posts found</Text>}
     </View>
   );
 };
@@ -22,6 +24,6 @@ export default PostList;
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    padding: 10,
   },
 });

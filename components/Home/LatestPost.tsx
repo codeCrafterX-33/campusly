@@ -5,17 +5,20 @@ import axios from "axios";
 import PostList from "../Post/PostList";
 import usePersistedState from "../../util/PersistedState";
 import { PostContext } from "../../context/PostContext";
+import { AuthContext } from "../../context/AuthContext";
 
 const LatestPost = () => {
   const [activeTab, setActiveTab] = useState("latest");
   const { posts, getPosts } = useContext(PostContext);
- 
+  const { user } = useContext(AuthContext);
 
   useEffect(() => {
-    getPosts();
-  }, []);
-
-  
+    if (user) {
+      if (posts.length === 0) {
+        getPosts();
+      }
+    }
+  }, [user]);
 
   return (
     <View style={styles.container}>
@@ -41,10 +44,7 @@ const LatestPost = () => {
           </Text>
         </Pressable>
       </View>
-      <PostList
-        posts={posts}
-
-      />
+      <PostList posts={posts} />
     </View>
   );
 };
@@ -52,11 +52,10 @@ const LatestPost = () => {
 export default LatestPost;
 
 const styles = StyleSheet.create({
-  container: {
-    marginTop: 15,
-  },
+  container: {},
   tabContainer: {
     display: "flex",
+    marginTop: 10,
     flexDirection: "row",
     gap: 10,
   },

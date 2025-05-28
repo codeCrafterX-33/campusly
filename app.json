@@ -7,7 +7,11 @@
     "icon": "./assets/images/logo.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": {},
+    "splash": {
+      "image": "./assets/my-splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "ios": {
       "supportsTablet": true
     },
@@ -23,6 +27,26 @@
       "bundler": "metro",
       "output": "server"
     },
-    "plugins": ["expo-router", "expo-splash-screen"]
+    "plugins": [
+      "expo-router",
+      "expo-splash-screen",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "minSdkVersion": 24
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d99286cd-fda8-4fbf-8dfa-0b04f527755a"
+      }
+    },
+    "owner": "codecrafterx-33"
   }
 }

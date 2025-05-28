@@ -1,60 +1,204 @@
-// components/CustomDrawerContent.tsx or .js
-import React from "react";
-import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
+import React, { useState, useContext } from "react";
+import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { DrawerContentScrollView, DrawerItem } from "@react-navigation/drawer";
 import {
-  DrawerContentScrollView,
-  DrawerItemList,
-} from "@react-navigation/drawer";
-import CategoryDrawer from "./CategoryDrawer"; // vertical version of Category
+  Avatar,
+  Drawer,
+  Text,
+  TouchableRipple,
+  Switch,
+  useTheme,
+  Surface,
+} from "react-native-paper";
 
-const CustomDrawerContent = (props: any) => {
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { Typography } from "../../components/shared/Typography";
+import { AuthContext } from "../../context/AuthContext";
+import Colors from "../../constants/Colors";
+import { useThemeContext } from "../../context/ThemeContext";
+export function CustomDrawerContent(props: any) {
+  const authCtx = useContext(AuthContext);
+  const { isDarkMode, setIsDarkMode } = useThemeContext();
+  const [expanded, setExpanded] = useState(false);
+
+  const { colors } = useTheme();
+
   return (
-    <DrawerContentScrollView contentContainerStyle={styles.scroll}>
-      {/* User Profile Section */}
-      <View style={styles.profile}>
-        <Image
-          source={{ uri: "https://i.pravatar.cc/100" }}
-          style={styles.avatar}
+    <DrawerContentScrollView
+      {...props}
+      style={[styles.drawerContent, { backgroundColor: colors.background }]}
+    >
+      <Drawer.Section style={[styles.drawerSection]}>
+        <View style={styles.userInfoSection}>
+          <TouchableOpacity
+            style={{ marginBottom: -10 }}
+            onPress={() => {
+              props.navigation.navigate("Profile");
+            }}
+          >
+            <Avatar.Image
+              source={{
+                uri: authCtx.user?.image,
+              }}
+              size={50}
+            />
+          </TouchableOpacity>
+          <Typography
+            variant="titleMedium"
+            style={[styles.title, { color: colors.onBackground }]}
+          >
+            {authCtx.user?.name}
+          </Typography>
+          <Typography variant="titleLarge" style={[styles.caption]}>
+            {authCtx.user?.email}
+          </Typography>
+          <View style={styles.row}>
+            <View style={styles.section}>
+              <Typography
+                style={[styles.paragraph, { color: colors.onBackground }]}
+              >
+                202
+              </Typography>
+              <Typography style={[styles.caption]}>Following</Typography>
+            </View>
+            <View style={styles.section}>
+              <Typography
+                variant="bodyMedium"
+                style={[styles.paragraph, { color: colors.onSurface }]}
+              >
+                159
+              </Typography>
+
+              <Typography style={[styles.caption]}>Followers</Typography>
+            </View>
+          </View>
+        </View>
+      </Drawer.Section>
+
+      <Drawer.Section style={[styles.drawerSection]}>
+        <DrawerItem
+          icon={({ color, size }) => (
+            <Icon
+              name="account-outline"
+              color={colors.onBackground}
+              size={size}
+            />
+          )}
+          label="Profile"
+          labelStyle={{ color: colors.onBackground }}
+          onPress={() => {
+            props.navigation.navigate("Profile");
+          }}
         />
-        <Text style={styles.username}>John Doe</Text>
+        <DrawerItem
+          icon={({ color, size }) => (
+            <Icon name="tune" color={colors.onBackground} size={size} />
+          )}
+          label="Preferences"
+          labelStyle={{ color: colors.onBackground }}
+          onPress={() => {}}
+        />
+        <DrawerItem
+          icon={({ color, size }) => (
+            <Icon
+              name="bookmark-outline"
+              color={colors.onBackground}
+              size={size}
+            />
+          )}
+          label="Bookmarks"
+          labelStyle={{ color: colors.onBackground }}
+          onPress={() => {}}
+        />
+
+        <View style={{ paddingBottom: 10 }} />
+      </Drawer.Section>
+
+      <View style={{ paddingTop: 10 }}>
+        <TouchableRipple
+          onPress={() => {
+            setExpanded(!expanded);
+          }}
+        >
+          <View style={styles.preference}>
+            <Text>Preferences</Text>
+            <Icon
+              name={expanded ? "chevron-up" : "chevron-down"}
+              size={24}
+              color={expanded ? Colors.PRIMARY : colors.onBackground}
+            />
+          </View>
+        </TouchableRipple>
+
+        {expanded && (
+          <>
+            <TouchableRipple
+              onPress={() => {
+                setIsDarkMode(!isDarkMode);
+              }}
+            >
+              <View style={styles.preference}>
+                <Text>Dark Theme</Text>
+                <View pointerEvents="none">
+                  <Switch value={isDarkMode} />
+                </View>
+              </View>
+            </TouchableRipple>
+            <TouchableRipple onPress={() => {}}>
+              <View style={styles.preference}>
+                <Text>RTL</Text>
+                <View pointerEvents="none">
+                  <Switch value={false} />
+                </View>
+              </View>
+            </TouchableRipple>
+          </>
+        )}
       </View>
-
-      {/* Drawer screen links */}
-      <DrawerItemList {...props} /> 
-
-      {/* Logout Button */}
-      <TouchableOpacity
-        style={styles.logout}
-        onPress={() => console.log("Logout")}
-      >
-        <Text style={{ color: "red" }}>Logout</Text>
-      </TouchableOpacity>
     </DrawerContentScrollView>
   );
-};
-
-export default CustomDrawerContent;
+}
 
 const styles = StyleSheet.create({
-  scroll: {
+  drawerContent: {
     flex: 1,
   },
-  profile: {
-    alignItems: "center",
-    paddingVertical: 20,
+  userInfoSection: {
+    paddingLeft: 20,
+    paddingBottom: 20,
   },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-  },
-  username: {
-    marginTop: 10,
+  title: {
+    marginTop: 20,
     fontWeight: "bold",
-    fontSize: 16,
   },
-  logout: {
-    marginTop: 30,
-    marginLeft: 20,
+  caption: {
+    fontSize: 14,
+    lineHeight: 14,
+    color: Colors.GRAY,
+    fontWeight: "bold",
+  },
+  row: {
+    marginTop: 12,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  section: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 15,
+  },
+  paragraph: {
+    fontWeight: "bold",
+    marginRight: 3,
+  },
+  drawerSection: {
+    marginTop: 15,
+    marginBottom: 10,
+  },
+  preference: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
   },
 });
