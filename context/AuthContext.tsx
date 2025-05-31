@@ -3,6 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { signOut, User } from "firebase/auth";
 import { auth } from "../configs/FireBaseConfigs";
 import axios from "axios";
+import usePersistedState from "../util/PersistedState";
 
 const AuthContext = createContext<any>({
   user: null,
@@ -11,7 +12,7 @@ const AuthContext = createContext<any>({
 });
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = usePersistedState("userData", null);
 
   const logout = async () => {
     await auth.signOut();

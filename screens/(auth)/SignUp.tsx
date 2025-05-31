@@ -74,7 +74,7 @@ export default function SignUp({ navigation }: { navigation: any }) {
                 `${process.env.EXPO_PUBLIC_SERVER_URL}/user/${email}`
               );
 
-            setUser(userData.data.data[0]);
+              setUser(userData.data.data[0]);
 
               setIsLoading(false);
               // navigate to home screen

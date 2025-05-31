@@ -12,7 +12,7 @@ const AddPostBtn: React.FC<AddPostBtnProps> = ({ style }) => {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
 
   const handleAddPost = () => {
-    navigation.navigate("Add-Post");
+    navigation.navigate("AddPost");
   };
 
   return (

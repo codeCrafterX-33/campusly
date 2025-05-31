@@ -11,8 +11,9 @@ import { TouchableOpacity, View } from "react-native";
 import { Avatar, useTheme } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
-import { useContext, useMemo } from "react";
+import { useContext, useEffect } from "react";
 import { PostContext } from "../context/PostContext";
+import HomeTopNavigator from "./HomeTopNavigator";
 
 const Tab = createBottomTabNavigator();
 
@@ -25,6 +26,24 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
   const { colors } = useTheme();
   const { getPosts } = useContext(PostContext);
 
+  const drawerNavigation = useNavigation<DrawerNavigationProp<any>>();
+
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("state", (e) => {
+      const currentTab = e.data.state.routes[e.data.state.index].name;
+      const parentDrawer = drawerNavigation.getParent();
+
+      if (parentDrawer) {
+        if (currentTab === "Home") {
+          parentDrawer.setOptions({ swipeEnabled: false });
+        } else {
+          parentDrawer.setOptions({ swipeEnabled: true });
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [navigation, drawerNavigation]);
 
   return (
     <Tab.Navigator
@@ -40,7 +59,6 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
           alignItems: "center",
           justifyContent: "center",
         },
-
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: "bold",
@@ -62,10 +80,10 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
             backgroundColor: colors.background,
           },
           headerLeft: () => {
-            const navigation = useNavigation<DrawerNavigationProp<any>>();
+            const nav = useNavigation<DrawerNavigationProp<any>>();
             return (
               <TouchableOpacity
-                onPress={() => navigation.openDrawer()}
+                onPress={() => nav.openDrawer()}
                 style={{ marginLeft: 10 }}
               >
                 <Avatar.Image size={34} source={{ uri: authCtx.user?.image }} />
@@ -73,7 +91,6 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
             );
           },
           headerTitle: "",
-
         }}
         listeners={{
           tabPress: () => {
@@ -81,6 +98,7 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
           },
         }}
       />
+      {/* other screens */}
       <Tab.Screen
         name="Event"
         component={Event}
@@ -99,7 +117,6 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
           ),
         }}
       />
-
       <Tab.Screen
         name="message"
         component={Message}

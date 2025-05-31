@@ -33,9 +33,8 @@ export default function SignIn({ navigation }: { navigation: any }) {
       .then(async (userCredential) => {
         if (userCredential.user) {
           const userEmail = userCredential.user?.email;
-          const token = await userCredential.user.getIdToken();
+       
 
-          console.log(userEmail);
           Toast.show({
             type: "success",
             text1: "Success!🎉",
@@ -66,7 +65,6 @@ export default function SignIn({ navigation }: { navigation: any }) {
       });
   }
 
-  
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
       <View style={styles.container}>
@@ -75,7 +73,7 @@ export default function SignIn({ navigation }: { navigation: any }) {
             source={require("../../assets/images/logo.png")}
             style={styles.logo}
           />
-          <Text style={styles.title}>Sign In To My School Event</Text>
+          <Text style={styles.title}>Sign In To Campusly</Text>
         </View>
 
         <AuthContent
@@ -89,7 +87,7 @@ export default function SignIn({ navigation }: { navigation: any }) {
           }}
         >
           <Text style={styles.footerText}>
-            New to My School Event? Sign up here
+            New to Campusly? Sign up here
           </Text>
         </Pressable>
       </View>
@@ -111,6 +109,9 @@ const styles = StyleSheet.create({
   logo: {
     width: 250,
     height: 250,
+    marginBottom: 20,
+    marginTop: 20,
+    borderRadius: 100,
   },
   logoContainer: {
     alignItems: "center",

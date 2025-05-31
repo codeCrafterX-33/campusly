@@ -1,5 +1,7 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import usePersistedState from "../util/PersistedState";
 import axios from "axios";
+import { auth } from "../configs/FireBaseConfigs";
 import { AuthContext } from "./AuthContext";
 const PostContext = createContext<any>({
   posts: [],
@@ -10,7 +12,7 @@ const PostContext = createContext<any>({
 });
 
 function PostProvider({ children }: { children: React.ReactNode }) {
-  const [posts, setPosts] = useState<any>([]);
+  const [posts, setPosts] = usePersistedState("posts", []);
   const [refreshing, setRefreshing] = useState(false);
   const { user } = useContext(AuthContext);
 

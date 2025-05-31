@@ -21,9 +21,10 @@ export type RootStackParamList = {
   AddPost: undefined;
   Event: undefined;
   Profile: undefined;
+  DrawerNavigator: undefined;
 };
 
-const Stack = createStackNavigator();
+const Stack = createStackNavigator<RootStackParamList>();
 
 export const StackNavigator = () => {
   return (
@@ -70,7 +71,7 @@ export const AuthenticatedStack = () => {
         }}
       />
       <Stack.Screen
-        name="Add-Post"
+        name="AddPost"
         component={AddPost}
         options={{
           headerShown: true,

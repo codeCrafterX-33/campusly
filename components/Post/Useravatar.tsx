@@ -1,9 +1,8 @@
-
 import React from "react";
 import { View, Text, Image, StyleSheet, StyleProp, ViewStyle } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useTheme } from "react-native-paper";
-
+import moment from "moment";
 interface UserAvatarProps {
   name: string;
   image: string;
@@ -21,10 +20,10 @@ const UserAvatar = ({ name, image, date, style }: UserAvatarProps) => {
           <Text style={[styles.name, { color: colors.onBackground }]}>
             {name}
           </Text>
-          <Text style={styles.date}>{date}</Text>
+          <Text style={styles.date}>{moment(date).fromNow()}</Text>
         </View>
       </View>
-      <Ionicons name="ellipsis-vertical" size={24} color="black" />
+      <Ionicons name="ellipsis-vertical" size={24} color="gray" />
     </View>
   );
 };

@@ -18,9 +18,7 @@ import { auth } from "../configs/FireBaseConfigs";
 import { AuthContext } from "../context/AuthContext";
 import * as SplashScreen from "expo-splash-screen";
 
-
 export default function LandingScreen({ navigation }: any) {
-
   return (
     <View style={styles.container}>
       <Image
@@ -33,7 +31,7 @@ export default function LandingScreen({ navigation }: any) {
           style={styles.welcomeTextHeader}
           entering={FadeIn.duration(1000)}
         >
-          Welcome to Campus Event! 🎉
+          Welcome to Campusly! 🎉
         </Animated.Text>
 
         <Animated.Text

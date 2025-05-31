@@ -17,7 +17,7 @@ const usePersistedState = (key: string, initialValue: any) => {
     };
 
     loadStoredValue();
-  }, []); // Run once on mount
+  }, []);
 
   useEffect(() => {
     const syncStateWithStorage = async () => {
@@ -32,7 +32,7 @@ const usePersistedState = (key: string, initialValue: any) => {
     if (state !== initialValue) {
       syncStateWithStorage();
     }
-  }, [state]); // Run when state changes
+  }, [state]);
 
   return [state, setState];
 };

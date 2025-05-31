@@ -3,7 +3,7 @@ import React from "react";
 import UserAvatar from "./Useravatar";
 import Colors from "../../constants/Colors";
 import { useTheme } from "react-native-paper";
-
+import { Ionicons } from "@expo/vector-icons";
 const PostCard = ({ post }: { post: any }) => {
   const { colors } = useTheme();
   return (
@@ -23,6 +23,16 @@ const PostCard = ({ post }: { post: any }) => {
       ) : (
         <></>
       )}
+      <View style={styles.footerContainer}>
+        <View style={styles.footerItem}>
+          <Ionicons name="heart-outline" size={17} color={Colors.GRAY} />
+          <Text style={styles.footerText}>{post?.likes} 30</Text>
+        </View>
+        <View style={styles.footerItem}>
+          <Ionicons name="chatbubble-outline" size={17} color={Colors.GRAY} />
+          <Text style={styles.footerText}>{post?.comments} 13</Text>
+        </View>
+      </View>
     </View>
   );
 };
@@ -34,9 +44,8 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.WHITE,
     padding: 15,
-    borderRadius: 8,
+    borderTopWidth: 0.2,
     marginTop: 10,
-    borderWidth: 0.1,
     borderColor: Colors.GRAY,
   },
   content: {
@@ -49,5 +58,27 @@ const styles = StyleSheet.create({
     objectFit: "cover",
     borderRadius: 10,
     marginTop: 10,
+  },
+  footerContainer: {
+    marginTop: 10,
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 20,
+  },
+  footer: {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  footerItem: {
+    display: "flex",
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  footerText: {
+    fontSize: 17,
+    color: Colors.GRAY,
+    marginLeft: -4,
   },
 });

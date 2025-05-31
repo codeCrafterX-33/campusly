@@ -11,15 +11,16 @@ import {
   Surface,
 } from "react-native-paper";
 
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
 import { Typography } from "../../components/shared/Typography";
 import { AuthContext } from "../../context/AuthContext";
 import Colors from "../../constants/Colors";
 import { useThemeContext } from "../../context/ThemeContext";
+import usePersistedState from "../../util/PersistedState";
 export function CustomDrawerContent(props: any) {
   const authCtx = useContext(AuthContext);
   const { isDarkMode, setIsDarkMode } = useThemeContext();
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = usePersistedState("expanded", false);
 
   const { colors } = useTheme();
 
@@ -135,6 +136,7 @@ export function CustomDrawerContent(props: any) {
             <TouchableRipple
               onPress={() => {
                 setIsDarkMode(!isDarkMode);
+                props.navigation.closeDrawer();
               }}
             >
               <View style={styles.preference}>
