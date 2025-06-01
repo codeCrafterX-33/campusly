@@ -13,6 +13,7 @@ import Profile from "../screens/(tab)/Profile";
 import { TransitionPresets } from "@react-navigation/stack";
 import { TouchableOpacity } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
+import ExploreClubs from "../screens/ExploreClubs";
 export type RootStackParamList = {
   Landing: undefined;
   SignIn: undefined;
@@ -22,6 +23,7 @@ export type RootStackParamList = {
   Event: undefined;
   Profile: undefined;
   DrawerNavigator: undefined;
+  ExploreClubs: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -93,6 +95,26 @@ export const AuthenticatedStack = () => {
             <TouchableOpacity
               onPress={() => {
                 navigation.replace("DrawerNavigator");
+              }}
+            >
+              <Icon name="arrow-left" size={24} color="black" />
+            </TouchableOpacity>
+          ),
+        })}
+      />
+
+      <Stack.Screen
+        name="ExploreClubs"
+        component={ExploreClubs}
+        options={({ navigation }) => ({
+          headerShown: true,
+          headerTitle: "Explore Clubs",
+          gestureEnabled: false,
+          ...TransitionPresets.SlideFromRightIOS,
+          headerLeft: () => (
+            <TouchableOpacity
+              onPress={() => {
+                navigation.goBack();
               }}
             >
               <Icon name="arrow-left" size={24} color="black" />

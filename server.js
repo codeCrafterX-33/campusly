@@ -110,6 +110,22 @@ app.get("/posts", async (req, res) => {
   }
 });
 
+app.get("/clubs", async (req, res) => {
+  try {
+    const result = await client.query(`SELECT * FROM clubs ORDER BY name ASC`);
+
+    res.status(200).json({
+      message: "Clubs fetched successfully",
+      data: result.rows,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Clubs fetching failed",
+      error: error.message,
+    });
+  }
+});
+
 client
   .connect()
   .then(() => {

@@ -3,6 +3,7 @@ import usePersistedState from "../util/PersistedState";
 import axios from "axios";
 import { auth } from "../configs/FireBaseConfigs";
 import { AuthContext } from "./AuthContext";
+import { Moment } from "../util/Moment";
 const PostContext = createContext<any>({
   posts: [],
   setPosts: () => {},
@@ -46,6 +47,8 @@ function PostProvider({ children }: { children: React.ReactNode }) {
     setRefreshing(true);
     GetPosts();
     posts && setRefreshing(false);
+
+    Moment("2025-06-01T01:48:50.233Z");
   };
 
   const value = {

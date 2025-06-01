@@ -26,6 +26,7 @@ import AddPostBtn from "../../components/Post/AddPostBtn";
 import { useTheme } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import Colors from "../../constants/Colors";
+
 function Home() {
   const { user, setUser } = useContext(AuthContext);
   const { colors } = useTheme();

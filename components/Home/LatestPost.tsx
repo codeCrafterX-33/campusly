@@ -8,7 +8,6 @@ import { PostContext } from "../../context/PostContext";
 import { AuthContext } from "../../context/AuthContext";
 
 const LatestPost = () => {
-
   const { posts, getPosts } = useContext(PostContext);
   const { user } = useContext(AuthContext);
 
@@ -22,7 +21,6 @@ const LatestPost = () => {
 
   return (
     <View style={styles.container}>
-      
       <PostList posts={posts} />
     </View>
   );
@@ -38,5 +36,4 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
   },
-  
 });
