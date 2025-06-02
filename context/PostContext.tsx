@@ -1,9 +1,8 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import usePersistedState from "../util/PersistedState";
-import axios from "axios";
-import { auth } from "../configs/FireBaseConfigs";
+import axios, { AxiosError } from "axios";
 import { AuthContext } from "./AuthContext";
-import { Moment } from "../util/Moment";
+import Toast from "react-native-toast-message";
 const PostContext = createContext<any>({
   posts: [],
   setPosts: () => {},
@@ -33,7 +32,14 @@ function PostProvider({ children }: { children: React.ReactNode }) {
         console.log("Error fetching posts");
       }
     } catch (error) {
-      console.log(error);
+      if (error instanceof AxiosError) {
+        console.log(error.response?.data);
+        Toast.show({
+          text1: "Couldn't load posts",
+          text2: "Please check your internet or try again later.",
+          type: "error",
+        });
+      }
     }
   };
 
@@ -47,8 +53,6 @@ function PostProvider({ children }: { children: React.ReactNode }) {
     setRefreshing(true);
     GetPosts();
     posts && setRefreshing(false);
-
-    Moment("2025-06-01T01:48:50.233Z");
   };
 
   const value = {

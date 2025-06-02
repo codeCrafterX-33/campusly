@@ -14,6 +14,7 @@ type ButtonProps = {
   onPress: () => void;
   style?: StyleProp<ViewStyle>;
   isLoading?: boolean;
+  outline?: boolean;
 };
 
 export default function Button({
@@ -21,13 +22,22 @@ export default function Button({
   onPress,
   style,
   isLoading,
+  outline,
 }: ButtonProps) {
   return (
-    <TouchableOpacity onPress={onPress} style={styles.button}>
+    <TouchableOpacity
+      onPress={onPress}
+      style={[outline ? styles.outlineButton : styles.button, style]}
+    >
       {isLoading ? (
-        <ActivityIndicator size="small" color={Colors.WHITE} />
+        <ActivityIndicator
+          size="small"
+          color={outline ? Colors.PRIMARY : Colors.WHITE}
+        />
       ) : (
-        <Text style={styles.buttonText}>{children}</Text>
+        <Text style={outline ? styles.outlineButtonText : styles.buttonText}>
+          {children}
+        </Text>
       )}
     </TouchableOpacity>
   );
@@ -42,9 +52,21 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   buttonText: {
-    textAlign: "center",
     fontWeight: "bold",
     color: Colors.WHITE,
     fontSize: 18,
+  },
+  outlineButtonText: {
+    color: Colors.PRIMARY,
+    fontWeight: "bold",
+    fontSize: 18,
+  },
+  outlineButton: {
+    padding: 15,
+    backgroundColor: Colors.WHITE,
+    borderWidth: 1,
+    borderColor: Colors.PRIMARY,
+    borderRadius: 10,
+    marginTop: 20,
   },
 });

@@ -110,6 +110,68 @@ app.get("/posts", async (req, res) => {
   }
 });
 
+app.post("/clubfollowers", async (req, res) => {
+  const { clubId, u_email } = req.body;
+
+  try {
+    const result = await client.query(
+      `INSERT INTO clubfollowers VALUES (DEFAULT, $1, $2)`,
+      [clubId, u_email]
+    );
+
+    res.status(201).json({
+      message: "Club follower created successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Club follower creation failed",
+      error: error.message,
+    });
+  }
+});
+
+app.get("/clubfollowers/:u_email", async (req, res) => {
+  const { u_email } = req.params;
+  console.log("Fetching club followers for user", u_email);
+  try {
+    const result = await client.query(
+      `SELECT * FROM clubfollowers WHERE u_email = $1`,
+      [u_email]
+    );
+
+    res.status(200).json({
+      message: "Club followers fetched successfully",
+      data: result.rows,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Club followers fetching failed",
+      error: error.message,
+    });
+  }
+});
+
+app.delete("/clubfollowers/:u_email", async (req, res) => {
+  const { u_email } = req.params;
+  const { clubId } = req.body;
+  console.log("Fetching club followers for user", u_email);
+  try {
+    const result = await client.query(
+      `DELETE FROM clubfollowers WHERE u_email = $1 AND club_id = $2`,
+      [u_email, clubId]
+    );
+
+    res.status(200).json({
+      message: "Club followers deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Club followers fetching failed",
+      error: error.message,
+    });
+  }
+});
+
 app.get("/clubs", async (req, res) => {
   try {
     const result = await client.query(`SELECT * FROM clubs ORDER BY name ASC`);

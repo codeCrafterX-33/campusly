@@ -14,6 +14,8 @@ import { TransitionPresets } from "@react-navigation/stack";
 import { TouchableOpacity } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import ExploreClubs from "../screens/ExploreClubs";
+import { useTheme } from "react-native-paper";
+
 export type RootStackParamList = {
   Landing: undefined;
   SignIn: undefined;
@@ -56,6 +58,7 @@ export const StackNavigator = () => {
 };
 
 export const AuthenticatedStack = () => {
+  const { colors } = useTheme();
   return (
     <Stack.Navigator
       initialRouteName="DrawerNavigator"
@@ -97,7 +100,7 @@ export const AuthenticatedStack = () => {
                 navigation.replace("DrawerNavigator");
               }}
             >
-              <Icon name="arrow-left" size={24} color="black" />
+              <Icon name="arrow-left" size={24} color={colors.onBackground} />
             </TouchableOpacity>
           ),
         })}
@@ -107,9 +110,17 @@ export const AuthenticatedStack = () => {
         name="ExploreClubs"
         component={ExploreClubs}
         options={({ navigation }) => ({
-          headerShown: true,
+          headerStyle: {
+            backgroundColor: colors.background,
+            borderBottomColor: colors.onBackground,
+            borderBottomWidth: 1,
+            borderBottomLeftRadius: 10,
+            borderBottomRightRadius: 10,
+          },
           headerTitle: "Explore Clubs",
-          gestureEnabled: false,
+          headerTitleStyle: {
+            color: colors.onBackground,
+          },
           ...TransitionPresets.SlideFromRightIOS,
           headerLeft: () => (
             <TouchableOpacity
@@ -117,7 +128,7 @@ export const AuthenticatedStack = () => {
                 navigation.goBack();
               }}
             >
-              <Icon name="arrow-left" size={24} color="black" />
+              <Icon name="arrow-left" size={24} color={colors.onBackground} />
             </TouchableOpacity>
           ),
         })}

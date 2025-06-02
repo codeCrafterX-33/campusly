@@ -17,6 +17,7 @@ import { ThemeProvider, ThemeContext } from "./context/ThemeContext";
 import { User } from "firebase/auth";
 import { Provider as PaperProvider } from "react-native-paper";
 import ThemedStatusBar from "./components/ThemedStatusBar";
+import ClubProvider from "./context/ClubContext";
 // Define navigation types
 export type RootStackParamList = {
   Landing: undefined;
@@ -53,21 +54,23 @@ export default function App() {
   return (
     <ThemeProvider>
       <GestureHandlerRootView style={{ flex: 1 }}>
-        <ThemedStatusBar />
         <ThemeContext.Consumer>
           {({ theme }) => (
             <PaperProvider theme={theme}>
+              <ThemedStatusBar />
               <NavigationContainer theme={DefaultTheme}>
                 <AuthProvider>
-                  <PostProvider>
-                    {isTryingLogin ? (
-                      <LoadingScreen />
-                    ) : user ? (
-                      <AuthenticatedStack />
-                    ) : (
-                      <StackNavigator />
-                    )}
-                  </PostProvider>
+                  <ClubProvider>
+                    <PostProvider>
+                      {isTryingLogin ? (
+                        <LoadingScreen />
+                      ) : user ? (
+                        <AuthenticatedStack />
+                      ) : (
+                        <StackNavigator />
+                      )}
+                    </PostProvider>
+                  </ClubProvider>
                 </AuthProvider>
               </NavigationContainer>
             </PaperProvider>
