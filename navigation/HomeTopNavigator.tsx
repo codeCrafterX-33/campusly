@@ -59,12 +59,18 @@ export default function HomeTopNavigator() {
         },
       }}
     >
-      <TopTab.Screen name="for-you" component={ForYouScreen} options={{
-        tabBarLabel: "For You",
-      }}/>
-      <TopTab.Screen name="following" component={FollowingScreen} options={{
-        tabBarLabel: "Following",
-      }}/>
+      <TopTab.Screen
+        name="for-you"
+        component={ForYouScreen}
+        options={{
+          tabBarLabel: "For You",
+        }}
+      />
+      <TopTab.Screen
+        name="following"
+        component={FollowingScreen}
+        options={{ tabBarLabel: "Following" }}
+      />
     </TopTab.Navigator>
   );
 }

@@ -153,7 +153,11 @@ const AuthForm = ({
       )}
 
       <View style={styles.buttonContainer}>
-        <Button isLoading={isLoading} onPress={submitHandler}>
+        <Button
+          isLoading={isLoading}
+          onPress={submitHandler}
+          textStyle={{ textAlign: "center" }}
+        >
           {isSignIn ? "Sign In" : "Create Account"}
         </Button>
       </View>

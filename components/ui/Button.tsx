@@ -5,6 +5,7 @@ import {
   StyleSheet,
   StyleProp,
   ViewStyle,
+  TextStyle,
   ActivityIndicator,
 } from "react-native";
 import Colors from "../../constants/Colors";
@@ -12,7 +13,8 @@ import Colors from "../../constants/Colors";
 type ButtonProps = {
   children: React.ReactNode;
   onPress: () => void;
-  style?: StyleProp<ViewStyle>;
+  viewStyle?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
   isLoading?: boolean;
   outline?: boolean;
 };
@@ -20,14 +22,15 @@ type ButtonProps = {
 export default function Button({
   children,
   onPress,
-  style,
+  textStyle,
   isLoading,
   outline,
+  viewStyle,
 }: ButtonProps) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      style={[outline ? styles.outlineButton : styles.button, style]}
+      style={[outline ? styles.outlineButton : styles.button, viewStyle]}
     >
       {isLoading ? (
         <ActivityIndicator
@@ -35,7 +38,7 @@ export default function Button({
           color={outline ? Colors.PRIMARY : Colors.WHITE}
         />
       ) : (
-        <Text style={outline ? styles.outlineButtonText : styles.buttonText}>
+        <Text style={[outline ? styles.outlineButtonText : styles.buttonText, textStyle]}>
           {children}
         </Text>
       )}

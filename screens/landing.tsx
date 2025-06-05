@@ -46,6 +46,7 @@ export default function LandingScreen({ navigation }: any) {
           onPress={() => {
             navigation.navigate("SignUp");
           }}
+          textStyle={{ textAlign: "center" }}
         >
           Get started
         </Button>

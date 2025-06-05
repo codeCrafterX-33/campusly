@@ -8,8 +8,9 @@ import {
   SafeAreaView,
   ViewStyle,
   Pressable,
+  ActivityIndicator,
 } from "react-native";
-import { useContext, useEffect, useState, useLayoutEffect } from "react";
+import { useContext, useEffect, useState, useLayoutEffect, useRef } from "react";
 import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
 import { auth } from "../../configs/FireBaseConfigs";
@@ -17,25 +18,62 @@ import AppLoading from "expo-app-loading";
 import Header from "../../components/Home/Header";
 import Category from "../../components/Home/Category";
 import LatestPost from "../../components/Home/LatestPost";
-import { FlatList } from "react-native-gesture-handler";
+import {
+  FlatList,
+  PanGestureHandler,
+  State,
+} from "react-native-gesture-handler";
 import { PostContext } from "../../context/PostContext";
 import { useAnimatedStyle } from "react-native-reanimated";
 import { interpolate } from "react-native-reanimated";
 import { useDrawerProgress } from "@react-navigation/drawer";
 import AddPostBtn from "../../components/Post/AddPostBtn";
 import { useTheme } from "react-native-paper";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, NavigationProp } from "@react-navigation/native";
+import { DrawerNavigationProp } from "@react-navigation/drawer";
 import Colors from "../../constants/Colors";
+import { CardStyleInterpolators } from "@react-navigation/stack";
+
 
 function Home() {
+   const [gestureEnabled, setGestureEnabled] = useState(true);
   const { user, setUser } = useContext(AuthContext);
   const { colors } = useTheme();
+  const { refreshing, onRefresh, posts, getPosts } = useContext(PostContext);
+  const navigation = useNavigation<DrawerNavigationProp<any>>();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const [activeTab, setActiveTab] = useState("latest");
+  const flatListRef = useRef(null);
+  const parentDrawer = navigation.getParent();
 
-  const { refreshing, onRefresh, posts } = useContext(PostContext);
+  const onSwipeRight = (event: any) => {
+    if (
+      event.nativeEvent.translationX > 100 &&
+      event.nativeEvent.state === State.END
+    ) {
+      navigation.openDrawer();
+    } else if (
+      event.nativeEvent.translationX < -100 &&
+      event.nativeEvent.state === State.END
+    ) {
+      navigation.navigate("following");
+    }
+  };
 
-  const navigation = useNavigation();
+  useEffect(() => {
+    const fetchPosts = async () => {
+      setIsLoading(true);
+      try {
+        await getPosts();
+      } catch (error) {
+        console.log(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchPosts();
+  }, [user]);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -77,15 +115,43 @@ function Home() {
     return () => backHandler.remove();
   }, []);
 
-  if (!user) {
-    return <AppLoading />;
+  if (isLoading) {
+    return (
+      <View style={[styles.loaderContainer, { backgroundColor: colors.background }] }>
+        <ActivityIndicator size="large" color={Colors.PRIMARY} />
+      </View>
+    );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Latest Post */}
-      <LatestPost key={user?.id} />
-    </View>
+    <PanGestureHandler
+      enabled={gestureEnabled}
+      onGestureEvent={() => {}} // Can be omitted if not using animated gestures
+      onHandlerStateChange={(event) => {
+        const { translationX, state, x } = event.nativeEvent;
+
+        if (x < 30) {
+          setGestureEnabled(false); // prevent conflict with drawer swipe
+          return;
+        }
+
+        if (state === State.END) {
+          if (translationX > 100) {
+            navigation.openDrawer();
+          } else if (translationX < -100) {
+            navigation.navigate("following");
+          }
+        }
+      }}
+      simultaneousHandlers={flatListRef}
+      activeOffsetX={[-30, 30]} // 👈 allows horizontal swipe detection
+      failOffsetY={[-5, 5]}
+    >
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {/* Latest Post */}
+        <LatestPost key={user?.id} flatListRef={flatListRef} />
+      </View>
+    </PanGestureHandler>
   );
 }
 
@@ -97,7 +163,6 @@ const styles = StyleSheet.create({
 
     paddingTop: 0,
   },
-
 
   tabText: {
     fontSize: 20,
@@ -118,5 +183,11 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     padding: 10,
+  },
+
+  loaderContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

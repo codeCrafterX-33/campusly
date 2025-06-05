@@ -1,9 +1,10 @@
 import React, { useContext } from "react";
-import { View, Text, StyleSheet, FlatList } from "react-native";
+import { View, Text, StyleSheet, FlatList, ActivityIndicator } from "react-native";
 import PostCard from "./PostCard";
 import { PostContext } from "../../context/PostContext";
+import { Colors } from "react-native/Libraries/NewAppScreen";
 
-const PostList = ({ posts }: { posts: any }) => {
+const PostList = ({ posts, flatListRef }: { posts: any, flatListRef: any }) => {
   const { refreshing, onRefresh } = useContext(PostContext);
   return (
     <View style={styles.container}>
@@ -14,8 +15,8 @@ const PostList = ({ posts }: { posts: any }) => {
         refreshing={refreshing}
         onRefresh={onRefresh}
         contentContainerStyle={{ paddingBottom: 100 }}
+        ref={flatListRef}
       />
-      {posts.length === 0 && <Text>No posts found</Text>}
     </View>
   );
 };

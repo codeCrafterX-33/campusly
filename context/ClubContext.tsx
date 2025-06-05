@@ -19,11 +19,13 @@ const ClubContext = createContext<any>({
 function ClubProvider({ children }: { children: React.ReactNode }) {
   const [clubs, setClubs] = usePersistedState("clubs", []);
   const [refreshing, setRefreshing] = useState(false);
-  const [followedClubs, setFollowedClubs] = useState([]);
+  const [followedClubs, setFollowedClubs] = usePersistedState(
+    "followedClubs",
+    []
+  );
   const { user } = useContext(AuthContext);
 
   const getClubs = async () => {
-    
     try {
       const response = await axios.get(
         `${process.env.EXPO_PUBLIC_SERVER_URL}/clubs`
