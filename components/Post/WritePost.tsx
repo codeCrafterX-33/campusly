@@ -30,7 +30,7 @@ import ModalDropdown from "./ModalDropdown";
 import { useTheme } from "react-native-paper";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { PostContext } from "../../context/PostContext";
-
+import { ClubContext } from "../../context/ClubContext";
 interface UploadResponse {
   url: string;
   secure_url: string;
@@ -40,6 +40,7 @@ export default function WritePost() {
   const { colors } = useTheme();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const { user } = useContext(AuthContext);
+  const { getFollowedClubs, followedClubs } = useContext(ClubContext);
   const { getPosts } = useContext(PostContext);
   const navigation =
     useNavigation<
@@ -48,16 +49,28 @@ export default function WritePost() {
         BottomTabNavigationProp<RootTabParamList>
       >
     >();
-  const [item, setItems] = useState<{ id: string; label: string }[]>([
-    { id: "1", label: "Code Crafter Club" },
-    { id: "2", label: "Nigerian Students" },
-  ]);
+  const [item, setItems] = useState<
+    { club_id: number; club_name: string; club_logo: string }[]
+  >([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [value, setValue] = useState("Public");
+  const [value, setValue] = useState({ club_name: "Public", club_id: 0 });
   const [content, setContent] = useState("");
   const inputRef = useRef<TextInput>(null);
 
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    getFollowedClubs();
+    if (followedClubs) {
+      setItems(
+        followedClubs.map((club: any) => ({
+          club_id: club.club_id,
+          club_logo: club.club_logo,
+          club_name: club.name,
+        }))
+      );
+    }
+  }, []);
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -136,7 +149,7 @@ export default function WritePost() {
         {
           content: content,
           imageUrl: imageUrl, // Will be null if no image
-          visibleIn: value,
+          visibleIn: value.club_id,
           email: user?.email,
         }
       );
@@ -147,7 +160,6 @@ export default function WritePost() {
           type: "success",
         });
 
-        getPosts();
         navigation.navigate("DrawerNavigator");
       }
     } catch (error) {

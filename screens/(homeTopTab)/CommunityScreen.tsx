@@ -1,25 +1,22 @@
-import React, { useContext, useCallback } from "react";
-import { View, Text, FlatList, StyleSheet } from "react-native";
-import { PostContext } from "../../context/PostContext";
 import { useFocusEffect } from "@react-navigation/native";
+import React, { useCallback, useContext } from "react";
+import { View, Text, StyleSheet } from "react-native";
+import { PostContext } from "../../context/PostContext";
 import usePersistedState from "../../util/PersistedState";
 import LatestPost from "../../components/Home/LatestPost";
-import { AuthContext } from "../../context/AuthContext";
 import { useTheme } from "react-native-paper";
 
-
-export default function FollowingScreen({ clubId }: { clubId: number }) {
+const CommunityScreen = ({ club_id }: { club_id: number }) => {
   const { getPosts } = useContext(PostContext);
-  const [clubPosts, setClubPosts] = usePersistedState("clubPosts", []);
-  const { user } = useContext(AuthContext);
+  const [clubPosts, setClubPosts] = usePersistedState(`clubPosts-${club_id}`, []);
   const { colors } = useTheme();
 
   useFocusEffect(
     useCallback(() => {
       const fetchPosts = async () => {
-        console.log("Fetching posts clubId", clubId);
+        console.log("Fetching posts clubId", club_id);
         await getPosts({
-          id: [clubId],
+          id: [club_id],
           clubPosts: clubPosts,
           setClubPosts: setClubPosts,
         });
@@ -35,7 +32,9 @@ export default function FollowingScreen({ clubId }: { clubId: number }) {
       <LatestPost clubPosts={clubPosts} />
     </View>
   );
-}
+};
+
+export default CommunityScreen;
 
 const styles = StyleSheet.create({
   container: {

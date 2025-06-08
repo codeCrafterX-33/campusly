@@ -69,9 +69,9 @@ app.post("/post", async (req, res) => {
 
   try {
     const result = await client.query(
-      `INSERT INTO POSTS (content, imageurl, visiblein, createdon, createdby)
-       VALUES ($1, $2, $3, DEFAULT, $4) RETURNING *`,
-      [content, imageUrl, visibleIn, email]
+      `INSERT INTO POSTS (content, imageurl, createdon, createdby, club)
+       VALUES ($1, $2, DEFAULT, $3, $4) RETURNING *`,
+      [content, imageUrl, email, visibleIn]
     );
 
     res.status(201).json({
@@ -87,16 +87,22 @@ app.post("/post", async (req, res) => {
 });
 
 app.get("/posts", async (req, res) => {
-  const { visibleIn, orderField = "createdon" } = req.query;
+  const { club, orderField = "createdon" } = req.query;
+
+  if (!club) {
+    return res.status(400).json({
+      message: "Missing required parameter: club",
+    });
+  }
 
   try {
     const result = await client.query(
       `SELECT * FROM posts
-       INNER JOIN users ON posts.createdby = users.email
-       WHERE visiblein = $1
-       ORDER BY ${orderField} DESC`,
-      [visibleIn]
+   INNER JOIN users ON posts.createdby = users.email
+   WHERE club in (${club})
+   ORDER BY ${orderField} DESC`
     );
+    console.log(result.rows);
 
     res.status(200).json({
       message: "Posts fetched successfully",
@@ -110,7 +116,7 @@ app.get("/posts", async (req, res) => {
   }
 });
 
-app.post("/clubfollowers", async (req, res) => {
+app.post("/followclub", async (req, res) => {
   const { clubId, u_email } = req.body;
 
   try {
@@ -130,12 +136,13 @@ app.post("/clubfollowers", async (req, res) => {
   }
 });
 
-app.get("/clubfollowers/:u_email", async (req, res) => {
+app.get("/followedclubs/:u_email", async (req, res) => {
   const { u_email } = req.params;
   console.log("Fetching club followers for user", u_email);
   try {
     const result = await client.query(
-      `SELECT * FROM clubfollowers WHERE u_email = $1`,
+      `select clubs.name, clubs.club_logo, clubfollowers.* from clubs
+INNER JOIN clubfollowers ON clubs.id=clubfollowers.club_id WHERE clubfollowers.u_email = $1;`,
       [u_email]
     );
 

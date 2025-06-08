@@ -74,7 +74,7 @@ function ClubProvider({ children }: { children: React.ReactNode }) {
         const response = await axios.get(
           `${
             process.env.EXPO_PUBLIC_SERVER_URL
-          }/clubfollowers/${encodeURIComponent(user.email)}`
+          }/followedclubs/${encodeURIComponent(user.email)}`
         );
         if (response.status === 200) {
           setFollowedClubs(response.data.data);

@@ -7,14 +7,16 @@ import {
   StyleSheet,
   FlatList,
   Keyboard,
+  Image,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { StyleProp, ViewStyle, TextStyle } from "react-native";
 import Colors from "../../constants/Colors";
 import { useTheme } from "react-native-paper";
 interface Item {
-  id: string;
-  label: string;
+  club_id: number;
+  club_name: string;
+  club_logo: string;
 }
 
 const ModalDropdown = ({
@@ -29,10 +31,10 @@ const ModalDropdown = ({
   style,
 }: {
   modalVisible: boolean;
-  value: string;
+  value: { club_name: string; club_id: number };
   items: Item[];
   setModalVisible: (visible: boolean) => void;
-  setValue: (value: string) => void;
+  setValue: (value: { club_name: string; club_id: number }) => void;
   setItems: (items: Item[]) => void;
   header?: string;
   placeholder?: string;
@@ -57,7 +59,7 @@ const ModalDropdown = ({
           }, 100);
         }}
       >
-        <Text style={styles.buttonText}>{value}</Text>
+        <Text style={styles.buttonText}>{value.club_name}</Text>
         <Ionicons name="chevron-down" size={18} color={Colors.PRIMARY} />
       </TouchableOpacity>
 
@@ -87,14 +89,17 @@ const ModalDropdown = ({
               </Text>
 
               <TouchableOpacity
-                style={styles.audienceItem}
-                onPress={() => selectOption("Public")}
+                style={styles.defaultItem}
+                onPress={() => selectOption({ club_name: "Public", club_id: 0 })}
               >
                 <View style={styles.dropdownIconContainer}>
                   <Ionicons name="earth" size={20} color="white" />
                 </View>
                 <Text
-                  style={[styles.audienceItemText, { color: colors.onBackground }]}
+                  style={[
+                    styles.audienceItemText,
+                    { color: colors.onBackground },
+                  ]}
                 >
                   Public
                 </Text>
@@ -114,18 +119,26 @@ const ModalDropdown = ({
                 renderItem={({ item }) => (
                   <TouchableOpacity
                     style={styles.audienceItem}
-                    onPress={() => selectOption(item.label)}
+                    onPress={() =>
+                      selectOption({
+                        club_name: item.club_name,
+                        club_id: item.club_id,
+                      })
+                    }
                   >
                     <View style={styles.dropdownIconContainer}>
-                      <Ionicons name="earth" size={20} color="white" />
+                      <Image
+                        source={{ uri: item.club_logo }}
+                        style={styles.audienceItemImage}
+                      />
                     </View>
                     <Text
                       style={[
-                        styles.audienceItemText         ,
+                        styles.audienceItemText,
                         { color: colors.onBackground },
                       ]}
                     >
-                      {item.label}
+                      {item.club_name}
                     </Text>
                   </TouchableOpacity>
                 )}
@@ -139,6 +152,11 @@ const ModalDropdown = ({
 };
 
 const styles = StyleSheet.create({
+  defaultItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    color: Colors.GRAY,
+  },
   button: {
     flexDirection: "row",
     alignItems: "center",
@@ -163,7 +181,7 @@ const styles = StyleSheet.create({
   dropdown: {
     backgroundColor: "white",
     paddingHorizontal: 20,
-    height: 350,
+    height: "70%",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     minHeight: 200,
@@ -172,11 +190,11 @@ const styles = StyleSheet.create({
   },
 
   dropdownIconContainer: {
-    marginRight: 10,
+    marginRight: 20,
     borderWidth: 1,
     backgroundColor: Colors.PRIMARY,
-    width: 50,
-    height: 50,
+    width: 70,
+    height: 60,
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 10,
@@ -185,7 +203,7 @@ const styles = StyleSheet.create({
   option: {
     padding: 15,
   },
- 
+
   dropdownHeader: {
     paddingBottom: 20,
     paddingHorizontal: 15,
@@ -209,6 +227,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 10,
     color: Colors.GRAY,
+    marginBottom: 18,
   },
   audienceItemHeader: {
     paddingVertical: 10,
@@ -217,8 +236,13 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   audienceItemText: {
-    fontSize: 16,
+    fontSize: 20,
     color: "#333",
+  },
+  audienceItemImage: {
+    width: 70,
+    height: 60,
+    borderRadius: 10,
   },
 });
 

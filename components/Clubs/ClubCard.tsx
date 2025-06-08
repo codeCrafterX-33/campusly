@@ -59,7 +59,7 @@ export default function ClubCard(club: CLUB) {
     } else {
       try {
         const response = await axios.post(
-          `${process.env.EXPO_PUBLIC_SERVER_URL}/clubfollowers`,
+          `${process.env.EXPO_PUBLIC_SERVER_URL}/followclub`,
           {
             clubId: club?.id,
             u_email: user?.email,
