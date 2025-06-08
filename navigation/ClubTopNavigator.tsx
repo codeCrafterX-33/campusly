@@ -15,7 +15,9 @@ import Colors from "../constants/Colors";
 import { FlatList, Text } from "react-native";
 import { ClubContext } from "../context/ClubContext";
 import CommunityScreen from "../screens/(homeTopTab)/CommunityScreen";
-
+import Clubs from "../screens/(tab)/Clubs";
+import ExploreClubs from "../screens/ExploreClubs";
+import { RFValue } from "react-native-responsive-fontsize";
 const TopTab = createMaterialTopTabNavigator();
 
 export default function HomeTopNavigator() {
@@ -31,32 +33,26 @@ export default function HomeTopNavigator() {
       // When screen comes into focus, disable drawer gestures
       if (parentDrawer) {
         parentDrawer.setOptions({
-          swipeEnabled: false,
+          swipeEnabled: true,
         });
       }
 
-      // When screen goes out of focus, re-enable drawer gestures
-      return () => {
-        if (parentDrawer) {
-          parentDrawer.setOptions({
-            swipeEnabled: true,
-          });
-        }
-      };
     }, [parentDrawer])
   );
 
   return (
     <TopTab.Navigator
       screenOptions={{
-        tabBarScrollEnabled: true,
-        swipeEnabled: true,
+        tabBarScrollEnabled: false,
+        swipeEnabled: false,
         tabBarStyle: {
           backgroundColor: colors.background,
+          borderBottomWidth: 0.2,
+          borderBottomColor: colors.onBackground,
         },
         tabBarLabelStyle: {
           color: colors.onBackground,
-          fontSize: 16,
+          fontSize: RFValue(16),
           fontWeight: "bold",
         },
         tabBarIndicatorStyle: {
@@ -65,34 +61,14 @@ export default function HomeTopNavigator() {
       }}
     >
       <TopTab.Screen
-        name="for-you"
-        children={() => <ForYouScreen />}
+        name="Home"
+        children={() => <Clubs />}
         options={{
-          tabBarLabel: "For You",
+          tabBarLabel: "Home",
           tabBarItemStyle: { flex: 1 },
         }}
       />
-      <TopTab.Screen
-        name="following"
-        children={() => <FollowingScreen clubId={6} />}
-      />
-
-      {followedClubs &&
-        followedClubs.map((club: any, index: number) => {
-          const isLast = index === followedClubs.length - 1;
-          return (
-            <TopTab.Screen
-              key={club.id}
-              name={club.name + " " + club.id}
-              children={() => (
-                <CommunityScreen club_id={club.club_id.toString()} />
-              )}
-              options={{
-                tabBarLabel: club.name,
-              }}
-            />
-          );
-        })}
+      <TopTab.Screen name="Explore" children={() => <ExploreClubs />} />
     </TopTab.Navigator>
   );
 }

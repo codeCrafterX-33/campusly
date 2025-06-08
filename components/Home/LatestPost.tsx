@@ -12,13 +12,13 @@ const LatestPost = ({
   clubRefreshing,
   clubOnRefresh,
   flatListRef,
-  club_id = 0,
+  club_id = [0],
 }: {
   clubPosts?: any;
   clubRefreshing?: boolean;
   clubOnRefresh?: () => void;
   flatListRef?: any;
-  club_id?: number;
+  club_id?: any[];
 }) => {
   const { posts } = useContext(PostContext);
   const { user } = useContext(AuthContext);

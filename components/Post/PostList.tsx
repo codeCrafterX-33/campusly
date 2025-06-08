@@ -13,13 +13,13 @@ import Colors from "../../constants/Colors";
 const PostList = ({
   posts,
   flatListRef,
-  club_id = 0,
+  club_id = [0],
   clubRefreshing,
   clubOnRefresh,
 }: {
   posts: any;
   flatListRef: any;
-  club_id?: number;
+  club_id?: any[];
   clubRefreshing?: boolean;
   clubOnRefresh?: () => void;
 }) => {
