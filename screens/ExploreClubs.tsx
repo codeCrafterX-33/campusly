@@ -86,17 +86,7 @@ export default function ExploreClubs() {
         />
       )}
 
-      <FAB
-        icon="plus"
-        label="Create Club"
-        onPress={() => navigation.navigate("CreateClub")}
-        style={{
-          position: "absolute",
-          bottom: 16,
-          right: 16,
-          backgroundColor: Colors.PRIMARY,
-        }}
-      />
+    
     </View>
   );
 }

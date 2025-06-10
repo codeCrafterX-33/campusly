@@ -14,7 +14,7 @@ import { AuthContext } from "../context/AuthContext";
 import { useContext, useEffect } from "react";
 import { PostContext } from "../context/PostContext";
 import HomeTopNavigator from "./HomeTopNavigator";
-import ClubTopNavigator from "./ClubTopNavigator";
+
 const Tab = createBottomTabNavigator();
 
 interface TabLayoutProps {
@@ -110,7 +110,7 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
       />
       <Tab.Screen
         name="Clubs"
-        component={ClubTopNavigator}
+        component={Clubs}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" color={color} size={size} />

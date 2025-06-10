@@ -15,7 +15,7 @@ import { TouchableOpacity } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import ExploreClubs from "../screens/ExploreClubs";
 import { useTheme } from "react-native-paper";
-
+import CreateClub from "../components/Clubs/CreateClub";
 export type RootStackParamList = {
   Landing: undefined;
   SignIn: undefined;
@@ -26,6 +26,7 @@ export type RootStackParamList = {
   Profile: undefined;
   DrawerNavigator: undefined;
   ExploreClubs: undefined;
+  CreateClub: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -47,11 +48,6 @@ export const StackNavigator = () => {
         name="SignUp"
         component={SignUp}
         options={{ headerTitle: "", headerTransparent: true }}
-      />
-      <Stack.Screen
-        name="TabLayout"
-        component={TabLayout}
-        options={{ headerShown: false }}
       />
     </Stack.Navigator>
   );
@@ -106,28 +102,14 @@ export const AuthenticatedStack = () => {
         })}
       />
 
-      <Stack.Screen
-        name="ExploreClubs"
-        component={ExploreClubs}
+      <Stack.Screen 
+        name="CreateClub"
+        component={CreateClub}
         options={({ navigation }) => ({
-          headerStyle: {
-            backgroundColor: colors.background,
-            borderBottomColor: colors.onBackground,
-            borderBottomWidth: 1,
-            borderBottomLeftRadius: 10,
-            borderBottomRightRadius: 10,
-          },
-          headerTitle: "Explore Clubs",
-          headerTitleStyle: {
-            color: colors.onBackground,
-          },
+          headerShown: true,
           ...TransitionPresets.SlideFromRightIOS,
           headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => {
-                navigation.goBack();
-              }}
-            >
+            <TouchableOpacity onPress={() => navigation.goBack()}>
               <Icon name="arrow-left" size={24} color={colors.onBackground} />
             </TouchableOpacity>
           ),

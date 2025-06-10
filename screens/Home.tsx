@@ -16,14 +16,12 @@ import { useNavigation } from "@react-navigation/native";
 import { useLayoutEffect } from "react";
 
 function Home() {
- const navigation = useNavigation<any>();
+  const navigation = useNavigation<any>();
 
- useLayoutEffect(() => {
-   // Disable drawer gesture while on this screen
-   navigation.setOptions({ gestureEnabled: false });
- }, [navigation]);
-
-
+  useLayoutEffect(() => {
+    // Disable drawer gesture while on this screen
+    navigation.setOptions({ gestureEnabled: false });
+  }, [navigation]);
 
   return (
     <View style={styles.container}>
@@ -47,6 +45,4 @@ const styles = StyleSheet.create({
     right: 20,
     zIndex: 1000,
   },
-
- 
 });

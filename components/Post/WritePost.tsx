@@ -88,9 +88,9 @@ export default function WritePost() {
       },
       headerRight: () => (
         <TouchableOpacity onPress={() => onPostBtnClick()}>
-          <Text style={[styles.postBtn, { color: colors.onBackground }]}>
+          <Text style={[styles.postBtn, { color: "white" }]}>
             {loading ? (
-              <ActivityIndicator size="small" color={colors.onBackground} />
+              <ActivityIndicator size="small" color={Colors.PRIMARY} />
             ) : (
               "Post"
             )}

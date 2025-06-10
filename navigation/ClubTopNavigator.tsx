@@ -15,12 +15,12 @@ import Colors from "../constants/Colors";
 import { FlatList, Text } from "react-native";
 import { ClubContext } from "../context/ClubContext";
 import CommunityScreen from "../screens/(homeTopTab)/CommunityScreen";
-import Clubs from "../screens/(tab)/Clubs";
+import Clubs from "../screens/ClubsHome";
 import ExploreClubs from "../screens/ExploreClubs";
 import { RFValue } from "react-native-responsive-fontsize";
 const TopTab = createMaterialTopTabNavigator();
 
-export default function HomeTopNavigator() {
+export default function ClubTopNavigator() {
   const { colors } = useTheme();
   const { followedClubs } = useContext(ClubContext);
   const navigation = useNavigation();
@@ -36,7 +36,6 @@ export default function HomeTopNavigator() {
           swipeEnabled: true,
         });
       }
-
     }, [parentDrawer])
   );
 
@@ -68,7 +67,7 @@ export default function HomeTopNavigator() {
           tabBarItemStyle: { flex: 1 },
         }}
       />
-      <TopTab.Screen name="Explore" children={() => <ExploreClubs />} />
+      <TopTab.Screen name="ExploreClubs" children={() => <ExploreClubs />} />
     </TopTab.Navigator>
   );
 }
