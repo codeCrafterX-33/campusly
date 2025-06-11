@@ -67,7 +67,13 @@ export default function ClubTopNavigator() {
           tabBarItemStyle: { flex: 1 },
         }}
       />
-      <TopTab.Screen name="ExploreClubs" children={() => <ExploreClubs />} />
+      <TopTab.Screen
+        name="ExploreClubs"
+        children={() => <ExploreClubs />}
+        options={{
+          tabBarLabel: "Explore Clubs",
+        }}
+      />
     </TopTab.Navigator>
   );
 }

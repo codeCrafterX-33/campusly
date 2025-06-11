@@ -15,6 +15,8 @@ export interface CLUB {
   club_logo: string;
   about: string;
   createdon: string;
+  createdby: string;
+  isAdmin: boolean;
   refreshData: () => void;
   isFollowed: boolean;
 }
@@ -95,6 +97,9 @@ export default function ClubCard(club: CLUB) {
         !isDarkMode ? styles.containerLight : styles.containerDark,
       ]}
     >
+      {club.isAdmin && (
+        <Text style={styles.adminText}>Admin</Text>
+      )}
       <Image
         source={{ uri: club.club_logo }}
         style={[
@@ -189,5 +194,16 @@ const styles = StyleSheet.create({
   },
   imageDark: {
     shadowColor: "black",
+  },
+  adminText: {
+    position: "absolute",
+    top: 0,
+    right: 0,
+    backgroundColor: "red",
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
+    padding: 5,
+    borderRadius: 5,
   },
 });

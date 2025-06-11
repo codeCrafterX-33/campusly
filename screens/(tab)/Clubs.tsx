@@ -26,4 +26,4 @@ export default function Clubs() {
     </View>
   );
 }
-// Placeholder component for Clubs screen
+

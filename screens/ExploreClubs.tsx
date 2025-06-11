@@ -13,10 +13,12 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import axios from "axios";
 import ClubCard from "../components/Clubs/ClubCard";
 import { ClubContext } from "../context/ClubContext";
-import { FAB, useTheme } from "react-native-paper";
+import { useTheme } from "react-native-paper";
 import Colors from "../constants/Colors";
+import { AuthContext } from "../context/AuthContext";
 
 export default function ExploreClubs() {
+  const { user } = useContext(AuthContext);
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { colors } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
@@ -61,6 +63,10 @@ export default function ExploreClubs() {
     return club ? true : false;
   };
 
+  const isAdmin = (createdby: string) => {
+    return createdby === user?.email;
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {isLoading ? (
@@ -77,6 +83,7 @@ export default function ExploreClubs() {
               {...item}
               isFollowed={isFollowed(item.id)}
               refreshData={getFollowedClubs}
+              isAdmin={isAdmin(item.createdby)}
             />
           )}
           keyExtractor={(item) => item.id.toString()}
@@ -85,8 +92,6 @@ export default function ExploreClubs() {
           ListFooterComponent={<View style={{ height: 100 }} />}
         />
       )}
-
-    
     </View>
   );
 }

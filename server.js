@@ -195,6 +195,28 @@ app.get("/clubs", async (req, res) => {
   }
 });
 
+app.post("/club", async (req, res) => {
+  const { name, description, imageUrl, u_email } = req.body;
+
+  console.log(name, description, imageUrl);
+
+  try {
+    const result = await client.query(
+      `INSERT INTO clubs VALUES (DEFAULT, $1, $2, $3, DEFAULT, $4) RETURNING *`,
+      [name, imageUrl, description, u_email]
+    );
+
+    res.status(201).json({
+      message: "Club created successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Club creation failed",
+      error: error.message,
+    });
+  }
+});
+
 client
   .connect()
   .then(() => {

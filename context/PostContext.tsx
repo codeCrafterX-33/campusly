@@ -65,11 +65,6 @@ function PostProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // useEffect(() => {
-  //   if (user) {
-  //     GetPosts(visibleIn);
-  //   }
-  // }, [user]);
 
   const onRefresh = async () => {
     setRefreshing(true);
