@@ -49,10 +49,12 @@ export default function Button({
 const styles = StyleSheet.create({
   buttonContainer: {},
   button: {
-    padding: 15,
+    paddingVertical: 12,
+    paddingHorizontal: 10, 
     backgroundColor: Colors.PRIMARY,
     borderRadius: 10,
     marginTop: 20,
+    alignSelf: "flex-start",
   },
   buttonText: {
     fontWeight: "bold",

@@ -15,7 +15,8 @@ import { TouchableOpacity } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import ExploreClubs from "../screens/ExploreClubs";
 import { useTheme } from "react-native-paper";
-import CreateClub from "../components/Clubs/CreateClub";
+import CreateClub from "../screens/CreateClub";
+import AddEvent from "../screens/AddEvent";
 export type RootStackParamList = {
   Landing: undefined;
   SignIn: undefined;
@@ -27,6 +28,7 @@ export type RootStackParamList = {
   DrawerNavigator: undefined;
   ExploreClubs: undefined;
   CreateClub: undefined;
+  AddEvent: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -102,7 +104,7 @@ export const AuthenticatedStack = () => {
         })}
       />
 
-      <Stack.Screen 
+      <Stack.Screen
         name="CreateClub"
         component={CreateClub}
         options={({ navigation }) => ({
@@ -114,6 +116,12 @@ export const AuthenticatedStack = () => {
             </TouchableOpacity>
           ),
         })}
+      />
+
+      <Stack.Screen
+        name="AddEvent"
+        component={AddEvent}
+        options={{ headerShown: true, headerTitle: "Add Event", ...TransitionPresets.SlideFromRightIOS }}
       />
     </Stack.Navigator>
   );

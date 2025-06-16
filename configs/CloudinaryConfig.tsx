@@ -30,3 +30,10 @@ export const clubOptions = {
   unsigned: true,
   folder: "clubs",
 };
+
+export const eventOptions = {
+  upload_preset: "my-school-event",
+  tags: ["school-event"],
+  unsigned: true,
+  folder: "events",
+};

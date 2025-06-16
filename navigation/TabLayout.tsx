@@ -106,6 +106,21 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar" color={color} size={size} />
           ),
+           headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerLeft: () => {
+            const nav = useNavigation<DrawerNavigationProp<any>>();
+            return (
+              <TouchableOpacity
+                onPress={() => nav.openDrawer()}
+                style={{ marginLeft: 10 }}
+              >
+                <Avatar.Image size={34} source={{ uri: authCtx.user?.image }} />
+              </TouchableOpacity>
+            );
+          },
+          headerTitle: "",
         }}
       />
       <Tab.Screen
@@ -139,6 +154,21 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbox-ellipses" color={color} size={size} />
           ),
+           headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerLeft: () => {
+            const nav = useNavigation<DrawerNavigationProp<any>>();
+            return (
+              <TouchableOpacity
+                onPress={() => nav.openDrawer()}
+                style={{ marginLeft: 10 }}
+              >
+                <Avatar.Image size={34} source={{ uri: authCtx.user?.image }} />
+              </TouchableOpacity>
+            );
+          },
+          headerTitle: "",
         }}
       />
     </Tab.Navigator>

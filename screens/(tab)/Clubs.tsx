@@ -19,7 +19,7 @@ export default function Clubs() {
           position: "absolute",
           bottom: RFValue(60),
           right: 20,
-          zIndex: 1000,
+          
           backgroundColor: Colors.PRIMARY,
         }}
       />

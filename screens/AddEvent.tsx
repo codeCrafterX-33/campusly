@@ -15,25 +15,27 @@ import {
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTheme } from "react-native-paper";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import Colors from "../../constants/Colors";
+import Colors from "../constants/Colors";
 import * as ImagePicker from "expo-image-picker";
 import { RFValue } from "react-native-responsive-fontsize";
 import Toast from "react-native-toast-message";
-import { cld } from "../../configs/CloudinaryConfig";
+import { cld } from "../configs/CloudinaryConfig";
 import { upload } from "cloudinary-react-native";
-import { clubOptions } from "../../configs/CloudinaryConfig";
+import { eventOptions } from "../configs/CloudinaryConfig";
 import axios from "axios";
 import { StackNavigationProp } from "@react-navigation/stack";
-import { RootStackParamList } from "../../navigation/StackNavigator";
+import { RootStackParamList } from "../navigation/StackNavigator";
 import { DrawerNavigationProp } from "@react-navigation/drawer";
 import { useContext } from "react";
-import { AuthContext } from "../../context/AuthContext";
+import { AuthContext } from "../context/AuthContext";
+import DateTimePicker from "@react-native-community/datetimepicker";
+
 interface UploadResponse {
   url: string;
   secure_url: string;
 }
 
-export default function CreateClub() {
+export default function AddEvent() {
   const { user } = useContext(AuthContext);
   const navigation =
     useNavigation<
@@ -44,54 +46,65 @@ export default function CreateClub() {
     >();
   const { colors } = useTheme();
   const [loading, setLoading] = useState(false);
-  const [clubName, setClubName] = useState<string>("");
-  const [clubDescription, setClubDescription] = useState<string>("");
-  const [clubImage, setClubImage] = useState<string | null>(null);
+  const [eventName, setEventName] = useState<string>("");
+  const [eventLocation, setEventLocation] = useState<string>("");
+  const [eventImage, setEventImage] = useState<string | null>(null);
+  const [eventLink, setEventLink] = useState<string>("");
   const [nameError, setNameError] = useState<string | null>(null);
-  const [descriptionError, setDescriptionError] = useState<string | null>(null);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
 
   const validateInputs = (
     name: string,
-    description: string,
+    location: string,
+    link: string,
     image: string | null
   ) => {
     let isValid = true;
 
     if (!name) {
-      setNameError("Please enter a club name");
+      setNameError("Please enter an event name");
       isValid = false;
     } else if (name.length < 3) {
-      setNameError("Club name must be at least 3 characters");
+      setNameError("Name must be at least 3 characters");
       isValid = false;
     } else {
       setNameError(null);
     }
 
-    if (!description) {
-      setDescriptionError("Please enter a club description");
+    if (!location) {
+      setLocationError("Please enter an event location");
       isValid = false;
-    } else if (description.length < 10) {
-      setDescriptionError("Description must be at least 10 characters");
+    } else if (location.length < 3) {
+      setLocationError("Location must be at least 3 characters");
       isValid = false;
     } else {
-      setDescriptionError(null);
+      setLocationError(null);
     }
 
     if (!image) {
-      setImageError("Please select a club image");
+      setImageError("Please select a banner");
       isValid = false;
     } else {
       setImageError(null);
     }
 
-    console.log("Validation Result:", { name, description, image, isValid });
+    if (!link) {
+      setLinkError("Please enter a link");
+      isValid = false;
+    } else {
+      setLinkError(null);
+    }
+
+    console.log("Validation Result:", { name, location, link, image, isValid });
     return isValid;
   };
 
   const uploadData = async (
     name: string,
-    description: string,
+    location: string,
+    link: string,
     image: string | null
   ) => {
     setLoading(true);
@@ -103,7 +116,7 @@ export default function CreateClub() {
           (resolve, reject) => {
             upload(cld, {
               file: image,
-              options: clubOptions,
+              options: eventOptions,
               callback: (error: any, response: any) => {
                 if (error) {
                   reject(error);
@@ -118,10 +131,11 @@ export default function CreateClub() {
       }
 
       const result = await axios.post(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/club`,
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/event`,
         {
           name: name,
-          description: description,
+          location: location,
+          link: link,
           imageUrl: imageUrl,
           u_email: user?.email,
         }
@@ -129,24 +143,21 @@ export default function CreateClub() {
 
       if (result.status === 201) {
         Toast.show({
-          text1: "Your club has been created",
+          text1: "Your event has been created",
           type: "success",
         });
 
         navigation.navigate("DrawerNavigator", {
           screen: "TabLayout",
           params: {
-            screen: "Clubs",
-            params: {
-              screen: "ExploreClubs",
-            },
+            screen: "Events",
           },
         });
       }
     } catch (error) {
       console.log(error);
       Toast.show({
-        text1: "Failed to create club",
+        text1: "Failed to create event",
         type: "error",
       });
     } finally {
@@ -156,14 +167,15 @@ export default function CreateClub() {
 
   const onPostBtnClick = () => {
     setTimeout(() => {
-      const name = clubName.trim();
-      const description = clubDescription.trim();
-      const image = clubImage;
+      const name = eventName.trim();
+      const location = eventLocation.trim();
+      const link = eventLink.trim();
+      const image = eventImage;
 
-      const isValid = validateInputs(name, description, image);
+      const isValid = validateInputs(name, location, link, image);
 
       if (isValid) {
-        uploadData(name, description, image);
+        uploadData(name, location, link, image);
       }
     }, 100);
   };
@@ -193,27 +205,31 @@ export default function CreateClub() {
         return;
       }
 
-      setClubImage(result.assets[0].uri);
+      setEventImage(result.assets[0].uri);
       setImageError(null);
     }
   };
 
   const handleNameChange = (text: string) => {
-    setClubName(text);
+    setEventName(text);
     if (text.trim().length < 3 && text.trim().length > 0) {
-      setNameError("Club name must be at least 3 characters");
+      setNameError("Event name must be at least 3 characters");
     } else {
       setNameError(null);
     }
   };
 
-  const handleDescriptionChange = (text: string) => {
-    setClubDescription(text);
-    if (text.trim().length < 10 && text.trim().length > 0) {
-      setDescriptionError("Description must be at least 10 characters");
+  const handleLocationChange = (text: string) => {
+    setEventLocation(text);
+    if (text.trim().length < 3 && text.trim().length > 0) {
+      setLocationError("Location must be at least 3 characters");
     } else {
-      setDescriptionError(null);
+      setLocationError(null);
     }
+  };
+
+  const handleLinkChange = (text: string) => {
+    setEventLink(text);
   };
 
   useLayoutEffect(() => {
@@ -241,7 +257,7 @@ export default function CreateClub() {
           </Text>
         </TouchableOpacity>
       ),
-      headerTitle: "Add New Club",
+      headerTitle: "Add Event",
       headerTitleStyle: {
         fontSize: RFValue(16),
         fontWeight: "bold",
@@ -253,11 +269,11 @@ export default function CreateClub() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <TouchableOpacity onPress={pickImage}>
-        {clubImage ? (
-          <Image source={{ uri: clubImage }} style={styles.image} />
+        {eventImage ? (
+          <Image source={{ uri: eventImage }} style={styles.image} />
         ) : (
           <Image
-            source={require("../../assets/images/image.png")}
+            source={require("../assets/images/image.png")}
             style={[
               styles.image,
               {
@@ -272,10 +288,10 @@ export default function CreateClub() {
       <Text style={styles.helperText}>Recommended: Square image, max 5MB</Text>
 
       <TextInput
-        placeholder="Club Name"
+        placeholder="Event Name"
         placeholderTextColor={Colors.GRAY}
         style={[
-          styles.clubNameInput,
+          styles.eventInput,
           {
             backgroundColor: colors.background,
             color: colors.onBackground,
@@ -283,7 +299,7 @@ export default function CreateClub() {
             borderWidth: nameError ? 1 : 0,
           },
         ]}
-        value={clubName}
+        value={eventName}
         onChangeText={handleNameChange}
         maxLength={30}
         autoCapitalize="words"
@@ -292,26 +308,40 @@ export default function CreateClub() {
       {nameError && <Text style={styles.errorText}>{nameError}</Text>}
 
       <TextInput
-        placeholder="Club Description"
+        placeholder="Location"
         placeholderTextColor={Colors.GRAY}
         style={[
-          styles.input,
+          styles.eventInput,
           {
             backgroundColor: colors.background,
             color: colors.onBackground,
-            borderColor: descriptionError ? "red" : "transparent",
-            borderWidth: descriptionError ? 1 : 0,
+            borderColor: locationError ? "red" : "transparent",
+            borderWidth: locationError ? 1 : 0,
           },
         ]}
-        value={clubDescription}
-        onChangeText={handleDescriptionChange}
-        multiline={true}
-        numberOfLines={4}
-        maxLength={1000}
+        value={eventLocation}
+        onChangeText={handleLocationChange}
+        maxLength={30}
       />
-      {descriptionError && (
-        <Text style={styles.errorText}>{descriptionError}</Text>
-      )}
+      {locationError && <Text style={styles.errorText}>{locationError}</Text>}
+
+      <TextInput
+        placeholder="Event Link"
+        placeholderTextColor={Colors.GRAY}
+        style={[
+          styles.eventInput,
+          {
+            backgroundColor: colors.background,
+            color: colors.onBackground,
+            borderColor: linkError ? "red" : "transparent",
+            borderWidth: linkError ? 1 : 0,
+          },
+        ]}
+        value={eventLink}
+        onChangeText={handleLinkChange}
+        maxLength={30}
+      />
+      {linkError && <Text style={styles.errorText}>{linkError}</Text>}
     </View>
   );
 }
@@ -344,7 +374,7 @@ const styles = StyleSheet.create({
     marginTop: 15,
     borderRadius: 15,
   },
-  clubNameInput: {
+  eventInput: {
     backgroundColor: Colors.WHITE,
     borderRadius: RFValue(15),
     padding: RFValue(10),
@@ -357,20 +387,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
   },
-  input: {
-    backgroundColor: Colors.WHITE,
-    borderRadius: RFValue(15),
-    padding: RFValue(10),
-    marginTop: RFValue(10),
-    height: RFValue(150),
-    textAlignVertical: "top",
-    fontSize: RFValue(14),
-    elevation: 10,
-    shadowColor: Colors.GRAY,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-  },
+
   errorText: {
     color: "red",
     fontSize: RFValue(12),

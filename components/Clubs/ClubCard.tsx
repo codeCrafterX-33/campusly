@@ -97,9 +97,7 @@ export default function ClubCard(club: CLUB) {
         !isDarkMode ? styles.containerLight : styles.containerDark,
       ]}
     >
-      {club.isAdmin && (
-        <Text style={styles.adminText}>Admin</Text>
-      )}
+      {club.isAdmin && <Text style={styles.adminText}>Admin</Text>}
       <Image
         source={{ uri: club.club_logo }}
         style={[
@@ -127,7 +125,7 @@ export default function ClubCard(club: CLUB) {
         isLoading={isLoading}
         outline={club.isFollowed}
       >
-        {club.isFollowed ? "Unfollow" : "Follow"}
+        {club.isFollowed ? "following" : "follow"}
       </Button>
     </View>
   );
@@ -199,10 +197,11 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     right: 0,
-    backgroundColor: "red",
+    backgroundColor: "#4B5563",
     color: "white",
     fontSize: 12,
     fontWeight: "bold",
+    margin: 5,
     padding: 5,
     borderRadius: 5,
   },
