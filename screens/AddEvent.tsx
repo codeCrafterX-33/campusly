@@ -29,6 +29,9 @@ import { DrawerNavigationProp } from "@react-navigation/drawer";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import DateTimePicker from "@react-native-community/datetimepicker";
+import { Platform } from "react-native";
+import RNDateTimePicker from "@react-native-community/datetimepicker";
+import Button from "../components/ui/Button";
 
 interface UploadResponse {
   url: string;
@@ -54,6 +57,45 @@ export default function AddEvent() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+
+  const [date, setDate] = useState<Date | null>(null);
+  const [time, setTime] = useState<Date | null>(null);
+  const [openDatePicker, setOpenDatePicker] = useState(false);
+  const [openTimePicker, setOpenTimePicker] = useState(false);
+
+  const showDatePicker = () => {
+    setOpenDatePicker(true);
+  };
+
+  const showTimePicker = () => {
+    setOpenTimePicker(true);
+  };
+
+  const onDateChange = (event: any, selectedDate?: Date) => {
+    if (Platform.OS === "android") {
+      setOpenDatePicker(false);
+      if (event.type === "set" && selectedDate) {
+        setDate(selectedDate);
+      }
+    } else {
+      if (selectedDate) {
+        setDate(selectedDate);
+      }
+    }
+  };
+
+  const onTimeChange = (event: any, selectedTime?: Date) => {
+    if (Platform.OS === "android") {
+      setOpenTimePicker(false);
+      if (event.type === "set" && selectedTime) {
+        setTime(selectedTime);
+      }
+    } else {
+      if (selectedTime) {
+        setTime(selectedTime);
+      }
+    }
+  };
 
   const validateInputs = (
     name: string,
@@ -342,6 +384,56 @@ export default function AddEvent() {
         maxLength={30}
       />
       {linkError && <Text style={styles.errorText}>{linkError}</Text>}
+
+      <Button
+        viewStyle={{ width: "100%" }}
+        outline
+        onPress={() => showDatePicker()}
+      >
+        <Text>
+          {date
+            ? date.toLocaleDateString([], {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })
+            : "Select Date"}
+        </Text>
+      </Button>
+
+      <Button
+        viewStyle={{ width: "100%" }}
+        outline
+        onPress={() => showTimePicker()}
+      >
+        <Text>
+          {time
+            ? time.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })
+            : "Select Time"}
+        </Text>
+      </Button>
+
+      {openDatePicker && (
+        <RNDateTimePicker
+          value={date || new Date()}
+          mode={"date"}
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          is24Hour={true}
+          onChange={onDateChange}
+        />
+      )}
+      {openTimePicker && (
+        <RNDateTimePicker
+          value={time || new Date()}
+          mode={"time"}
+          display={Platform.OS === "ios" ? "spinner" : "default"}
+          is24Hour={true}
+          onChange={onTimeChange}
+        />
+      )}
     </View>
   );
 }
@@ -350,7 +442,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: "100%",
-    paddingHorizontal: RFValue(10),
+    paddingHorizontal: RFValue(15),
   },
   postBtn: {
     fontSize: RFValue(16),

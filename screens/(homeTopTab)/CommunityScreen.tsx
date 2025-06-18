@@ -8,21 +8,24 @@ import { useTheme } from "react-native-paper";
 
 const CommunityScreen = ({ club_id }: { club_id: number }) => {
   const { getPosts } = useContext(PostContext);
-  const [clubPosts, setClubPosts] = usePersistedState(`clubPosts-${club_id}`, []);
+  const [clubPosts, setClubPosts] = usePersistedState(
+    `clubPosts-${club_id}`,
+    []
+  );
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { colors } = useTheme();
 
-   const fetchPosts = async () => {
-     console.log("Fetching posts clubId", club_id);
-     await getPosts({
-       id: [club_id],
-       clubPosts: clubPosts,
-       setClubPosts: setClubPosts,
-     });
-     if (clubPosts.length > 0) {
-       // console.log(clubPosts);
-     }
-   };
+  const fetchPosts = async () => {
+    console.log("Fetching posts clubId", club_id);
+    await getPosts({
+      id: [club_id],
+      clubPosts: clubPosts,
+      setClubPosts: setClubPosts,
+    });
+    if (clubPosts.length > 0) {
+      // console.log(clubPosts);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {

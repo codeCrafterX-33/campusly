@@ -8,6 +8,7 @@ import axios, { AxiosError } from "axios";
 import { AuthContext } from "../../context/AuthContext";
 import { ClubContext } from "../../context/ClubContext";
 import Toast from "react-native-toast-message";
+import { RFValue } from "react-native-responsive-fontsize";
 
 export interface CLUB {
   id: number;
@@ -124,6 +125,8 @@ export default function ClubCard(club: CLUB) {
         onPress={() => onFollowBtnClick()}
         isLoading={isLoading}
         outline={club.isFollowed}
+        viewStyle={styles.button}
+        textStyle={styles.buttonText}
       >
         {club.isFollowed ? "following" : "follow"}
       </Button>
@@ -204,5 +207,11 @@ const styles = StyleSheet.create({
     margin: 5,
     padding: 5,
     borderRadius: 5,
+  },
+  button: {
+    width: RFValue(70),
+  },
+  buttonText: {
+    fontSize: RFValue(18),
   },
 });

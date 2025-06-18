@@ -20,10 +20,6 @@ const client = new Client({
   database: process.env.EXPO_PUBLIC_DB_DATABASE,
 });
 
-app.get("/", (req, res) => {
-  res.send("hello world");
-});
-
 app.get("/user/:email", async (req, res) => {
   const { email } = req.params;
 

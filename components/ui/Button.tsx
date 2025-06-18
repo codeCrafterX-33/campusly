@@ -49,25 +49,27 @@ export default function Button({
 const styles = StyleSheet.create({
   buttonContainer: {},
   button: {
-    paddingVertical: 12,
-    paddingHorizontal: 10, 
+    padding: 10, 
     backgroundColor: Colors.PRIMARY,
     borderRadius: 10,
     marginTop: 20,
-    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderColor: Colors.PRIMARY,
   },
   buttonText: {
     fontWeight: "bold",
     color: Colors.WHITE,
     fontSize: 18,
+    textAlign: "center",
   },
   outlineButtonText: {
     color: Colors.PRIMARY,
     fontWeight: "bold",
     fontSize: 18,
+    textAlign: "center",
   },
   outlineButton: {
-    padding: 15,
+    padding: 10,
     backgroundColor: Colors.WHITE,
     borderWidth: 1,
     borderColor: Colors.PRIMARY,
