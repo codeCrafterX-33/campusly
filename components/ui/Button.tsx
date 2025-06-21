@@ -17,6 +17,8 @@ type ButtonProps = {
   textStyle?: StyleProp<TextStyle>;
   isLoading?: boolean;
   outline?: boolean;
+  disabled?: boolean;
+  fullWidth?: boolean;
 };
 
 export default function Button({
@@ -26,11 +28,19 @@ export default function Button({
   isLoading,
   outline,
   viewStyle,
+  disabled,
+  fullWidth,
 }: ButtonProps) {
   return (
     <TouchableOpacity
+      disabled={disabled}
       onPress={onPress}
-      style={[outline ? styles.outlineButton : styles.button, viewStyle]}
+      style={[
+        outline ? styles.outlineButton : styles.button,
+        viewStyle,
+        disabled && styles.disabled,
+        fullWidth && styles.fullWidth,
+      ]}
     >
       {isLoading ? (
         <ActivityIndicator
@@ -38,7 +48,12 @@ export default function Button({
           color={outline ? Colors.PRIMARY : Colors.WHITE}
         />
       ) : (
-        <Text style={[outline ? styles.outlineButtonText : styles.buttonText, textStyle]}>
+        <Text
+          style={[
+            outline ? styles.outlineButtonText : styles.buttonText,
+            textStyle,
+          ]}
+        >
           {children}
         </Text>
       )}
@@ -49,12 +64,17 @@ export default function Button({
 const styles = StyleSheet.create({
   buttonContainer: {},
   button: {
-    padding: 10, 
+    padding: 10,
+    paddingHorizontal: 20,
     backgroundColor: Colors.PRIMARY,
     borderRadius: 10,
     marginTop: 20,
     borderWidth: 1,
     borderColor: Colors.PRIMARY,
+  },
+
+  disabled: {
+    opacity: 0.3,
   },
   buttonText: {
     fontWeight: "bold",
@@ -75,5 +95,8 @@ const styles = StyleSheet.create({
     borderColor: Colors.PRIMARY,
     borderRadius: 10,
     marginTop: 20,
+  },
+  fullWidth: {
+    flex: 1,
   },
 });

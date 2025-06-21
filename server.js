@@ -154,7 +154,7 @@ INNER JOIN clubfollowers ON clubs.id=clubfollowers.club_id WHERE clubfollowers.u
   }
 });
 
-app.delete("/clubfollowers/:u_email", async (req, res) => {
+app.delete("/unfollowclub/:u_email", async (req, res) => {
   const { u_email } = req.params;
   const { clubId } = req.body;
   console.log("Fetching club followers for user", u_email);
@@ -208,6 +208,127 @@ app.post("/club", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Club creation failed",
+      error: error.message,
+    });
+  }
+});
+
+app.post("/event", async (req, res) => {
+  const {
+    eventName,
+    eventImage,
+    location,
+    link,
+    eventDate,
+    eventTime,
+    u_email,
+  } = req.body;
+
+  console.log(
+    eventName,
+    eventImage,
+    location,
+    link,
+    eventDate,
+    eventTime,
+    u_email
+  );
+  try {
+    const result = await client.query(
+      `INSERT INTO events VALUES (DEFAULT, $1, $2, $3, $4, $5, $6, $7, DEFAULT) RETURNING *`,
+      [eventName, location, link, eventImage, eventDate, eventTime, u_email]
+    );
+
+    res.status(201).json({
+      message: "Event created successfully",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Event creation failed",
+      error: error?.response?.data,
+    });
+  }
+});
+
+app.get("/events", async (req, res) => {
+  try {
+    const result =
+      await client.query(`select events.*, users.name as username from events
+inner join users
+on events.createdby=users.email
+order by id desc;`);
+
+    res.status(200).json({
+      message: "Events fetched successfully",
+      data: result.rows,
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Events fetching failed", error: error.message });
+  }
+});
+
+app.post("/event/register", async (req, res) => {
+  const { eventId, u_email } = req.body;
+
+  try {
+    const result = await client.query(
+      `INSERT INTO event_registration VALUES (DEFAULT, $1, $2, DEFAULT)`,
+      [eventId, u_email]
+    );
+
+    res.status(201).json({
+      message: "Event registered successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Event registration failed",
+      error: error.message,
+    });
+  }
+});
+
+app.get("/event/registered/:u_email", async (req, res) => {
+  const { u_email } = req.params;
+
+  try {
+    const result = await client.query(
+      `SELECT events.*, event_registration.* FROM events
+INNER JOIN event_registration ON events.id = event_registration.event_id
+WHERE event_registration.u_email = $1`,
+      [u_email]
+    );
+
+    res.status(200).json({
+      message: "Registered events fetched successfully",
+      data: result.rows,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Registered events fetching failed",
+      error: error.message,
+    });
+  }
+});
+
+app.delete("/event/unregister/:u_email", async (req, res) => {
+  const { u_email } = req.params;
+  const { eventId } = req.body;
+
+  try {
+    const result = await client.query(
+      `DELETE FROM event_registration WHERE u_email = $1 AND event_id = $2`,
+      [u_email, eventId]
+    );
+
+    res.status(200).json({
+      message: "Event unregistered successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Event unregistration failed",
       error: error.message,
     });
   }

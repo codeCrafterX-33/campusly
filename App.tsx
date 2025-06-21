@@ -18,6 +18,7 @@ import { User } from "firebase/auth";
 import { Provider as PaperProvider } from "react-native-paper";
 import ThemedStatusBar from "./components/ThemedStatusBar";
 import ClubProvider from "./context/ClubContext";
+import EventProvider from "./context/EventContext";
 // Define navigation types
 export type RootStackParamList = {
   Landing: undefined;
@@ -61,15 +62,17 @@ export default function App() {
               <NavigationContainer theme={DefaultTheme}>
                 <AuthProvider>
                   <ClubProvider>
-                    <PostProvider>
-                      {isTryingLogin ? (
-                        <LoadingScreen />
-                      ) : user ? (
-                        <AuthenticatedStack />
-                      ) : (
-                        <StackNavigator />
-                      )}
-                    </PostProvider>
+                    <EventProvider>
+                      <PostProvider>
+                        {isTryingLogin ? (
+                          <LoadingScreen />
+                        ) : user ? (
+                          <AuthenticatedStack />
+                        ) : (
+                          <StackNavigator />
+                        )}
+                      </PostProvider>
+                    </EventProvider>
                   </ClubProvider>
                 </AuthProvider>
               </NavigationContainer>

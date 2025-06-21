@@ -34,7 +34,7 @@ export default function ClubCard(club: CLUB) {
     if (club.isFollowed) {
       try {
         const response = await axios.delete(
-          `${process.env.EXPO_PUBLIC_SERVER_URL}/clubfollowers/${user?.email}`,
+          `${process.env.EXPO_PUBLIC_SERVER_URL}/unfollowclub/${user?.email}`,
           {
             data: { clubId: club?.id },
           }

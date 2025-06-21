@@ -33,12 +33,11 @@ export default function SignIn({ navigation }: { navigation: any }) {
       .then(async (userCredential) => {
         if (userCredential.user) {
           const userEmail = userCredential.user?.email;
-       
 
           Toast.show({
             type: "success",
-            text1: "Success!🎉",
-            text2: "You have successfully signed in to your account.",
+            text1: "Login Successfull🎉",
+            text2: "Welcome back to Campusly!",
           });
 
           if (userEmail) {
@@ -86,9 +85,7 @@ export default function SignIn({ navigation }: { navigation: any }) {
             navigation.navigate("SignUp");
           }}
         >
-          <Text style={styles.footerText}>
-            New to Campusly? Sign up here
-          </Text>
+          <Text style={styles.footerText}>New to Campusly? Sign up here</Text>
         </Pressable>
       </View>
     </TouchableWithoutFeedback>

@@ -6,8 +6,10 @@ import {
   StyleSheet,
   Image,
   TextInput,
+  Keyboard,
 } from "react-native";
 import React, { useLayoutEffect, useState } from "react";
+import moment from "moment";
 import {
   useNavigation,
   CompositeNavigationProp,
@@ -57,9 +59,11 @@ export default function AddEvent() {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [linkError, setLinkError] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [eventDateError, setEventDateError] = useState<boolean>(false);
+  const [eventTimeError, setEventTimeError] = useState<boolean>(false);
 
-  const [date, setDate] = useState<Date | null>(null);
-  const [time, setTime] = useState<Date | null>(null);
+  const [eventDate, setEventDate] = useState<Date | null>(null);
+  const [eventTime, setEventTime] = useState<Date | null>(null);
   const [openDatePicker, setOpenDatePicker] = useState(false);
   const [openTimePicker, setOpenTimePicker] = useState(false);
 
@@ -71,28 +75,32 @@ export default function AddEvent() {
     setOpenTimePicker(true);
   };
 
-  const onDateChange = (event: any, selectedDate?: Date) => {
+  const onDateChange = (event: any, selectedDate?: any) => {
     if (Platform.OS === "android") {
       setOpenDatePicker(false);
       if (event.type === "set" && selectedDate) {
-        setDate(selectedDate);
+        setEventDate(selectedDate);
+        setEventDateError(false);
       }
     } else {
       if (selectedDate) {
-        setDate(selectedDate);
+        setEventDate(selectedDate);
+        setEventDateError(false);
       }
     }
   };
 
-  const onTimeChange = (event: any, selectedTime?: Date) => {
+  const onTimeChange = (event: any, selectedTime?: any) => {
     if (Platform.OS === "android") {
       setOpenTimePicker(false);
       if (event.type === "set" && selectedTime) {
-        setTime(selectedTime);
+        setEventTime(selectedTime);
+        setEventTimeError(false);
       }
     } else {
       if (selectedTime) {
-        setTime(selectedTime);
+        setEventTime(selectedTime);
+        setEventTimeError(false);
       }
     }
   };
@@ -101,7 +109,9 @@ export default function AddEvent() {
     name: string,
     location: string,
     link: string,
-    image: string | null
+    image: string | null,
+    eventDate: Date | null,
+    eventTime: Date | null
   ) => {
     let isValid = true;
 
@@ -135,8 +145,21 @@ export default function AddEvent() {
     if (!link) {
       setLinkError("Please enter a link");
       isValid = false;
+    } else if (!link.includes("https://")) {
+      setLinkError("Please enter a valid link");
+      isValid = false;
     } else {
       setLinkError(null);
+    }
+
+    if (!eventDate) {
+      setEventDateError(true);
+      isValid = false;
+    }
+
+    if (!eventTime) {
+      setEventTimeError(true);
+      isValid = false;
     }
 
     console.log("Validation Result:", { name, location, link, image, isValid });
@@ -147,7 +170,10 @@ export default function AddEvent() {
     name: string,
     location: string,
     link: string,
-    image: string | null
+    image: string | null,
+    eventDate: Date | null,
+    eventTime: Date | null,
+    u_email: string
   ) => {
     setLoading(true);
     try {
@@ -171,30 +197,32 @@ export default function AddEvent() {
         );
         imageUrl = uploadImage.url;
       }
+      if (imageUrl) {
+        const result = await axios.post(
+          `${process.env.EXPO_PUBLIC_SERVER_URL}/event`,
+          {
+            eventName: eventName,
+            location: eventLocation,
+            link: eventLink,
+            eventImage: imageUrl,
+            eventDate: moment(eventDate).format("MMMM Do YYYY"),
+            eventTime: moment(eventTime).format("hh:mm a"),
+            u_email: u_email,
+          }
+        );
+        if (result.status === 201) {
+          Toast.show({
+            text1: "Great! New event added",
+            type: "success",
+          });
 
-      const result = await axios.post(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/event`,
-        {
-          name: name,
-          location: location,
-          link: link,
-          imageUrl: imageUrl,
-          u_email: user?.email,
+          navigation.navigate("DrawerNavigator", {
+            screen: "TabLayout",
+            params: {
+              screen: "Events",
+            },
+          });
         }
-      );
-
-      if (result.status === 201) {
-        Toast.show({
-          text1: "Your event has been created",
-          type: "success",
-        });
-
-        navigation.navigate("DrawerNavigator", {
-          screen: "TabLayout",
-          params: {
-            screen: "Events",
-          },
-        });
       }
     } catch (error) {
       console.log(error);
@@ -213,11 +241,34 @@ export default function AddEvent() {
       const location = eventLocation.trim();
       const link = eventLink.trim();
       const image = eventImage;
+      const date = eventDate;
+      const time = eventTime;
 
-      const isValid = validateInputs(name, location, link, image);
+      const isValid = validateInputs(
+        eventName,
+        eventLocation,
+        eventLink,
+        eventImage,
+        eventDate,
+        eventTime
+      );
 
       if (isValid) {
-        uploadData(name, location, link, image);
+        uploadData(
+          eventName,
+          eventLocation,
+          eventLink,
+          eventImage,
+          eventDate,
+          eventTime,
+          user?.email
+        );
+      } else {
+        Toast.show({
+          text1: "Please fill all the fields",
+          type: "error",
+        });
+        Keyboard.dismiss();
       }
     }, 100);
   };
@@ -272,6 +323,11 @@ export default function AddEvent() {
 
   const handleLinkChange = (text: string) => {
     setEventLink(text);
+    if (!text.includes("https://")) {
+      setLinkError("Please enter a valid link");
+    } else {
+      setLinkError(null);
+    }
   };
 
   useLayoutEffect(() => {
@@ -386,13 +442,17 @@ export default function AddEvent() {
       {linkError && <Text style={styles.errorText}>{linkError}</Text>}
 
       <Button
-        viewStyle={{ width: "100%" }}
+        viewStyle={{
+          width: "100%",
+          borderColor: eventDateError ? "red" : Colors.PRIMARY,
+        }}
+        textStyle={{ color: eventDateError ? "red" : Colors.PRIMARY }}
         outline
         onPress={() => showDatePicker()}
       >
         <Text>
-          {date
-            ? date.toLocaleDateString([], {
+          {eventDate
+            ? eventDate.toLocaleDateString([], {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
@@ -402,13 +462,17 @@ export default function AddEvent() {
       </Button>
 
       <Button
-        viewStyle={{ width: "100%" }}
+        viewStyle={{
+          width: "100%",
+          borderColor: eventTimeError ? "red" : Colors.PRIMARY,
+        }}
+        textStyle={{ color: eventTimeError ? "red" : Colors.PRIMARY }}
         outline
         onPress={() => showTimePicker()}
       >
         <Text>
-          {time
-            ? time.toLocaleTimeString([], {
+          {eventTime
+            ? eventTime.toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
               })
@@ -418,7 +482,7 @@ export default function AddEvent() {
 
       {openDatePicker && (
         <RNDateTimePicker
-          value={date || new Date()}
+          value={eventDate || new Date()}
           mode={"date"}
           display={Platform.OS === "ios" ? "spinner" : "default"}
           is24Hour={true}
@@ -427,10 +491,9 @@ export default function AddEvent() {
       )}
       {openTimePicker && (
         <RNDateTimePicker
-          value={time || new Date()}
+          value={eventTime || new Date()}
           mode={"time"}
           display={Platform.OS === "ios" ? "spinner" : "default"}
-          is24Hour={true}
           onChange={onTimeChange}
         />
       )}
