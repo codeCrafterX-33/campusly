@@ -5,10 +5,12 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
+  RefreshControl,
 } from "react-native";
 import PostCard from "./PostCard";
 import { PostContext } from "../../context/PostContext";
 import Colors from "../../constants/Colors";
+import { useTheme } from "react-native-paper";
 
 const PostList = ({
   posts,
@@ -24,6 +26,7 @@ const PostList = ({
   clubOnRefresh?: () => void;
 }) => {
   const { refreshing, onRefresh } = useContext(PostContext);
+  const { colors: color } = useTheme();
 
   const handleRefresh = () => {
     console.log("Refreshing with club_id:", club_id);
@@ -40,6 +43,27 @@ const PostList = ({
         onRefresh={clubOnRefresh ? clubOnRefresh : handleRefresh}
         contentContainerStyle={{ paddingBottom: 100 }}
         ref={flatListRef}
+        ListEmptyComponent={
+          <View
+            style={{
+              flex: 1,
+              alignItems: "center",
+              marginTop: 20,
+              justifyContent: "center",
+            }}
+          >
+        
+            <Text style={[{color:color.onBackground}]}>No posts available</Text>
+          </View>
+        }
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.PRIMARY]} // Android spinner color
+            tintColor={Colors.PRIMARY} // iOS spinner color
+          />
+        }
       />
     </View>
   );

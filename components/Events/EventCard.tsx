@@ -4,6 +4,9 @@ import { RFValue } from "react-native-responsive-fontsize";
 import Colors from "../../constants/Colors";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Button from "../ui/Button";
+import { useContext } from "react";
+import { EventContext } from "../../context/EventContext";
+
 type EVENT = {
   id: number;
   name: string;
@@ -14,10 +17,15 @@ type EVENT = {
   event_time: string;
   createdBy: string;
   username: string;
+  isRegistered?: boolean;
+  isCreator?: boolean;
+  refreshData?: () => void;
 };
 
 export default function EventCard({ event }: { event: EVENT }) {
+  const { registerEvent, unregisterEvent } = useContext(EventContext);
   const { colors } = useTheme();
+
   return (
     <View style={styles.eventCard}>
       <Image

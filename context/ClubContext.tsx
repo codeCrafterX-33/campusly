@@ -78,10 +78,7 @@ function ClubProvider({ children }: { children: React.ReactNode }) {
         );
         if (response.status === 200) {
           setFollowedClubs(response.data.data);
-          console.log(
-            "Club followers fetched successfully",
-            response.data.data
-          );
+          console.log("Club followers fetched successfully");
         }
       }
     } catch (error) {

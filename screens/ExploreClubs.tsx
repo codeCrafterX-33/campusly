@@ -90,6 +90,14 @@ export default function ExploreClubs() {
           contentContainerStyle={{ padding: 16 }}
           numColumns={2}
           ListFooterComponent={<View style={{ height: 100 }} />}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={[Colors.PRIMARY]} // Android spinner color
+              tintColor={Colors.PRIMARY} // iOS spinner color
+            />
+          }
         />
       )}
     </View>

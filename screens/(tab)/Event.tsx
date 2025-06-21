@@ -9,6 +9,7 @@ import { useEffect, useState, useLayoutEffect, useContext } from "react";
 import EventCard from "../../components/Events/EventCard";
 import { EventContext } from "../../context/EventContext";
 import Colors from "../../constants/Colors";
+import { auth } from "../../configs/FireBaseConfigs";
 
 type EventViewProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
@@ -27,12 +28,30 @@ type Event = {
 };
 
 export default function EventView({ navigation }: EventViewProps) {
-  const { getEvents, events, refreshing, onRefresh, setRefreshing } =
-    useContext(EventContext);
+  const {
+    getEvents,
+    events,
+    refreshing,
+    onRefresh,
+    setRefreshing,
+    getRegisteredEvents,
+    registeredEvents,
+  } = useContext(EventContext);
 
   useLayoutEffect(() => {
     getEvents();
   }, []);
+
+  const isRegistered = (eventId: number) => {
+    const event = registeredEvents.find(
+      (event: any) => event.event_id === eventId
+    );
+    return event ? true : false;
+  };
+
+  const isCreator = (createdBy: string) => {
+    return createdBy === auth.currentUser?.email;
+  };
 
   const { colors } = useTheme();
   return (
