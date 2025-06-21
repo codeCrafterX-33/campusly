@@ -71,7 +71,15 @@ export default function EventView({ navigation }: EventViewProps) {
       </View>
       <FlatList
         data={events}
-        renderItem={({ item, index }) => <EventCard event={item} key={index} />}
+        renderItem={({ item, index }) => (
+          <EventCard
+            {...item}
+            key={index}
+            isRegistered={isRegistered(item.id)}
+            isCreator={isCreator(item.createdby)}
+            refreshData={getEvents}
+          />
+        )}
         keyExtractor={(item) => item.id.toString()}
         refreshing={refreshing}
         onRefresh={async () => {
@@ -79,6 +87,7 @@ export default function EventView({ navigation }: EventViewProps) {
           await getEvents();
           setRefreshing(false);
         }}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

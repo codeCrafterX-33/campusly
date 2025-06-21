@@ -297,7 +297,7 @@ app.get("/event/registered/:u_email", async (req, res) => {
     const result = await client.query(
       `SELECT events.*, event_registration.* FROM events
 INNER JOIN event_registration ON events.id = event_registration.event_id
-WHERE event_registration.u_email = $1`,
+WHERE event_registration.user_email = $1`,
       [u_email]
     );
 
@@ -319,7 +319,7 @@ app.delete("/event/unregister/:u_email", async (req, res) => {
 
   try {
     const result = await client.query(
-      `DELETE FROM event_registration WHERE u_email = $1 AND event_id = $2`,
+      `DELETE FROM event_registration WHERE user_email = $1 AND event_id = $2`,
       [u_email, eventId]
     );
 

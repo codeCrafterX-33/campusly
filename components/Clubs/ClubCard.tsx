@@ -11,9 +11,6 @@ import { ClubContext } from "../../context/ClubContext";
 import Toast from "react-native-toast-message";
 import { RFValue } from "react-native-responsive-fontsize";
 
-
-
-
 export interface CLUB {
   id: number;
   name: string;
@@ -130,7 +127,6 @@ export default function ClubCard(club: CLUB) {
         isLoading={isLoading}
         outline={club.isFollowed}
         viewStyle={styles.button}
-        textStyle={styles.buttonText}
       >
         {club.isFollowed ? "following" : "follow"}
       </Button>
@@ -214,8 +210,5 @@ const styles = StyleSheet.create({
   },
   button: {
     width: RFValue(70),
-  },
-  buttonText: {
-    fontSize: RFValue(18),
   },
 });

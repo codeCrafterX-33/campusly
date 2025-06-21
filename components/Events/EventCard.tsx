@@ -4,7 +4,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import Colors from "../../constants/Colors";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import Button from "../ui/Button";
-import { useContext } from "react";
+import { useContext, useState } from "react";
 import { EventContext } from "../../context/EventContext";
 
 type EVENT = {
@@ -22,9 +22,31 @@ type EVENT = {
   refreshData?: () => void;
 };
 
-export default function EventCard({ event }: { event: EVENT }) {
+export default function EventCard(event: EVENT) {
   const { registerEvent, unregisterEvent } = useContext(EventContext);
   const { colors } = useTheme();
+  const [isLoading, setIsLoading] = useState(false);
+
+  const onRegisterBtnClick = async () => {
+    setIsLoading(true);
+    if (event.isRegistered) {
+      try {
+        await unregisterEvent(event.id);
+      } catch (error) {
+        console.log("Error unregistering from event:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    } else {
+      try {
+        await registerEvent(event.id);
+      } catch (error) {
+        console.log("Error registering for event:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
 
   return (
     <View style={styles.eventCard}>
@@ -52,8 +74,13 @@ export default function EventCard({ event }: { event: EVENT }) {
         <Button fullWidth outline onPress={() => {}}>
           Share
         </Button>
-        <Button fullWidth onPress={() => {}}>
-          Register
+        <Button
+          fullWidth
+          isLoading={isLoading}
+          onPress={() => onRegisterBtnClick()}
+          dim={event.isRegistered}
+        >
+          {event.isRegistered ? "Registered" : "Register"}
         </Button>
       </View>
     </View>

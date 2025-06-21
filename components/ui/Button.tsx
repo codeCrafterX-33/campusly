@@ -19,6 +19,7 @@ type ButtonProps = {
   outline?: boolean;
   disabled?: boolean;
   fullWidth?: boolean;
+  dim?: boolean;
 };
 
 export default function Button({
@@ -30,6 +31,7 @@ export default function Button({
   viewStyle,
   disabled,
   fullWidth,
+  dim = false,
 }: ButtonProps) {
   return (
     <TouchableOpacity
@@ -40,6 +42,7 @@ export default function Button({
         viewStyle,
         disabled && styles.disabled,
         fullWidth && styles.fullWidth,
+        dim && { opacity: 0.5, backgroundColor: Colors.GRAY },
       ]}
     >
       {isLoading ? (
