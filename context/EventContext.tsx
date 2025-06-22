@@ -81,6 +81,7 @@ function EventProvider({ children }: { children: React.ReactNode }) {
         console.log("Event registered successfully");
         await getRegisteredEvents();
       }
+      return { status: response.status };
     } catch (error) {
       console.log(error);
     }
@@ -98,6 +99,7 @@ function EventProvider({ children }: { children: React.ReactNode }) {
         console.log("Event unregistered successfully");
         await getRegisteredEvents();
       }
+      return { status: response.status };
     } catch (error) {
       console.log(error);
     }

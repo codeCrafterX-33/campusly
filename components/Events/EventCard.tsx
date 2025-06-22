@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Image } from "react-native";
+import { View, Text, StyleSheet, Image, Alert, Share } from "react-native";
 import { useTheme } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
 import Colors from "../../constants/Colors";
@@ -6,6 +6,9 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import Button from "../ui/Button";
 import { useContext, useState } from "react";
 import { EventContext } from "../../context/EventContext";
+import { showEventToast } from "../ToastMessages";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
 
 type EVENT = {
   id: number;
@@ -28,23 +31,80 @@ export default function EventCard(event: EVENT) {
   const [isLoading, setIsLoading] = useState(false);
 
   const onRegisterBtnClick = async () => {
-    setIsLoading(true);
     if (event.isRegistered) {
+      // If the user is already registered, unregister them
+
       try {
-        await unregisterEvent(event.id);
+        Alert.alert(
+          "Wait up! 🛑",
+          "Are you sure you want to bail on this event? 😢 We'll miss you!",
+          [
+            {
+              text: "Yeah, gotta go",
+              onPress: async () => {
+                setIsLoading(true); // Set loading state to true while unregistering
+                try {
+                  const unregister = await unregisterEvent(event.id);
+                  if (unregister?.status === 200) {
+                    showEventToast("unregister"); // random fun unregister toast
+                    event.refreshData?.();
+                  } else {
+                    showEventToast("unregisterError");
+                  }
+                } catch (error) {
+                  console.log("Error unregistering from event:", error);
+                  showEventToast("unregisterError");
+                } finally {
+                  setIsLoading(false);
+                }
+              },
+            },
+            {
+              text: "Nah, I'm staying",
+              onPress: () => {
+                setIsLoading(false); // Reset loading state if user cancels
+              },
+              style: "cancel",
+            },
+          ],
+          { cancelable: true }
+        );
       } catch (error) {
         console.log("Error unregistering from event:", error);
-      } finally {
-        setIsLoading(false);
+        showEventToast("unregisterError");
       }
     } else {
       try {
-        await registerEvent(event.id);
+        setIsLoading(true); // Set loading state to true while registering
+        const register = await registerEvent(event.id);
+        if (register.status === 201) {
+          showEventToast("register");
+          event.refreshData?.();
+        }
       } catch (error) {
         console.log("Error registering for event:", error);
+        showEventToast("registerError");
       } finally {
         setIsLoading(false);
       }
+    }
+  };
+
+  const shareImage = async () => {
+    try {
+      const fileUri = FileSystem.documentDirectory + "event_image.png";
+      // download the image from the url
+      const image = await FileSystem.downloadAsync(event.bannerurl, fileUri);
+
+      // check if sharing is available
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(fileUri);
+      } else {
+        showEventToast("shareError");
+      }
+    } catch (error) {
+      console.log("Error sharing event:", error);
+      showEventToast("shareError");
     }
   };
 
@@ -71,8 +131,14 @@ export default function EventCard(event: EVENT) {
         </Text>
       </View>
       <View style={styles.buttonContainer}>
-        <Button fullWidth outline onPress={() => {}}>
-          Share
+        <Button
+          fullWidth
+          outline
+          onPress={() => {
+            shareImage();
+          }}
+        >
+          <Ionicons name="share-outline" size={30} color={Colors.PRIMARY} />
         </Button>
         <Button
           fullWidth
