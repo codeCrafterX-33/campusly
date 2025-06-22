@@ -90,22 +90,17 @@ export default function EventCard(event: EVENT) {
     }
   };
 
-  const shareImage = async () => {
-    try {
-      const fileUri = FileSystem.documentDirectory + "event_image.png";
-      // download the image from the url
-      const image = await FileSystem.downloadAsync(event.bannerurl, fileUri);
+  const shareEvent = async () => {
+    const message = `🎉 ${event.name}
+📍 ${event.location}
+📅 ${event.event_date} at ${event.event_time}
 
-      // check if sharing is available
-      if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(fileUri);
-      } else {
-        showEventToast("shareError");
-      }
-    } catch (error) {
-      console.log("Error sharing event:", error);
-      showEventToast("shareError");
-    }
+Join me on Campusly:
+https://campusly.vercel.app/events/${event.id}
+
+`;
+
+    await Share.share({ message });
   };
 
   return (
@@ -135,7 +130,7 @@ export default function EventCard(event: EVENT) {
           fullWidth
           outline
           onPress={() => {
-            shareImage();
+            shareEvent();
           }}
         >
           <Ionicons name="share-outline" size={30} color={Colors.PRIMARY} />
