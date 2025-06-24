@@ -83,32 +83,42 @@ app.post("/post", async (req, res) => {
 });
 
 app.get("/posts", async (req, res) => {
-  const { club, orderField = "createdon" } = req.query;
+  const { club, userEmail, orderField = "createdon" } = req.query;
 
-  if (!club) {
-    return res.status(400).json({
-      message: "Missing required parameter: club",
-    });
-  }
-
-  try {
+  if (userEmail) {
     const result = await client.query(
-      `SELECT * FROM posts
-   INNER JOIN users ON posts.createdby = users.email
-   WHERE club in (${club})
-   ORDER BY ${orderField} DESC`
+      `SELECT * FROM posts 
+      INNER JOIN users ON posts.createdby = users.email
+      WHERE createdby = $1
+      ORDER BY ${orderField} DESC`,
+      [userEmail]
     );
-    console.log(result.rows);
-
-    res.status(200).json({
+    return res.status(200).json({
       message: "Posts fetched successfully",
       data: result.rows,
     });
-  } catch (error) {
-    res.status(500).json({
-      message: "Posts fetching failed",
-      error: error.message,
-    });
+  }
+
+  if (club) {
+    try {
+      const result = await client.query(
+        `SELECT * FROM posts
+   INNER JOIN users ON posts.createdby = users.email
+   WHERE club in (${club})
+   ORDER BY ${orderField} DESC`
+      );
+      console.log(result.rows);
+
+      res.status(200).json({
+        message: "Posts fetched successfully",
+        data: result.rows,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Posts fetching failed",
+        error: error.message,
+      });
+    }
   }
 });
 
@@ -295,8 +305,10 @@ app.get("/event/registered/:u_email", async (req, res) => {
 
   try {
     const result = await client.query(
-      `SELECT events.*, event_registration.* FROM events
+      `SELECT events.*, event_registration.*, users.name as username FROM events
 INNER JOIN event_registration ON events.id = event_registration.event_id
+INNER JOIN users 
+  ON events.createdby = users.email
 WHERE event_registration.user_email = $1`,
       [u_email]
     );

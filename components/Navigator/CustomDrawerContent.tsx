@@ -11,12 +11,13 @@ import {
   Surface,
 } from "react-native-paper";
 
-import { MaterialCommunityIcons as Icon } from '@expo/vector-icons';
+import { MaterialCommunityIcons as Icon } from "@expo/vector-icons";
 import { Typography } from "../../components/shared/Typography";
 import { AuthContext } from "../../context/AuthContext";
 import Colors from "../../constants/Colors";
 import { useThemeContext } from "../../context/ThemeContext";
 import usePersistedState from "../../util/PersistedState";
+import Button from "../ui/Button";
 export function CustomDrawerContent(props: any) {
   const authCtx = useContext(AuthContext);
   const { isDarkMode, setIsDarkMode } = useThemeContext();
@@ -34,6 +35,7 @@ export function CustomDrawerContent(props: any) {
           <TouchableOpacity
             style={{ marginBottom: -10 }}
             onPress={() => {
+              props.navigation.closeDrawer();
               props.navigation.navigate("Profile");
             }}
           >
@@ -88,6 +90,7 @@ export function CustomDrawerContent(props: any) {
           label="Profile"
           labelStyle={{ color: colors.onBackground }}
           onPress={() => {
+            props.navigation.closeDrawer();
             props.navigation.navigate("Profile");
           }}
         />
@@ -126,7 +129,7 @@ export function CustomDrawerContent(props: any) {
             <Icon
               name={expanded ? "chevron-up" : "chevron-down"}
               size={24}
-              color={expanded ? Colors.PRIMARY : colors.onBackground}
+              color={Colors.PRIMARY}
             />
           </View>
         </TouchableRipple>
@@ -142,7 +145,7 @@ export function CustomDrawerContent(props: any) {
               <View style={styles.preference}>
                 <Text>Dark Theme</Text>
                 <View pointerEvents="none">
-                  <Switch value={isDarkMode} />
+                  <Switch color={Colors.PRIMARY} value={isDarkMode} />
                 </View>
               </View>
             </TouchableRipple>
@@ -156,6 +159,16 @@ export function CustomDrawerContent(props: any) {
             </TouchableRipple>
           </>
         )}
+
+        <Button
+          onPress={() => {
+            authCtx.logout();
+
+          }}
+          viewStyle={{ marginTop: 50 }}
+        >
+          Logout
+        </Button>
       </View>
     </DrawerContentScrollView>
   );

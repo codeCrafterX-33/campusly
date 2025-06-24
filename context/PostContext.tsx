@@ -10,10 +10,13 @@ const PostContext = createContext<any>({
   getPosts: () => {},
   refreshing: false,
   onRefresh: () => {},
+  getUserPosts: () => {},
+  setUserPosts: () => {},
 });
 
 function PostProvider({ children }: { children: React.ReactNode }) {
   const [posts, setPosts] = usePersistedState("posts", []);
+  const [userPosts, setUserPosts] = usePersistedState("userPosts", []);
   const [refreshing, setRefreshing] = useState(false);
   const { user } = useContext(AuthContext);
 
@@ -48,6 +51,7 @@ function PostProvider({ children }: { children: React.ReactNode }) {
           setPosts(data.data);
         }
         console.log("Posts fetched successfully");
+        console.log(posts);
       } else {
         console.log("Error fetching posts");
       }
@@ -65,6 +69,20 @@ function PostProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const GetUserPosts = async () => {
+    console.log("Fetching user posts");
+    const response = await axios.get(
+      `${process.env.EXPO_PUBLIC_SERVER_URL}/posts?userEmail=${user?.email}`
+    );
+
+    if (response.status === 200) {
+      const data = response.data;
+      setUserPosts(data.data);
+      console.log("User posts fetched successfully");
+    } else {
+      console.log("Error fetching user posts");
+    }
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -83,6 +101,9 @@ function PostProvider({ children }: { children: React.ReactNode }) {
     getPosts: GetPosts,
     refreshing: refreshing,
     onRefresh: onRefresh,
+    getUserPosts: GetUserPosts,
+    setUserPosts: setUserPosts,
+    userPosts: userPosts, 
   };
 
   return <PostContext.Provider value={value}>{children}</PostContext.Provider>;

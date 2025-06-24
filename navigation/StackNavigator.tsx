@@ -88,19 +88,14 @@ export const AuthenticatedStack = () => {
         name="Profile"
         component={Profile}
         options={({ navigation }) => ({
-          headerShown: true,
+         
+          headerTransparent: true,
+          headerTintColor: colors.onBackground,
+          headerShown: false,
           headerTitle: "Profile",
           gestureEnabled: false,
           ...TransitionPresets.SlideFromRightIOS,
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => {
-                navigation.replace("DrawerNavigator");
-              }}
-            >
-              <Icon name="arrow-left" size={24} color={colors.onBackground} />
-            </TouchableOpacity>
-          ),
+          
         })}
       />
 
@@ -121,7 +116,11 @@ export const AuthenticatedStack = () => {
       <Stack.Screen
         name="AddEvent"
         component={AddEvent}
-        options={{ headerShown: true, headerTitle: "Add Event", ...TransitionPresets.SlideFromRightIOS }}
+        options={{
+          headerShown: true,
+          headerTitle: "Add Event",
+          ...TransitionPresets.SlideFromRightIOS,
+        }}
       />
     </Stack.Navigator>
   );

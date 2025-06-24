@@ -100,13 +100,13 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
       />
       {/* other screens */}
       <Tab.Screen
-        name="Event"
+        name="Events"
         component={Event}
         options={{
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="calendar" color={color} size={size} />
           ),
-           headerStyle: {
+          headerStyle: {
             backgroundColor: colors.background,
           },
           headerLeft: () => {
@@ -130,7 +130,7 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="people" color={color} size={size} />
           ),
-           headerStyle: {
+          headerStyle: {
             backgroundColor: colors.background,
           },
           headerLeft: () => {
@@ -154,7 +154,7 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="chatbox-ellipses" color={color} size={size} />
           ),
-           headerStyle: {
+          headerStyle: {
             backgroundColor: colors.background,
           },
           headerLeft: () => {

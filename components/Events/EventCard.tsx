@@ -23,6 +23,8 @@ type EVENT = {
   isRegistered?: boolean;
   isCreator?: boolean;
   refreshData?: () => void;
+  filter?: string;
+  event_id?: number;
 };
 
 export default function EventCard(event: EVENT) {
@@ -44,7 +46,9 @@ export default function EventCard(event: EVENT) {
               onPress: async () => {
                 setIsLoading(true); // Set loading state to true while unregistering
                 try {
-                  const unregister = await unregisterEvent(event.id);
+                  const unregister = await unregisterEvent(
+                    event.filter === "upcoming" ? event.id : event.event_id
+                  );
                   if (unregister?.status === 200) {
                     showEventToast("unregister"); // random fun unregister toast
                     event.refreshData?.();
