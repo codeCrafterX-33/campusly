@@ -17,6 +17,7 @@ import ExploreClubs from "../screens/ExploreClubs";
 import { useTheme } from "react-native-paper";
 import CreateClub from "../screens/CreateClub";
 import AddEvent from "../screens/AddEvent";
+import Profile2 from "../screens/(tab)/profile2";
 export type RootStackParamList = {
   Landing: undefined;
   SignIn: undefined;
@@ -88,14 +89,12 @@ export const AuthenticatedStack = () => {
         name="Profile"
         component={Profile}
         options={({ navigation }) => ({
-         
           headerTransparent: true,
           headerTintColor: colors.onBackground,
           headerShown: false,
           headerTitle: "Profile",
           gestureEnabled: false,
           ...TransitionPresets.SlideFromRightIOS,
-          
         })}
       />
 

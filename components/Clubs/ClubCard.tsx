@@ -128,7 +128,7 @@ export default function ClubCard(club: CLUB) {
         outline={club.isFollowed}
         viewStyle={styles.button}
       >
-        {club.isFollowed ? "following" : "follow"}
+        {club.isFollowed ? "Joined" : "Join"}
       </Button>
     </View>
   );

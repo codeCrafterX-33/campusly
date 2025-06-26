@@ -59,7 +59,8 @@
     "react-native-toast-message": "^2.2.1",
     "react-native-vector-icons": "^10.2.0",
     "expo-file-system": "~18.1.10",
-    "expo-sharing": "~13.1.5"
+    "expo-sharing": "~13.1.5",
+    "expo-haptics": "~14.1.4"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
