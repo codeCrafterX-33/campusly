@@ -60,19 +60,19 @@ export function CustomDrawerContent(props: any) {
               <Typography
                 style={[styles.paragraph, { color: colors.onBackground }]}
               >
-                202
+                1,234
               </Typography>
-              <Typography style={[styles.caption]}>Following</Typography>
+              <Typography style={[styles.caption]}>Connections</Typography>
             </View>
             <View style={styles.section}>
               <Typography
                 variant="bodyMedium"
                 style={[styles.paragraph, { color: colors.onSurface }]}
               >
-                159
+                5,678
               </Typography>
 
-              <Typography style={[styles.caption]}>Followers</Typography>
+              <Typography style={[styles.caption]}>Following</Typography>
             </View>
           </View>
         </View>
@@ -163,7 +163,6 @@ export function CustomDrawerContent(props: any) {
         <Button
           onPress={() => {
             authCtx.logout();
-
           }}
           viewStyle={{ marginTop: 50 }}
         >

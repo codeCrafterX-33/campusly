@@ -15,9 +15,13 @@ const PROFILE_IMAGE_SIZE = 80;
 
 interface ProfileHeaderProps {
   scrollY: Animated.Value;
+  user_id: string;
 }
 
-const ProfileHeader = ({ scrollY }: ProfileHeaderProps) => {
+const ProfileHeader = ({ scrollY, user_id }: ProfileHeaderProps) => {
+    const { user } = useContext(AuthContext);
+  const loggedInUser = user_id === user?.email;
+
   const profileImageScale = scrollY.interpolate({
     inputRange: [0, COVER_HEIGHT / 2, COVER_HEIGHT],
     outputRange: [1, 0.6, 0.3],
@@ -37,7 +41,7 @@ const ProfileHeader = ({ scrollY }: ProfileHeaderProps) => {
     extrapolate: "clamp",
   });
 
-  const { user } = useContext(AuthContext);
+
   return (
     <View style={styles.profileHeader}>
       <Animated.View
@@ -62,8 +66,10 @@ const ProfileHeader = ({ scrollY }: ProfileHeaderProps) => {
           <Text style={styles.verificationText}>🎓</Text>
         </View>
       </Animated.View>
-      <TouchableOpacity style={styles.followButton}>
-        <Text style={styles.followButtonText}>Following</Text>
+      <TouchableOpacity style={loggedInUser ? styles.editProfileButton : styles.followButton}>
+        <Text style={loggedInUser ? styles.editProfileButtonText : styles.followButtonText}>
+          {loggedInUser ? "Edit Profile" : "Follow"}
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -115,4 +121,17 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontWeight: "bold",
   },
+
+  editProfileButton: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 20,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  editProfileButtonText: {
+    color: "#000",
+    fontWeight: "bold",
+  },
+  
+
 });

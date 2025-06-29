@@ -3,7 +3,6 @@ import React, {
   useRef,
   useCallback,
   useContext,
-  useLayoutEffect,
   useEffect,
 } from "react";
 import {
@@ -29,26 +28,22 @@ import { useTheme } from "react-native-paper";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import ProfileHeader from "../../components/Profile/ProfileHeader";
 import { useNavigation } from "@react-navigation/native";
+import Toast from "react-native-toast-message";
+import { useCheckAnimation } from "../../util/showSuccessCheckmark";
+import PullToRefreshIndicator from "../../components/Profile/PullToRefreshIndicator";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
 const HEADER_HEIGHT = 56;
 const COVER_HEIGHT = 200;
 
 const PULL_THRESHOLD = 80;
-
-interface Tweet {
-  id: string;
-  content: string;
-  timestamp: string;
-  likes: number;
-  retweets: number;
-  replies: number;
-}
 
 const Profile = () => {
   const { user } = useContext(AuthContext);
   const { userPosts, getUserPosts } = useContext(PostContext);
   const { colors } = useTheme();
   const navigation = useNavigation();
+  const { showSuccessCheckmark, checkmark } = useCheckAnimation();
 
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("Posts");
@@ -61,113 +56,36 @@ const Profile = () => {
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const pullProgress = useRef(new Animated.Value(0)).current;
-  const checkmarkScale = useRef(new Animated.Value(0)).current;
-  const checkmarkOpacity = useRef(new Animated.Value(0)).current;
+
   const suggestionOpacity = useRef(new Animated.Value(0)).current;
   const suggestionTranslateY = useRef(new Animated.Value(-30)).current;
-  const hideTimeout = useRef<NodeJS.Timeout | null>(null);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     setHasTriggeredHaptic(false);
 
-    // Force hide the pull suggestion immediately when refresh starts
-    const status = await getUserPosts();
+    try {
+      const status = await getUserPosts();
 
-    if (status === 200) {
-      // Trigger success vibration
-      Vibration.vibrate(100);
-      setTimeout(() => {
-        setRefreshing(false);
-        showSuccessCheckmark();
-      }, 2000);
-    } else {
+      if (status === 200) {
+        // Trigger success vibration
+        Vibration.vibrate(100);
+        setTimeout(() => {
+          setRefreshing(false);
+          showSuccessCheckmark(setShowCheckmark);
+        }, 2000);
+      }
+    } catch (error) {
+      console.log(error);
+      Toast.show({
+        text1: "Couldn't refresh profile",
+        text2: "Please check your internet or try again later.",
+        type: "error",
+        position: "bottom",
+      });
       setRefreshing(false);
     }
   }, []);
-
-  const showSuccessCheckmark = () => {
-    setShowCheckmark(true);
-
-    // Animate checkmark appearance
-    Animated.parallel([
-      Animated.spring(checkmarkScale, {
-        toValue: 1,
-        useNativeDriver: true,
-        tension: 150,
-        friction: 8,
-      }),
-      Animated.timing(checkmarkOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
-
-    // Hide checkmark after 2.5 seconds
-    setTimeout(() => {
-      Animated.parallel([
-        Animated.spring(checkmarkScale, {
-          toValue: 0,
-          useNativeDriver: true,
-          tension: 150,
-          friction: 8,
-        }),
-        Animated.timing(checkmarkOpacity, {
-          toValue: 0,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setShowCheckmark(false);
-      });
-    }, 2500);
-  };
-
-  const showPullSuggestionInternal = () => {
-    setShowPullSuggestion(true);
-    Animated.parallel([
-      Animated.timing(suggestionOpacity, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.spring(suggestionTranslateY, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 120,
-        friction: 8,
-      }),
-    ]).start();
-  };
-
-  const hidePullSuggestion = () => {
-    // Clear any existing timeout
-    if (hideTimeout.current) {
-      clearTimeout(hideTimeout.current);
-    }
-
-    // Set a delay before hiding to prevent flickering
-    hideTimeout.current = setTimeout(() => {
-      if (showPullSuggestion && !isPulling) {
-        Animated.parallel([
-          Animated.timing(suggestionOpacity, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.spring(suggestionTranslateY, {
-            toValue: -20,
-            useNativeDriver: true,
-            tension: 120,
-            friction: 8,
-          }),
-        ]).start(() => {
-          setShowPullSuggestion(false);
-        });
-      }
-    }, 500); // Wait 500ms before hiding
-  };
 
   const handleScroll = Animated.event(
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
@@ -180,11 +98,6 @@ const Profile = () => {
           const distance = Math.abs(offsetY);
           setPullDistance(distance);
           setIsPulling(true);
-
-          // Clear hide timeout when pulling
-          if (hideTimeout.current) {
-            clearTimeout(hideTimeout.current);
-          }
 
           // Update pull progress
           const progress = Math.min(distance / PULL_THRESHOLD, 1);
@@ -201,9 +114,6 @@ const Profile = () => {
           setPullDistance(0);
           pullProgress.setValue(0);
           setIsPulling(false);
-
-          // Hide pull suggestion with delay
-          hidePullSuggestion();
         }
       },
     }
@@ -230,61 +140,6 @@ const Profile = () => {
     inputRange: [0, 0.3, 0.7, 1],
     outputRange: [0, 0.5, 0.8, 1],
   });
-
-  const renderPullIndicator = () => {
-    if (pullDistance === 0 || refreshing) return null;
-
-    const isReady = pullDistance >= PULL_THRESHOLD;
-
-    return (
-      <Animated.View
-        style={[
-          styles.pullIndicator,
-          {
-            opacity: pullTextOpacity,
-            transform: [{ translateY: Math.min(pullDistance - 20, 60) }],
-          },
-        ]}
-      >
-        <Animated.View
-          style={[
-            styles.pullIcon,
-            {
-              backgroundColor: isReady ? "#1DA1F2" : "#8B98A5",
-              transform: [
-                { rotate: pullIndicatorRotation },
-                { scale: pullIndicatorScale },
-              ],
-            },
-          ]}
-        >
-          <Text
-            style={[styles.pullIconText, { color: isReady ? "#fff" : "#000" }]}
-          >
-            {isReady ? "🎉" : "↓"}
-          </Text>
-        </Animated.View>
-        <Text
-          style={[styles.pullText, { color: isReady ? "#1DA1F2" : "#8B98A5" }]}
-        >
-          {isReady ? "Release to refresh!" : "Pull to refresh"}
-        </Text>
-        <View style={styles.progressBar}>
-          <Animated.View
-            style={[
-              styles.progressFill,
-              {
-                width: pullProgress.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: ["0%", "100%"],
-                }),
-              },
-            ]}
-          />
-        </View>
-      </Animated.View>
-    );
-  };
 
   const renderTabBar = () => (
     <View style={styles.tabBar}>
@@ -388,63 +243,23 @@ const Profile = () => {
         </TouchableOpacity>
         <View style={styles.headerTitle}>
           <Text style={styles.headerName}>{user?.name}</Text>
-          <Text style={styles.headerTweetCount}>1,234 Tweets</Text>
+          <Text style={styles.headerTweetCount}>{userPosts.length} posts</Text>
         </View>
         <TouchableOpacity style={styles.headerButton}>
           <Text style={styles.headerButtonText}>⋯</Text>
         </TouchableOpacity>
       </Animated.View>
 
-      {/* Pull Suggestion in Header - Always render for better performance */}
-      {showPullSuggestion && (
-        <Animated.View
-          style={[
-            styles.pullSuggestion,
-            {
-              opacity: suggestionOpacity,
-              transform: [{ translateY: suggestionTranslateY }],
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.pullSuggestionText,
-              {
-                color:
-                  pullDistance >= PULL_THRESHOLD
-                    ? "#fff"
-                    : "rgba(255,255,255,0.9)",
-              },
-            ]}
-          >
-            {pullSuggestionText || "Pull down to refresh"}
-          </Text>
-          {pullDistance >= PULL_THRESHOLD && (
-            <Text style={styles.pullSuggestionEmoji}>🎉</Text>
-          )}
-        </Animated.View>
-      )}
-
       {/* Pull Progress Indicator */}
-      {renderPullIndicator()}
+      <PullToRefreshIndicator
+        pullDistance={pullDistance}
+        pullProgress={pullProgress}
+        refreshing={refreshing}
+        threshold={PULL_THRESHOLD}
+      />
 
       {/* Success Checkmark */}
-      {showCheckmark && (
-        <Animated.View
-          style={[
-            styles.checkmarkContainer,
-            {
-              opacity: checkmarkOpacity,
-              transform: [{ scale: checkmarkScale }],
-            },
-          ]}
-        >
-          <View style={styles.checkmarkCircle}>
-            <Text style={styles.checkmarkText}>✓</Text>
-          </View>
-          <Text style={styles.checkmarkLabel}>Updated!</Text>
-        </Animated.View>
-      )}
+      {showCheckmark && checkmark()}
 
       <Animated.ScrollView
         style={styles.scrollView}
@@ -454,8 +269,8 @@ const Profile = () => {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#1DA1F2"
-            colors={["#1DA1F2"]}
+            tintColor={Colors.PRIMARY}
+            colors={[Colors.PRIMARY]}
             progressViewOffset={60}
           />
         }
@@ -478,7 +293,7 @@ const Profile = () => {
 
         {/* Profile Section */}
         <View style={styles.profileSection}>
-          <ProfileHeader scrollY={scrollY} />
+          <ProfileHeader user_id={user?.email} scrollY={scrollY} />
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>{user?.name}</Text>
             <Text style={styles.profileHandle}>{user?.email}</Text>
@@ -548,7 +363,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: HEADER_HEIGHT + 44,
-    backgroundColor: "#1DA1F2",
+    backgroundColor: Colors.PRIMARY,
     flexDirection: "row",
     alignItems: "flex-end",
     paddingBottom: 8,
@@ -614,7 +429,7 @@ const styles = StyleSheet.create({
   },
   progressFill: {
     height: "100%",
-    backgroundColor: "#1DA1F2",
+    backgroundColor: Colors.PRIMARY,
     borderRadius: 1.5,
   },
   coverContainer: {
@@ -705,7 +520,7 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     borderBottomWidth: 2,
-    borderBottomColor: "#1DA1F2",
+    borderBottomColor: Colors.PRIMARY,
   },
   tabText: {
     color: "#8B98A5",
@@ -714,9 +529,7 @@ const styles = StyleSheet.create({
   activeTabText: {
     color: "#fff",
   },
-  tweetsContainer: {
-    backgroundColor: "#000",
-  },
+
   tweetContainer: {
     flexDirection: "row",
     padding: 16,
@@ -773,45 +586,7 @@ const styles = StyleSheet.create({
     color: "#8B98A5",
     fontSize: 14,
   },
-  checkmarkContainer: {
-    position: "absolute",
-    top: 130,
-    left: 0,
-    right: 0,
-    alignItems: "center",
-    zIndex: 1001,
-  },
-  checkmarkCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: Colors.PRIMARY,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
-  },
-  checkmarkText: {
-    color: "#fff",
-    fontSize: 24,
-    fontWeight: "bold",
-  },
-  checkmarkLabel: {
-    color: Colors.PRIMARY,
-    fontSize: 14,
-    fontWeight: "600",
-    marginTop: 8,
-    backgroundColor: "rgba(0,0,0,0.8)",
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
+
   pullSuggestion: {
     position: "absolute",
     top: HEADER_HEIGHT + 44 + 8,

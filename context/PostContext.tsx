@@ -82,11 +82,6 @@ function PostProvider({ children }: { children: React.ReactNode }) {
       console.log("User posts fetched successfully");
     } else {
       console.log("Error fetching user posts");
-      Toast.show({
-        text1: "Couldn't refresh profile",
-        text2: "Please check your internet or try again later.",
-        type: "error",
-      });
     }
     return response.status;
   };

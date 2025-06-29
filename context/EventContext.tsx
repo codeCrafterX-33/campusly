@@ -1,5 +1,5 @@
 import { View, Text } from "react-native";
-import React, { createContext, useEffect } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 import usePersistedState from "../util/PersistedState";
 import axios from "axios";
 import { AuthContext } from "./AuthContext";
@@ -18,13 +18,13 @@ const EventContext = createContext<any>({
 });
 
 function EventProvider({ children }: { children: React.ReactNode }) {
-  const { user } = React.useContext<any>(AuthContext);
+  const { user } = useContext<any>(AuthContext);
   const [events, setEvents] = usePersistedState("events", []);
   const [registeredEvents, setRegisteredEvents] = usePersistedState(
     "registeredEvents",
     []
   );
-  const [refreshing, setRefreshing] = React.useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   const GetEvents = async () => {
     try {
