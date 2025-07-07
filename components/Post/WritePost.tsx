@@ -17,8 +17,6 @@ import React, {
 import Colors from "../../constants/Colors";
 import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
-import { upload } from "cloudinary-react-native";
-import { cld, postOptions } from "../../configs/CloudinaryConfig";
 import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
@@ -31,6 +29,8 @@ import { useTheme } from "react-native-paper";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { PostContext } from "../../context/PostContext";
 import { ClubContext } from "../../context/ClubContext";
+import { postOptions } from "../../configs/CloudinaryConfig";
+
 interface UploadResponse {
   url: string;
   secure_url: string;
@@ -125,22 +125,33 @@ export default function WritePost() {
 
       // Upload image if one is selected
       if (selectedImage) {
-        const uploadImage = await new Promise<UploadResponse>(
-          (resolve, reject) => {
-            upload(cld, {
-              file: selectedImage,
-              options: postOptions,
-              callback: (error: any, response: any) => {
-                if (error) {
-                  reject(error);
-                } else {
-                  resolve(response);
-                }
-              },
-            });
+        // Create form data for image upload
+        const formData = new FormData();
+        const uri = selectedImage;
+        const filename = uri.split("/").pop();
+        const match = /\.(\w+)$/.exec(filename as string);
+        const type = match ? `image/${match[1]}` : "image";
+
+        formData.append("file", {
+          uri,
+          name: filename,
+          type,
+        } as any);
+
+        formData.append("upload_preset", postOptions.upload_preset);
+        formData.append("folder", postOptions.folder);
+
+        // Upload to Cloudinary directly
+        const uploadResponse = await fetch(
+          `https://api.cloudinary.com/v1_1/${process.env.EXPO_PUBLIC_CLOUD_NAME}/image/upload`,
+          {
+            method: "POST",
+            body: formData,
           }
         );
-        imageUrl = uploadImage.url;
+
+        const uploadResult = await uploadResponse.json();
+        imageUrl = uploadResult.secure_url;
       }
 
       // Post data to backend

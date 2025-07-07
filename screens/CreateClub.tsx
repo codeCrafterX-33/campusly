@@ -19,8 +19,7 @@ import Colors from "../constants/Colors";
 import * as ImagePicker from "expo-image-picker";
 import { RFValue } from "react-native-responsive-fontsize";
 import Toast from "react-native-toast-message";
-import { cld } from "../configs/CloudinaryConfig";
-import { upload } from "cloudinary-react-native";
+
 import { clubOptions } from "../configs/CloudinaryConfig";
 import axios from "axios";
 import { StackNavigationProp } from "@react-navigation/stack";
@@ -99,22 +98,33 @@ export default function CreateClub() {
       let imageUrl = null;
 
       if (image) {
-        const uploadImage = await new Promise<UploadResponse>(
-          (resolve, reject) => {
-            upload(cld, {
-              file: image,
-              options: clubOptions,
-              callback: (error: any, response: any) => {
-                if (error) {
-                  reject(error);
-                } else {
-                  resolve(response);
-                }
-              },
-            });
+        // Create form data for image upload
+        const formData = new FormData();
+        const uri = image;
+        const filename = uri.split("/").pop();
+        const match = /\.(\w+)$/.exec(filename as string);
+        const type = match ? `image/${match[1]}` : "image";
+
+        formData.append("file", {
+          uri,
+          name: filename,
+          type,
+        } as any);
+
+        formData.append("upload_preset", clubOptions.upload_preset);
+        formData.append("folder", clubOptions.folder);
+
+        // Upload to Cloudinary directly
+        const uploadResponse = await fetch(
+          `https://api.cloudinary.com/v1_1/${process.env.EXPO_PUBLIC_CLOUD_NAME}/image/upload`,
+          {
+            method: "POST",
+            body: formData,
           }
         );
-        imageUrl = uploadImage.url;
+
+        const uploadResult = await uploadResponse.json();
+        imageUrl = uploadResult.secure_url;
       }
 
       const result = await axios.post(

@@ -17,6 +17,10 @@ import {
   StatusBar,
   StyleSheet,
   Vibration,
+  TextInput,
+  KeyboardAvoidingView,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthContext } from "../../context/AuthContext";
@@ -31,6 +35,12 @@ import { useNavigation } from "@react-navigation/native";
 import Toast from "react-native-toast-message";
 import { useCheckAnimation } from "../../util/showSuccessCheckmark";
 import PullToRefreshIndicator from "../../components/Profile/PullToRefreshIndicator";
+import ProfileTopNavigator from "../../navigation/ProfileTopNavigator";
+import Button from "../../components/ui/Button";
+import { RFValue } from "react-native-responsive-fontsize";
+import { heightPercentageToDP as hp } from "react-native-responsive-screen";
+import { ActivitySectionMiniScreen } from "../ActivitySectionScreen";
+import ProfileSkeleton from "../../components/Skeletons/ProfileSkeleton";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const HEADER_HEIGHT = 56;
@@ -38,12 +48,25 @@ const COVER_HEIGHT = 200;
 
 const PULL_THRESHOLD = 80;
 
-const Profile = () => {
+const Profile = ({ navigation }: { navigation: any }) => {
   const { user } = useContext(AuthContext);
+  const [aboutExpanded, setAboutExpanded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { userPosts, getUserPosts } = useContext(PostContext);
   const { colors } = useTheme();
-  const navigation = useNavigation();
   const { showSuccessCheckmark, checkmark } = useCheckAnimation();
+  const [skills, setSkills] = useState<string[]>([
+    "React Native",
+    "Photography",
+    "Web Development",
+    "UI/UX Design",
+    "Node.js",
+    "Express",
+    "MongoDB",
+    "React",
+  ]);
+  const [newSkill, setNewSkill] = useState("");
+  const [isEditingSkills, setIsEditingSkills] = useState(false);
 
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("Posts");
@@ -141,13 +164,20 @@ const Profile = () => {
     outputRange: [0, 0.5, 0.8, 1],
   });
 
- 
-
-  
-
   useEffect(() => {
     getUserPosts();
+    setTimeout(() => {
+      setIsLoading(false);
+    }, 2000);
   }, []);
+
+  // if (isLoading) {
+  //   return (
+  //     <View style={styles.container}>
+  //       <ProfileSkeleton />
+  //     </View>
+  //   );
+  // }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -182,7 +212,7 @@ const Profile = () => {
       {showCheckmark && checkmark()}
 
       <Animated.ScrollView
-        style={styles.scrollView}
+        style={[styles.scrollView, { backgroundColor: colors.background }]}
         onScroll={handleScroll}
         scrollEventThrottle={16}
         refreshControl={
@@ -212,12 +242,19 @@ const Profile = () => {
         </View>
 
         {/* Profile Section */}
-        <View style={styles.profileSection}>
+        <View
+          style={[
+            styles.profileSection,
+            { backgroundColor: colors.background },
+          ]}
+        >
           <ProfileHeader user_id={user?.email} scrollY={scrollY} />
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{user?.name}</Text>
-            <Text style={styles.profileHandle}>{user?.email}</Text>
-            <Text style={styles.profileBio}>
+            <Text style={[styles.profileName, { color: colors.onBackground }]}>
+              {user?.name}
+            </Text>
+            <Text style={[styles.profileHandle]}>{user?.email}</Text>
+            <Text style={[styles.profileBio, { color: colors.onBackground }]}>
               Accounting at Afe Babalola University 🎓 | Full-stack developer |
               Study group organizer | Coffee enthusiast ☕ | Always down to help
               with coding!
@@ -260,12 +297,150 @@ const Profile = () => {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* About Section     */}
+          <View
+            style={[
+              styles.aboutSection,
+              { backgroundColor: colors.background },
+            ]}
+          >
+            <Text style={[styles.aboutTitle, { color: colors.onBackground }]}>
+              About
+            </Text>
+            <Text
+              style={[styles.aboutText, { color: colors.onBackground }]}
+              numberOfLines={aboutExpanded ? undefined : 3}
+            >
+              {user?.about ||
+                `I’m a passionate full-stack developer with a background in accounting. I enjoy building practical digital solutions, from student-focused apps to scalable e-commerce platforms. 
+
+I'm currently studying Accounting at Afe Babalola University, where I also lead coding study groups and help others grow in tech. When I'm not coding, I’m usually exploring design trends, reading about startups, or organizing small projects with friends.
+
+I believe in constant learning, sharing knowledge, and making tech more accessible to people around me.`}
+            </Text>
+            {!aboutExpanded && (
+              <TouchableOpacity onPress={() => setAboutExpanded(true)}>
+                <Text style={styles.readMoreText}>Read more</Text>
+              </TouchableOpacity>
+            )}
+            {aboutExpanded && (
+              <TouchableOpacity onPress={() => setAboutExpanded(false)}>
+                <Text style={styles.readMoreText}>Show less</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+
+          {/* {Activity Section} */}
+          <View
+            style={[
+              styles.activitySection,
+              { backgroundColor: colors.background },
+            ]}
+          >
+            <View style={styles.activityHeader}>
+              <Text
+                style={[styles.activityTitle, { color: colors.onBackground }]}
+              >
+                Activity
+              </Text>
+              <View style={styles.activityHeaderRight}>
+                <TouchableOpacity
+                  style={styles.activityButton}
+                  onPress={() => {
+                    navigation.navigate("AddPost");
+                  }}
+                >
+                  <Text style={styles.activityButtonText}>Create a post</Text>
+                </TouchableOpacity>
+                <TouchableOpacity>
+                  <Ionicons
+                    name="pencil-outline"
+                    size={RFValue(16)}
+                    color={Colors.PRIMARY}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+            <ActivitySectionMiniScreen />
+          </View>
+
+          {/* Skills & Interests Section */}
+          <View style={styles.skillsSection}>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+              }}
+            >
+              <Text
+                style={[styles.skillsTitle, { color: colors.onBackground }]}
+              >
+                Skills & Interests
+              </Text>
+              <TouchableOpacity
+                onPress={() => setIsEditingSkills(!isEditingSkills)}
+              >
+                <Text style={{ color: Colors.PRIMARY }}>
+                  {isEditingSkills ? (
+                    "Done"
+                  ) : (
+                    <Ionicons
+                      name="pencil-outline"
+                      size={24}
+                      color={Colors.PRIMARY}
+                    />
+                  )}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.skillsWrapper}>
+              {skills.map((skill, index) => (
+                <View key={index} style={styles.skillTag}>
+                  <Text style={styles.skillText}>#{skill}</Text>
+                  {isEditingSkills && (
+                    <TouchableOpacity
+                      onPress={() =>
+                        setSkills((prev) => prev.filter((_, i) => i !== index))
+                      }
+                    >
+                      <Ionicons
+                        name="close"
+                        size={14}
+                        color="#fff"
+                        style={{ marginLeft: 6 }}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ))}
+            </View>
+          </View>
+
+          {isEditingSkills && (
+            <View style={{ flexDirection: "row", marginBottom: 12 }}>
+              <TextInput
+                placeholder="Add a skill..."
+                value={newSkill}
+                onChangeText={(text) => setNewSkill(text)}
+                placeholderTextColor="#aaa"
+                style={styles.skillInput}
+                onSubmitEditing={() => {}}
+              />
+              <TouchableOpacity
+                onPress={() => {
+                  if (newSkill.trim() && !skills.includes(newSkill.trim())) {
+                    setSkills([...skills, newSkill.trim()]);
+                    setNewSkill("");
+                  }
+                }}
+              >
+                <Ionicons name="add-circle" size={28} color={Colors.PRIMARY} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
-
-        {/* Tab Bar */}
-
-
-       
       </Animated.ScrollView>
     </SafeAreaView>
   );
@@ -426,7 +601,102 @@ const styles = StyleSheet.create({
   statLabel: {
     color: "#8B98A5",
   },
- 
+  aboutSection: {
+    backgroundColor: "#000",
+    paddingHorizontal: 16,
+  },
+  aboutTitle: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 24,
+  },
+  aboutText: {
+    color: "#fff",
+    fontSize: 16,
+    lineHeight: 22,
+    marginBottom: 12,
+  },
+  readMoreText: {
+    color: Colors.PRIMARY,
+    fontWeight: "bold",
+    fontSize: 14,
+    marginTop: -8,
+    marginBottom: 12,
+  },
+  skillsSection: {
+    marginTop: 25,
+    paddingHorizontal: 16,
+  },
+  skillsTitle: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  skillsWrapper: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  skillTag: {
+    backgroundColor: Colors.PRIMARY,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  skillText: {
+    color: "#fff",
+    fontSize: 14,
+  },
+
+  skillInput: {
+    flex: 1,
+    backgroundColor: "#1c1c1e",
+    color: "#fff",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: Colors.PRIMARY,
+  },
+  activitySection: {
+    backgroundColor: "#000",
+    paddingHorizontal: 16,
+    marginTop: hp(3),
+  },
+  activityTitle: {
+    color: "#fff",
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 24,
+  },
+  activityHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  activityButton: {
+    backgroundColor: "#fff",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderColor: Colors.PRIMARY,
+    borderWidth: 1,
+  },
+  activityButtonText: {
+    fontSize: RFValue(15),
+    fontWeight: "bold",
+    color: Colors.PRIMARY,
+  },
+  activityHeaderRight: {
+    flexDirection: "row",
+    gap: 10,
+    alignItems: "center",
+  },
 });
 
 export default Profile;

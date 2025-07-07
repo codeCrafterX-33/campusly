@@ -10,7 +10,14 @@ import {
   Pressable,
   ActivityIndicator,
 } from "react-native";
-import { useContext, useEffect, useState, useLayoutEffect, useRef, useCallback } from "react";
+import {
+  useContext,
+  useEffect,
+  useState,
+  useLayoutEffect,
+  useRef,
+  useCallback,
+} from "react";
 import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
 import { auth } from "../../configs/FireBaseConfigs";
@@ -29,42 +36,44 @@ import { interpolate } from "react-native-reanimated";
 import { useDrawerProgress } from "@react-navigation/drawer";
 import AddPostBtn from "../../components/Post/AddPostBtn";
 import { useTheme } from "react-native-paper";
-import { useNavigation, NavigationProp, useFocusEffect } from "@react-navigation/native";
+import {
+  useNavigation,
+  NavigationProp,
+  useFocusEffect,
+} from "@react-navigation/native";
 import { DrawerNavigationProp } from "@react-navigation/drawer";
 import Colors from "../../constants/Colors";
 import { CardStyleInterpolators } from "@react-navigation/stack";
 
-
 function Home() {
-   const [gestureEnabled, setGestureEnabled] = useState(true);
+  const [gestureEnabled, setGestureEnabled] = useState(true);
   const { user, setUser } = useContext(AuthContext);
   const { colors } = useTheme();
   const { posts, getPosts } = useContext(PostContext);
   const navigation = useNavigation<DrawerNavigationProp<any>>();
   const [isLoading, setIsLoading] = useState(false);
-  const {visibleIn, setVisibleIn} = useContext(PostContext);
+  const { visibleIn, setVisibleIn } = useContext(PostContext);
 
   const flatListRef = useRef(null);
   const parentDrawer = navigation.getParent();
 
   useFocusEffect(
     useCallback(() => {
-       const onSwipeRight = (event: any) => {
-         if (
-           event.nativeEvent.translationX > 100 &&
-           event.nativeEvent.state === State.END
-         ) {
-           navigation.openDrawer();
-         } else if (
-           event.nativeEvent.translationX < -100 &&
-           event.nativeEvent.state === State.END
-         ) {
-           navigation.navigate("following");
-         }
-       };
+      const onSwipeRight = (event: any) => {
+        if (
+          event.nativeEvent.translationX > 100 &&
+          event.nativeEvent.state === State.END
+        ) {
+          navigation.openDrawer();
+        } else if (
+          event.nativeEvent.translationX < -100 &&
+          event.nativeEvent.state === State.END
+        ) {
+          navigation.navigate("following");
+        }
+      };
     }, [])
   );
- 
 
   useEffect(() => {
     // Fetch posts when the component mounts or user changes
@@ -125,7 +134,9 @@ function Home() {
 
   if (isLoading) {
     return (
-      <View style={[styles.loaderContainer, { backgroundColor: colors.background }] }>
+      <View
+        style={[styles.loaderContainer, { backgroundColor: colors.background }]}
+      >
         <ActivityIndicator size="large" color={Colors.PRIMARY} />
       </View>
     );

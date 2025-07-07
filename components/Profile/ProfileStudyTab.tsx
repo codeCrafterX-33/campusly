@@ -1,20 +1,22 @@
-import React from "react";
+ import React from "react";
 import { View, Text, StyleSheet } from "react-native";
 import PostCard from "../Post/PostCard";
 import { useContext } from "react";
 import { PostContext } from "../../context/PostContext";
-
+import { Tabs } from "react-native-collapsible-tab-view";
 const ProfileStudyTab = () => {
   const { userPosts } = useContext(PostContext);
   return (
-    <View style={styles.studyContainer}>
-      <Text style={styles.sectionTitle}>Study Groups & Academic Posts</Text>
+    <Tabs.ScrollView style={styles.studyContainer}>
+      <Text style={[styles.sectionTitle, { color: "black" }]}>
+        Study Groups & Academic Posts
+      </Text>
       {userPosts
         .filter((p: any) => p.type === "study" || p.type === "achievement")
         .map((post: any) => (
           <PostCard post={post} key={post.id} />
         ))}
-    </View>
+    </Tabs.ScrollView>
   );
 };
 
@@ -30,5 +32,5 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 16,
   },
-});
+  });
 

@@ -27,20 +27,7 @@
       "bundler": "metro",
       "output": "server"
     },
-    "plugins": [
-      "expo-router",
-      "expo-splash-screen",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "compileSdkVersion": 35,
-            "targetSdkVersion": 35,
-            "minSdkVersion": 24
-          }
-        }
-      ]
-    ],
+    "plugins": ["expo-router", "expo-splash-screen"],
     "extra": {
       "router": {},
       "eas": {

@@ -18,6 +18,8 @@ import { useTheme } from "react-native-paper";
 import CreateClub from "../screens/CreateClub";
 import AddEvent from "../screens/AddEvent";
 import Profile2 from "../screens/(tab)/profile2";
+import Profile3 from "../screens/(tab)/Profile3";
+import Sticky from "../screens/(tab)/Sticky";
 export type RootStackParamList = {
   Landing: undefined;
   SignIn: undefined;

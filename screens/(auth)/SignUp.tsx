@@ -2,7 +2,6 @@ import {
   View,
   StyleSheet,
   Text,
-  Image,
   TouchableWithoutFeedback,
   Keyboard,
   Pressable,
@@ -10,9 +9,6 @@ import {
 import AuthContent from "../../components/auth/AuthContent";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../configs/FireBaseConfigs";
-import { options } from "../../configs/CloudinaryConfig";
-import { upload } from "cloudinary-react-native";
-import { cld } from "../../configs/CloudinaryConfig";
 import { Toast } from "react-native-toast-message/lib/src/Toast";
 import axios from "axios";
 import Colors from "../../constants/Colors";
@@ -21,9 +17,36 @@ import { AuthContext } from "../../context/AuthContext";
 
 export default function SignUp({ navigation }: { navigation: any }) {
   const [isLoading, setIsLoading] = useState(false);
-  const { user, setUser } = useContext(AuthContext);
+  const { setUser } = useContext(AuthContext);
 
-  function signupHandler({
+  // Replace with your Cloudinary info
+  const CLOUD_NAME = "YOUR_CLOUD_NAME";
+  const UPLOAD_PRESET = "YOUR_UNSIGNED_UPLOAD_PRESET";
+
+  async function uploadImageToCloudinary(imageUri: string) {
+    const data = new FormData();
+    data.append("file", {
+      uri: imageUri,
+      type: "image/jpeg", // adjust type if needed
+      name: "upload.jpg",
+    } as any);
+    data.append("upload_preset", UPLOAD_PRESET);
+
+    const res = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+      {
+        method: "POST",
+        body: data,
+      }
+    );
+    const json = await res.json();
+    if (!res.ok) {
+      throw new Error(json.error?.message || "Cloudinary upload failed");
+    }
+    return json.secure_url;
+  }
+
+  async function signupHandler({
     email,
     password,
     fullName,
@@ -35,70 +58,53 @@ export default function SignUp({ navigation }: { navigation: any }) {
     profileImage: string;
   }) {
     setIsLoading(true);
-    createUserWithEmailAndPassword(auth, email, password)
-      .then(async (userCredential) => {
-        Toast.show({
-          type: "success",
-          text1: "Success!",
-          text2: "Your action was completed successfully.",
-        });
+    try {
+      // Create user with Firebase Auth
+      await createUserWithEmailAndPassword(auth, email, password);
 
-        //  upload image
-        const uploadResult = await upload(cld, {
-          file: profileImage,
-          options: options,
-          callback: async (error: any, response: any) => {
-            if (error) {
-              console.log(error);
-              if (!response?.url) {
-                Toast.show({
-                  type: "error",
-                  text1: "Image upload failed",
-                });
-                return;
-              }
-            }
+      // Upload image and get URL
+      const imageUrl = await uploadImageToCloudinary(profileImage);
 
-            // send data to backend
-            const result = await axios.post(
-              `${process.env.EXPO_PUBLIC_SERVER_URL}/user`,
-              {
-                name: fullName,
-                email: email,
-                image: response?.url,
-              }
-            );
-
-            if (result.status === 201) {
-              const userData = await axios.get(
-                `${process.env.EXPO_PUBLIC_SERVER_URL}/user/${email}`
-              );
-
-              setUser(userData.data.data[0]);
-
-              setIsLoading(false);
-              // navigate to home screen
-              navigation.navigate("DrawerNavigator");
-            }
-          },
-        });
-      })
-      .catch((error) => {
-        setIsLoading(false);
-        if (error.code === "auth/email-already-in-use") {
-          Toast.show({
-            type: "error",
-            text1: "Error",
-            text2: "Email already in use please sign in",
-          });
-        } else {
-          Toast.show({
-            type: "error",
-            text1: "Error",
-            text2: error?.message,
-          });
+      // Send user data to backend
+      const result = await axios.post(
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/user`,
+        {
+          name: fullName,
+          email,
+          image: imageUrl,
         }
+      );
+
+      if (result.status === 201) {
+        const userData = await axios.get(
+          `${process.env.EXPO_PUBLIC_SERVER_URL}/user/${email}`
+        );
+        setUser(userData.data.data[0]);
+        navigation.navigate("DrawerNavigator");
+      }
+
+      Toast.show({
+        type: "success",
+        text1: "Success!",
+        text2: "Your account has been created.",
       });
+    } catch (error: any) {
+      if (error.code === "auth/email-already-in-use") {
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: "Email already in use, please sign in",
+        });
+      } else {
+        Toast.show({
+          type: "error",
+          text1: "Error",
+          text2: error.message || "Something went wrong",
+        });
+      }
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
