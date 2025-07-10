@@ -15,6 +15,7 @@ const EventContext = createContext<any>({
   getRegisteredEvents: () => {},
   registeredEvents: [],
   setRegisteredEvents: () => {},
+  eventIsRegistered: () => {},
 });
 
 function EventProvider({ children }: { children: React.ReactNode }) {
@@ -105,6 +106,13 @@ function EventProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const eventIsRegistered = (eventId: number) => {
+    const event = registeredEvents.find(
+      (event: any) => event.event_id === eventId
+    );
+    return event ? true : false;
+  };
+
   const value = {
     events: events,
     getEvents: GetEvents,
@@ -116,6 +124,7 @@ function EventProvider({ children }: { children: React.ReactNode }) {
     getRegisteredEvents: getRegisteredEvents,
     registeredEvents: registeredEvents,
     setRegisteredEvents: setRegisteredEvents,
+    eventIsRegistered: eventIsRegistered,
   };
 
   return (

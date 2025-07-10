@@ -17,9 +17,9 @@ import ExploreClubs from "../screens/ExploreClubs";
 import { useTheme } from "react-native-paper";
 import CreateClub from "../screens/CreateClub";
 import AddEvent from "../screens/AddEvent";
-import Profile2 from "../screens/(tab)/profile2";
-import Profile3 from "../screens/(tab)/Profile3";
-import Sticky from "../screens/(tab)/Sticky";
+import AllActivityScreen from "../screens/AllActivityScreen";
+import Colors from "../constants/Colors";
+
 export type RootStackParamList = {
   Landing: undefined;
   SignIn: undefined;
@@ -32,6 +32,7 @@ export type RootStackParamList = {
   ExploreClubs: undefined;
   CreateClub: undefined;
   AddEvent: undefined;
+  AllActivityScreen: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -122,6 +123,21 @@ export const AuthenticatedStack = () => {
           headerTitle: "Add Event",
           ...TransitionPresets.SlideFromRightIOS,
         }}
+      />
+
+      <Stack.Screen
+        name="AllActivityScreen"
+        component={AllActivityScreen}
+        options={({ navigation }) => ({
+          headerTitle: "All Activity",
+
+          ...TransitionPresets.SlideFromRightIOS,
+          headerLeft: () => (
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Icon name="arrow-left" size={24} color={Colors.PRIMARY} />
+            </TouchableOpacity>
+          ),
+        })}
       />
     </Stack.Navigator>
   );

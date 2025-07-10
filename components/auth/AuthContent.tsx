@@ -5,7 +5,6 @@ import { ToastAndroid } from "react-native";
 import Toast from "react-native-toast-message";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../../configs/FireBaseConfigs";
-import { upload } from "cloudinary-react-native";
 import { cld, options } from "../../configs/CloudinaryConfig";
 import axios from "axios";
 // @ts-ignore

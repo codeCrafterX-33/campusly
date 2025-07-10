@@ -52,13 +52,13 @@ function PostProvider({ children }: { children: React.ReactNode }) {
           setPosts(data.data);
         }
         console.log("Posts fetched successfully");
-        console.log(posts);
+        
       } else {
         console.log("Error fetching posts");
       }
     } catch (error) {
       if (error instanceof AxiosError) {
-        console.log("Posts fetching failed", error.response?.data);
+        console.log("Posts fetching failed");
         Toast.show({
           text1: "Couldn't load posts",
           text2: "Please check your internet or try again later.",

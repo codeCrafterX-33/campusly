@@ -20,6 +20,7 @@ import Colors from "../../constants/Colors";
 import { auth } from "../../configs/FireBaseConfigs";
 import { RFValue } from "react-native-responsive-fontsize";
 
+
 type EventViewProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
 };
@@ -45,18 +46,14 @@ export default function EventView({ navigation }: EventViewProps) {
     setRefreshing,
     getRegisteredEvents,
     registeredEvents,
+    eventIsRegistered,
   } = useContext(EventContext);
 
   useLayoutEffect(() => {
     getEvents();
   }, []);
 
-  const isRegistered = (eventId: number) => {
-    const event = registeredEvents.find(
-      (event: any) => event.event_id === eventId
-    );
-    return event ? true : false;
-  };
+
 
   const isCreator = (createdBy: string) => {
     return createdBy === auth.currentUser?.email;
@@ -248,8 +245,8 @@ export default function EventView({ navigation }: EventViewProps) {
             filter={filter}
             isRegistered={
               filter === "upcoming"
-                ? isRegistered(item.id)
-                : isRegistered(item.event_id)
+                ? eventIsRegistered(item.id)
+                : eventIsRegistered(item.event_id)
             }
             isCreator={isCreator(item.createdby)}
             refreshData={getEvents}

@@ -17,6 +17,8 @@ import React, {
 import Colors from "../../constants/Colors";
 import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
+// Remove the Cloudinary import and just use fetch API
+import { cld, postOptions } from "../../configs/CloudinaryConfig";
 import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
 import { useNavigation } from "@react-navigation/native";
@@ -29,8 +31,7 @@ import { useTheme } from "react-native-paper";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { PostContext } from "../../context/PostContext";
 import { ClubContext } from "../../context/ClubContext";
-import { postOptions } from "../../configs/CloudinaryConfig";
-
+import uploadImageToCloudinary from "../../util/uploadToCloudinary";
 interface UploadResponse {
   url: string;
   secure_url: string;
@@ -39,6 +40,7 @@ interface UploadResponse {
 export default function WritePost() {
   const { colors } = useTheme();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const selectedImageRef = useRef<string | null>(null);
   const { user } = useContext(AuthContext);
   const { getFollowedClubs, followedClubs } = useContext(ClubContext);
   const { getPosts } = useContext(PostContext);
@@ -90,7 +92,7 @@ export default function WritePost() {
         <TouchableOpacity onPress={() => onPostBtnClick()}>
           <Text style={[styles.postBtn, { color: "white" }]}>
             {loading ? (
-              <ActivityIndicator size="small" color={Colors.PRIMARY} />
+              <ActivityIndicator size="small" color="white" />
             ) : (
               "Post"
             )}
@@ -120,46 +122,41 @@ export default function WritePost() {
 
     setLoading(true);
 
+    let postImageUrl = null;
     try {
-      let imageUrl = null;
-
-      // Upload image if one is selected
-      if (selectedImage) {
-        // Create form data for image upload
-        const formData = new FormData();
-        const uri = selectedImage;
-        const filename = uri.split("/").pop();
-        const match = /\.(\w+)$/.exec(filename as string);
-        const type = match ? `image/${match[1]}` : "image";
-
-        formData.append("file", {
-          uri,
-          name: filename,
-          type,
-        } as any);
-
-        formData.append("upload_preset", postOptions.upload_preset);
-        formData.append("folder", postOptions.folder);
-
-        // Upload to Cloudinary directly
-        const uploadResponse = await fetch(
-          `https://api.cloudinary.com/v1_1/${process.env.EXPO_PUBLIC_CLOUD_NAME}/image/upload`,
-          {
-            method: "POST",
-            body: formData,
-          }
-        );
-
-        const uploadResult = await uploadResponse.json();
-        imageUrl = uploadResult.secure_url;
+      if (selectedImageRef.current && selectedImageRef.current.length > 0) {
+        console.log("Uploading image to Cloudinary:", selectedImageRef.current);
+        try {
+          const uploadResponse = await uploadImageToCloudinary(
+            selectedImageRef.current
+          );
+          const imageUrl = uploadResponse;
+          console.log("Image uploaded. URL:", imageUrl);
+          postImageUrl = imageUrl;
+        } catch (err) {
+          Toast.show({
+            text1: "Image upload failed",
+            text2: "Try again or remove the image",
+            type: "error",
+          });
+          setLoading(false);
+          return;
+        }
       }
 
-      // Post data to backend
+      // Now send post
+      console.log("Sending post to backend:", {
+        content,
+        imageUrl: postImageUrl,
+        visibleIn: value.club_id,
+        email: user?.email,
+      });
+
       const result = await axios.post(
         `${process.env.EXPO_PUBLIC_SERVER_URL}/post`,
         {
           content: content,
-          imageUrl: imageUrl, // Will be null if no image
+          imageUrl: postImageUrl,
           visibleIn: value.club_id,
           email: user?.email,
         }
@@ -192,8 +189,15 @@ export default function WritePost() {
       quality: 0.5,
     });
 
-    if (!result.canceled) {
-      setSelectedImage(result.assets[0].uri);
+    if (
+      !result.canceled &&
+      result.assets[0].uri &&
+      result.assets[0].uri.length > 0
+    ) {
+      const pickedUri = result.assets[0].uri;
+      selectedImageRef.current = pickedUri;
+      setSelectedImage(pickedUri);
+      console.log("selected Image:", selectedImageRef.current);
     }
   };
 
@@ -210,7 +214,11 @@ export default function WritePost() {
         multiline={true}
         numberOfLines={4}
         maxLength={1000}
-        onChangeText={(text) => setContent(text)}
+        onChangeText={(text) => {
+          setContent(text);
+          console.log("Content:", text);
+          console.log("Selected image:", selectedImage);
+        }}
       />
 
       <TouchableOpacity onPress={pickImage}>

@@ -365,6 +365,17 @@ I believe in constant learning, sharing knowledge, and making tech more accessib
             <ActivitySectionMiniScreen />
           </View>
 
+          {/* Education Section */}
+          <View style={styles.educationSection}>
+            <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>
+              Education
+            </Text>
+            <Text style={[styles.eduItem, { color: colors.onBackground }]}>
+              B.Sc Accounting — Afe Babalola University, 2020
+            </Text>
+            {/* Add more schools or courses */}
+          </View>
+
           {/* Skills & Interests Section */}
           <View style={styles.skillsSection}>
             <View
@@ -696,6 +707,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 10,
     alignItems: "center",
+  },
+  educationSection: {
+    backgroundColor: "#000",
+    paddingHorizontal: 16,
+    marginTop: hp(3),
+  },
+  sectionTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 12,
+  },
+  eduItem: {
+    color: "#fff",
+    fontSize: 16,
+    lineHeight: 22,
+    marginBottom: 12,
   },
 });
 
