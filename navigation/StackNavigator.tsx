@@ -17,7 +17,7 @@ import ExploreClubs from "../screens/ExploreClubs";
 import { useTheme } from "react-native-paper";
 import CreateClub from "../screens/CreateClub";
 import AddEvent from "../screens/AddEvent";
-import AllActivityScreen from "../screens/AllActivityScreen";
+import AllActivityScreen from "../screens/allActivityScreen/AllActivityScreen";
 import Colors from "../constants/Colors";
 
 export type RootStackParamList = {

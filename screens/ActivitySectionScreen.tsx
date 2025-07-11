@@ -9,13 +9,15 @@ import usePersistedState from "../util/PersistedState";
 import ProfileEventCard from "../components/Events/ProfileEventCard";
 import { EventContext } from "../context/EventContext";
 import { useNavigation } from "@react-navigation/native";
+import { useTheme } from "react-native-paper";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-
+import Button from "../components/ui/Button";
 const miniTabs = ["Posts", "Clubs", "Academic", "Events"];
 const fullTabs = ["Posts", "Clubs", "Academic", "Events", "Comments", "Likes"];
 
 export default function ActivitySectionScreen({ screen }: { screen: string }) {
   const navigation = useNavigation<any>();
+  const { colors } = useTheme();
 
   const { registeredEvents, getRegisteredEvents, eventIsRegistered } =
     useContext(EventContext);
@@ -39,8 +41,8 @@ export default function ActivitySectionScreen({ screen }: { screen: string }) {
   const [activeTab, setActiveTab] = useState(miniTabs[0]);
   const renderTabs = () => {
     return (
-      <View style={styles.container}>
-        {  miniTabs.map((tab, index) => (
+      <View style={[styles.container, { backgroundColor: colors.background }]}>
+        {miniTabs.map((tab, index) => (
           <TouchableOpacity
             onPress={() => setActiveTab(tab)}
             style={activeTab === tab ? styles.activeTab : styles.tab}
@@ -85,10 +87,28 @@ export default function ActivitySectionScreen({ screen }: { screen: string }) {
       case "Events":
         content = (
           <View style={styles.activitySectionContainer}>
-            <ProfileEventCard
-              {...registeredEvents[0]}
-              isRegistered={eventIsRegistered(registeredEvents[0].event_id)}
-            />
+            {registeredEvents.length > 0 ? (
+              <ProfileEventCard
+                {...registeredEvents[0]}
+                isRegistered={eventIsRegistered(registeredEvents[0].event_id)}
+              />
+            ) : (
+              <View style={styles.noEventsContainer}>
+                <Text style={styles.noEventsText}>
+                  Your event list is empty...
+                </Text>
+                <Button
+                  onPress={() =>
+                    navigation.navigate("DrawerNavigator", {
+                      screen: "TabLayout",
+                      params: { screen: "Events" },
+                    })
+                  }
+                >
+                  Discover what's happening 🎉
+                </Button>
+              </View>
+            )}
           </View>
         );
         break;
@@ -97,7 +117,7 @@ export default function ActivitySectionScreen({ screen }: { screen: string }) {
   };
 
   return (
-    <View>
+    <View style={{ flex: 1, backgroundColor: colors.background      }}>
       {renderTabs()}
       {renderTabContent({ tab: activeTab })}
 
@@ -118,14 +138,6 @@ export default function ActivitySectionScreen({ screen }: { screen: string }) {
   );
 }
 
-const ActivitySectionFullScreen = () => {
-  return (
-    <View style={styles.fullScreenContainer}>
-      <ActivitySectionScreen screen="full" />
-    </View>
-  );
-};
-
 const ActivitySectionMiniScreen = () => {
   return (
     <View style={styles.fullScreenContainer}>
@@ -134,7 +146,7 @@ const ActivitySectionMiniScreen = () => {
   );
 };
 
-export { ActivitySectionFullScreen, ActivitySectionMiniScreen };
+export { ActivitySectionMiniScreen };
 
 const styles = StyleSheet.create({
   container: {
@@ -188,12 +200,23 @@ const styles = StyleSheet.create({
   showMoreContainer: {
     flexDirection: "row",
     justifyContent: "center",
-    alignItems: "center", // 👈 this aligns icon and text properly
+    alignItems: "center",
     gap: 10,
     marginTop: 10,
   },
   fullScreenContainer: {
     flex: 1,
     backgroundColor: "#fff",
+  },
+  noEventsText: {
+    textAlign: "center",
+    fontSize: RFValue(15),
+    fontWeight: "bold",
+    color: Colors.GRAY,
+  },
+  noEventsContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
 });

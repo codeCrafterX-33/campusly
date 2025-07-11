@@ -6,6 +6,7 @@ import {
   RefreshControl,
   Pressable,
   Animated,
+  BackHandler,
 } from "react-native";
 import { useTheme } from "react-native-paper";
 import Button from "../../components/ui/Button";
@@ -19,7 +20,6 @@ import { EventContext } from "../../context/EventContext";
 import Colors from "../../constants/Colors";
 import { auth } from "../../configs/FireBaseConfigs";
 import { RFValue } from "react-native-responsive-fontsize";
-
 
 type EventViewProps = {
   navigation: NativeStackNavigationProp<RootStackParamList>;
@@ -49,11 +49,23 @@ export default function EventView({ navigation }: EventViewProps) {
     eventIsRegistered,
   } = useContext(EventContext);
 
+  useEffect(() => {
+    const handleBackPress = () => {
+      navigation.goBack();
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      handleBackPress
+    );
+
+    return () => backHandler.remove();
+  }, [navigation]);
+
   useLayoutEffect(() => {
     getEvents();
   }, []);
-
-
 
   const isCreator = (createdBy: string) => {
     return createdBy === auth.currentUser?.email;
@@ -88,7 +100,7 @@ export default function EventView({ navigation }: EventViewProps) {
       inputRange: [0, 0.5, 1],
       outputRange: [
         filter === "upcoming" ? Colors.PRIMARY : "white",
-        filter === "upcoming" ? "#a0a0a0" : "#f0f0f0", // Intermediate color
+        filter === "upcoming" ? "#a0a0a0" : "#f0f0f0",
         filter === "upcoming" ? Colors.PRIMARY : "white",
       ],
     }),

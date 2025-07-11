@@ -273,6 +273,7 @@ order by id desc;`);
       message: "Events fetched successfully",
       data: result.rows,
     });
+    console.log(result.rows);
   } catch (error) {
     res
       .status(500)
@@ -295,7 +296,7 @@ app.post("/event/register", async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Event registration failed",
-      error: error.message,
+      error: error?.response?.data,
     });
   }
 });
@@ -309,7 +310,7 @@ app.get("/event/registered/:u_email", async (req, res) => {
 INNER JOIN event_registration ON events.id = event_registration.event_id
 INNER JOIN users 
   ON events.createdby = users.email
-WHERE event_registration.user_email = $1`,
+WHERE event_registration.user_email = $1 ORDER BY event_registration.register_on DESC`,
       [u_email]
     );
 

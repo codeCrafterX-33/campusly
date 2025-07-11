@@ -10,7 +10,7 @@ import {
 import { Tabs } from "react-native-collapsible-tab-view";
 import ProfileCollapseHeader from "./Profile";
 import { PostContext } from "../../context/PostContext";
-import ProfilePostsTab from "../../components/Profile/ProfilePostsTab";
+import ProfilePostsTab from "../allActivityScreen/PostsTab";
 import ProfileClubtab from "../../components/Profile/ProfileClubtab";
 import ProfileStudyTab from "../../components/Profile/ProfileStudyTab";
 const HEADER_HEIGHT = 300;
@@ -93,7 +93,6 @@ const Example: React.FC = () => {
 
   return (
     <Tabs.Container
-   
       headerHeight={HEADER_HEIGHT} // optional
     >
       <Tabs.Tab name="Posts">
