@@ -15,6 +15,8 @@ export const ThemeProvider = ({ children }: { children: React.ReactNode }) => {
 
   const theme = isDarkMode ? DeepBlackTheme : MD3LightTheme;
 
+  
+
   return (
     <ThemeContext.Provider value={{ isDarkMode, setIsDarkMode, theme }}>
       {children}

@@ -6,6 +6,7 @@ import {
   StyleSheet,
   RefreshControl,
   Vibration,
+  StatusBar,
 } from "react-native";
 import { useTheme } from "react-native-paper";
 import { MaterialTabBar, Tabs } from "react-native-collapsible-tab-view";
@@ -23,16 +24,23 @@ import Checkmark from "../../components/checkmark";
 import PostsTab from "./PostsTab";
 import Clubstab from "./Clubstab";
 import EventsTab from "./EventsTab";
+import { ThemeContext } from "../../context/ThemeContext";
+import AllActivityHeader from "./AllActivityHeader";
+
 const AllActivityScreen = ({ navigation, route }: any) => {
   const [refreshing, setRefreshing] = useState(false);
   const { colors } = useTheme();
   const layout = useWindowDimensions();
+  const { isDarkMode } = useContext(ThemeContext);
 
   const { userPosts, getUserPosts } = useContext(PostContext);
   const { followedClubs, getFollowedClubs } = useContext(ClubContext);
   const { registeredEvents, getRegisteredEvents, eventIsRegistered } =
     useContext(EventContext);
 
+  const [currentTab, setCurrentTab] = useState(
+    route.params.activeTab || "Posts"
+  );
   const [showCheckmark, setShowCheckmark] = useState(false);
   const [hasTriggeredHaptic, setHasTriggeredHaptic] = useState(false);
 
@@ -43,17 +51,18 @@ const AllActivityScreen = ({ navigation, route }: any) => {
   }, []);
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <StatusBar
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
+        backgroundColor={colors.background}
+      />
       {showCheckmark && (
         <Checkmark visible={showCheckmark} setVisible={setShowCheckmark} />
       )}
       <Tabs.Container
-        renderHeader={() => (
-          <View style={styles.header}>
-            <Text style={styles.headerTitle}>My Activity</Text>
-          </View>
-        )}
+        renderHeader={() => <AllActivityHeader currentTab={currentTab} />}
         initialTabName={route.params.activeTab}
+        onTabChange={({ tabName }) => setCurrentTab(tabName)}
         lazy={false}
         renderTabBar={(props) => (
           <MaterialTabBar
@@ -62,14 +71,14 @@ const AllActivityScreen = ({ navigation, route }: any) => {
             labelStyle={{
               fontSize: RFValue(14),
               textTransform: "none",
-              color: "black",
+              color: colors.onBackground,
             }}
             tabStyle={{
-              backgroundColor: "white",
+              backgroundColor: colors.background,
             }}
             indicatorStyle={{ backgroundColor: Colors.PRIMARY }}
             activeColor={Colors.PRIMARY}
-            inactiveColor="black"
+            inactiveColor={colors.onBackground}
           />
         )}
       >
@@ -103,15 +112,6 @@ const AllActivityScreen = ({ navigation, route }: any) => {
 export default AllActivityScreen;
 
 const styles = StyleSheet.create({
-  header: {
-    padding: 20,
-    backgroundColor: Colors.PRIMARY,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "white",
-  },
   tabContent: {
     padding: 16,
     backgroundColor: "#fff",

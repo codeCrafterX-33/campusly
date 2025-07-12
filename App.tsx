@@ -19,6 +19,17 @@ import { Provider as PaperProvider } from "react-native-paper";
 import ThemedStatusBar from "./components/ThemedStatusBar";
 import ClubProvider from "./context/ClubContext";
 import EventProvider from "./context/EventContext";
+import {
+  configureReanimatedLogger,
+  ReanimatedLogLevel,
+} from "react-native-reanimated";
+
+// Customize logging behavior—this suppresses warnings:
+configureReanimatedLogger({
+  level: ReanimatedLogLevel.error,
+  strict: false,
+});
+
 // Define navigation types
 export type RootStackParamList = {
   Landing: undefined;

@@ -286,7 +286,7 @@ app.post("/event/register", async (req, res) => {
 
   try {
     const result = await client.query(
-      `INSERT INTO event_registration VALUES (DEFAULT, $1, $2, DEFAULT)`,
+      `INSERT INTO event_registration VALUES (DEFAULT, $1, $2, DEFAULT) RETURNING *`,
       [eventId, u_email]
     );
 

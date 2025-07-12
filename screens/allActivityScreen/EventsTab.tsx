@@ -40,6 +40,7 @@ export default function EventsTab({
           />
         )}
         keyExtractor={(item: any) => item.event_id.toString()}
+        contentContainerStyle={{ marginHorizontal: RFValue(16) }}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -58,35 +59,20 @@ export default function EventsTab({
       />
     </View>
   ) : (
-    <View style={styles.container}>
-      {registeredEvents.length > 0 ? (
-        <FlatList
-          data={registeredEvents}
-          renderItem={({ item }) => (
-            <ProfileEventCard
-              {...item}
-              isRegistered={eventIsRegistered(item.event_id)}
-            />
-          )}
-          keyExtractor={(item: any) => item.event_id.toString()}
-        />
-      ) : (
-        <View style={styles.noEventsContainer}>
-          <Text style={styles.noEventsText}>Your event list is empty...</Text>
-          <Button
-            onPress={() =>
-              navigation.navigate("DrawerNavigator", {
-                screen: "TabLayout",
-                params: {
-                  screen: "Events",
-                },
-              })
-            }
-          >
-            Discover what's happening 🎉
-          </Button>
-        </View>
-      )}
+    <View style={styles.noEventsContainer}>
+      <Text style={styles.noEventsText}>Your event list is empty...</Text>
+      <Button
+        onPress={() =>
+          navigation.navigate("DrawerNavigator", {
+            screen: "TabLayout",
+            params: {
+              screen: "Events",
+            },
+          })
+        }
+      >
+        Discover what's happening 🎉
+      </Button>
     </View>
   );
 }
@@ -94,8 +80,7 @@ export default function EventsTab({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    paddingVertical: RFValue(10),
   },
   noEventsText: {
     textAlign: "center",

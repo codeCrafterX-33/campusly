@@ -19,7 +19,7 @@ import CreateClub from "../screens/CreateClub";
 import AddEvent from "../screens/AddEvent";
 import AllActivityScreen from "../screens/allActivityScreen/AllActivityScreen";
 import Colors from "../constants/Colors";
-
+import { RFValue } from "react-native-responsive-fontsize";
 export type RootStackParamList = {
   Landing: undefined;
   SignIn: undefined;
@@ -130,11 +130,26 @@ export const AuthenticatedStack = () => {
         component={AllActivityScreen}
         options={({ navigation }) => ({
           headerTitle: "All Activity",
+          headerStyle: {
+            backgroundColor: colors.background,
+          },
+          headerTitleStyle: {
+            color: colors.onBackground,
+            fontSize: RFValue(16),
+            marginLeft: RFValue(10),
+          },
 
           ...TransitionPresets.SlideFromRightIOS,
           headerLeft: () => (
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <Icon name="arrow-left" size={24} color={Colors.PRIMARY} />
+            <TouchableOpacity
+              style={{ paddingHorizontal: RFValue(7) }}
+              onPress={() => navigation.goBack()}
+            >
+              <Icon
+                name="arrow-left"
+                size={RFValue(24)}
+                color={Colors.PRIMARY}
+              />
             </TouchableOpacity>
           ),
         })}

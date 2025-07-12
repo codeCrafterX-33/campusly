@@ -43,6 +43,7 @@ function EventProvider({ children }: { children: React.ReactNode }) {
         if (events.length > 0) {
           console.log(events);
         }
+        return response.status;
       }
     } catch (error) {
       console.log(error);
@@ -56,17 +57,17 @@ function EventProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getRegisteredEvents = async () => {
-    try {
-      const response = await axios.get(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/event/registered/${user?.email}`
-      );
-      if (response.status === 200) {
-        setRegisteredEvents(response.data.data);
-        console.log("Registered events fetched successfully");
-      }
-    } catch (error) {
-      console.log(error);
+    const response = await axios.get(
+      `${process.env.EXPO_PUBLIC_SERVER_URL}/event/registered/${user?.email}`
+    );
+    if (response.status === 200) {
+      setRegisteredEvents(response.data.data);
+      console.log("Registered events fetched successfully");
+      return response.status;
+    } else {
+      console.log("Error fetching registered events");
     }
+    return response.status;
   };
 
   const registerEvent = async (eventId: string) => {
