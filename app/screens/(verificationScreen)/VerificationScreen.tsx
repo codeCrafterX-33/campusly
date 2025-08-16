@@ -11,6 +11,7 @@ import {
   Linking,
   Alert,
   BackHandler,
+  Keyboard,
 } from "react-native";
 import { useState, useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
@@ -31,6 +32,7 @@ import axios from "axios";
 export default function VerificationScreen() {
   const [query, setQuery] = useState("");
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
+
   const { colors } = useTheme();
   const { isDarkMode } = useThemeContext();
 
@@ -114,12 +116,13 @@ export default function VerificationScreen() {
         university.name.toLowerCase().includes(query.toLowerCase())
       );
       setResults(results);
-      console.log(results);
     }
     setLoading(false);
   };
 
-  const verifyEmail = () => {
+  const verifyEmail = async () => {
+    setLoading(true);
+    Keyboard.dismiss();
     const SchoolEmail = email.trim();
 
     if (!SchoolEmail.includes("@")) {
@@ -134,7 +137,6 @@ export default function VerificationScreen() {
       });
       setIsAlertVisible(true);
       setAlertType("error");
-
       return;
     }
 
@@ -149,14 +151,14 @@ export default function VerificationScreen() {
     }
 
     if (isValid) {
-      const response = axios.post(
+      const response = await axios.post(
         `${process.env.EXPO_PUBLIC_SERVER_URL}/otp/send-otp`,
         { email: SchoolEmail }
       );
-      console.log("Server URL:", process.env.EXPO_PUBLIC_SERVER_URL);
+      if (response.status === 200) {
+        navigation.navigate("OTPVerificationScreen", { email: SchoolEmail });
+      }
 
-      console.log("response", response);
-  
       // setIsAlertVisible(true);
       // setAlertType("success");
 
@@ -169,6 +171,7 @@ export default function VerificationScreen() {
       setIsAlertVisible(true);
       setAlertType("error");
     }
+    setLoading(false);
   };
 
   return (
@@ -366,7 +369,9 @@ export default function VerificationScreen() {
               disabled={!email}
               onPress={() => verifyEmail()}
             >
-              <Text style={styles.buttonText}>Verify school email</Text>
+              <Text style={styles.buttonText}>
+                {loading ? "Verifying..." : "Verify school email"}
+              </Text>
             </TouchableOpacity>
           </View>
         )}

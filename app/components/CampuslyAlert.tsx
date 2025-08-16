@@ -7,6 +7,8 @@ export default function CampuslyAlert({
   type,
   onClose,
   messages,
+  onPress,
+  buttonText,
 }: {
   isVisible: boolean;
   type: string;
@@ -23,6 +25,8 @@ export default function CampuslyAlert({
       icon: string;
     };
   };
+  onPress?: () => void;
+  buttonText?: string;
 }) {
   const isSuccess = type === "success";
 
@@ -43,10 +47,10 @@ export default function CampuslyAlert({
           </Text>
           <TouchableOpacity
             style={isSuccess ? styles.button : styles.buttonError}
-            onPress={onClose}
+            onPress={onPress && buttonText === "Got it!" ? onPress : onClose}
           >
             <Text style={styles.buttonText}>
-              {isSuccess ? "Got it!" : "Try again"}
+              {isSuccess ? buttonText : "Try again"}
             </Text>
           </TouchableOpacity>
         </View>

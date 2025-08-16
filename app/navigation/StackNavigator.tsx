@@ -25,7 +25,7 @@ import ProfileStepTwoScreen from "../screens/(profile)/ProfileStepTwoScreen";
 import { useContext, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
-
+import OTPVerificationScreen from "../screens/(verificationScreen)/OtpVerificationScreen";
 export type RootStackParamList = {
   Landing: undefined;
   SignIn: undefined;
@@ -41,6 +41,7 @@ export type RootStackParamList = {
   AllActivityScreen: undefined;
   ProfileStepOneScreen: undefined;
   ProfileStepTwoScreen: undefined;
+  OTPVerificationScreen: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -182,6 +183,11 @@ export const AuthenticatedStack = () => {
       <Stack.Screen
         name="ProfileStepTwoScreen"
         component={ProfileStepTwoScreen}
+        options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="OTPVerificationScreen"
+        component={OTPVerificationScreen}
         options={{ headerShown: false }}
       />
     </Stack.Navigator>

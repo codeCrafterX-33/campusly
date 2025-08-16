@@ -6,6 +6,7 @@ import Toast from "react-native-toast-message";
 
 const PostContext = createContext<any>({
   posts: [],
+  postMedia: [],
   setPosts: () => {},
   getPosts: () => {},
   refreshing: false,
@@ -19,6 +20,7 @@ function PostProvider({ children }: { children: React.ReactNode }) {
   const [posts, setPosts] = usePersistedState("posts", []);
   const [userPosts, setUserPosts] = usePersistedState("userPosts", []);
   const [refreshing, setRefreshing] = useState(false);
+  const [postMedia, setPostMedia] = useState<any>([]);
   const { userData } = useContext(AuthContext);
 
   type getPosts = {
@@ -50,8 +52,12 @@ function PostProvider({ children }: { children: React.ReactNode }) {
           club.setClubPosts(data.data);
         } else {
           setPosts(data.data);
+          setPostMedia(data.data[0].media.media);
+          console.log("Post media", postMedia);
         }
-        console.log("Posts fetched successfully");
+        const latestPost = posts[0];
+
+        // console.log("Posts fetched successfully", postMedia);
       } else {
         console.log("Error fetching posts");
       }

@@ -3,11 +3,12 @@ import axios from "axios";
 const uploadImageToCloudinary = async (
   uri: string,
   folder: string,
-  preset: string
+  preset: string,
+  type: "image" | "video"
 ) => {
   const filename = uri.split("/").pop() || `photo.jpg`; // fallback name
   const match = /\.(\w+)$/.exec(filename);
-  const type = match ? `image/${match[1]}` : `image/jpeg`; // fallback to jpeg
+  const mediaType = match ? `image/${match[1]}` : `image/jpeg`; // fallback to jpeg
 
   console.log("Uploading file:", { uri, filename, type });
 
@@ -15,12 +16,12 @@ const uploadImageToCloudinary = async (
   formData.append("file", {
     uri,
     name: filename,
-    type,
+    type: mediaType,
   } as any);
   formData.append("upload_preset", preset);
   formData.append("folder", folder);
 
-  const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${process.env.EXPO_PUBLIC_CLOUD_NAME}/image/upload`;
+  const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${process.env.EXPO_PUBLIC_CLOUD_NAME}/${type}/upload`;
   console.log("Uploading to Cloudinary URL:", cloudinaryUrl);
 
   try {
@@ -37,7 +38,7 @@ const uploadImageToCloudinary = async (
       "Cloudinary upload error:",
       error.response?.data || error.message
     );
-    throw new Error("Image upload failed");
+    throw new Error("Media upload failed");
   }
 };
 

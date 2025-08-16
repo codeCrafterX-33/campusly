@@ -4,8 +4,11 @@ import {
   TextInput,
   StyleSheet,
   Image,
+  Modal,
   TouchableOpacity,
   ActivityIndicator,
+  Pressable,
+  FlatList,
 } from "react-native";
 import React, {
   useContext,
@@ -31,6 +34,12 @@ import { PostContext } from "../../context/PostContext";
 import { ClubContext } from "../../context/ClubContext";
 import uploadImageToCloudinary from "../../util/uploadToCloudinary";
 import { postOptions } from "../../configs/CloudinaryConfig";
+import { Video, ResizeMode } from "expo-av";
+import {
+  widthPercentageToDP as wp,
+  heightPercentageToDP as hp,
+} from "react-native-responsive-screen";
+
 interface UploadResponse {
   url: string;
   secure_url: string;
@@ -38,8 +47,16 @@ interface UploadResponse {
 
 export default function WritePost() {
   const { colors } = useTheme();
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const selectedImageRef = useRef<string | null>(null);
+  const [selectedMedia, setSelectedMedia] = useState<
+    { uri: string; type: "image" | "video" }[]
+  >([]);
+
+  const selectedMediaRef = useRef<
+    {
+      uri: string;
+      type: "image" | "video";
+    }[]
+  >([]);
   const { userData } = useContext(AuthContext);
   const { getFollowedClubs, followedClubs } = useContext(ClubContext);
   const { getPosts } = useContext(PostContext);
@@ -57,6 +74,10 @@ export default function WritePost() {
   const [value, setValue] = useState({ club_name: "Public", club_id: 0 });
   const [content, setContent] = useState("");
   const inputRef = useRef<TextInput>(null);
+  const [previewMedia, setPreviewMedia] = useState<null | {
+    uri: string;
+    type: string;
+  }>(null);
 
   const [loading, setLoading] = useState(false);
 
@@ -121,43 +142,30 @@ export default function WritePost() {
 
     setLoading(true);
 
-    let postImageUrl = null;
+    let postMedia = [];
     try {
-      if (selectedImageRef.current && selectedImageRef.current.length > 0) {
-        console.log("Uploading image to Cloudinary:", selectedImageRef.current);
-        try {
+      if (selectedMediaRef.current && selectedMediaRef.current.length > 0) {
+        for (const media of selectedMediaRef.current) {
           const uploadResponse = await uploadImageToCloudinary(
-            selectedImageRef.current,
+            media.uri,
             postOptions.folder,
-            postOptions.upload_preset
+            postOptions.upload_preset,
+            media.type
           );
-          const imageUrl = uploadResponse;
-          console.log("Image uploaded. URL:", imageUrl);
-          postImageUrl = imageUrl;
-        } catch (err) {
-          Toast.show({
-            text1: "Image upload failed",
-            text2: "Try again or remove the image",
-            type: "error",
+          postMedia.push({
+            url: uploadResponse,
+            type: media.type,
           });
-          setLoading(false);
-          return;
         }
+        console.log("postMedia", postMedia);
       }
 
-      // Now send post
-      console.log("Sending post to backend:", {
-        content,
-        imageUrl: postImageUrl,
-        visibleIn: value.club_id,
-        email: userData?.email,
-      });
-
+     
       const result = await axios.post(
         `${process.env.EXPO_PUBLIC_SERVER_URL}/post`,
         {
           content: content,
-          imageUrl: postImageUrl,
+          media: postMedia,
           visibleIn: value.club_id,
           email: userData?.email,
         }
@@ -172,7 +180,6 @@ export default function WritePost() {
         navigation.navigate("DrawerNavigator");
       }
     } catch (error) {
-      console.error("Post submission error:", error);
       Toast.show({
         text1: "Error creating post",
         type: "error",
@@ -182,23 +189,47 @@ export default function WritePost() {
     }
   };
 
-  const pickImage = async () => {
+  const pickMedia = async () => {
+    const MAX_MEDIA = 4;
+
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
+      mediaTypes: ["images", "videos"],
       allowsEditing: true,
-      aspect: [4, 4],
-      quality: 0.5,
+      allowsMultipleSelection: true,
+      quality: 0.7,
     });
 
-    if (
-      !result.canceled &&
-      result.assets[0].uri &&
-      result.assets[0].uri.length > 0
-    ) {
-      const pickedUri = result.assets[0].uri;
-      selectedImageRef.current = pickedUri;
-      setSelectedImage(pickedUri);
-      console.log("selected Image:", selectedImageRef.current);
+    if (!result.canceled) {
+      let pickedMedia = result.assets.map((asset) => ({
+        uri: asset.uri,
+        type: asset.type as "image" | "video",
+      }));
+
+      const combinedMedia = [...selectedMediaRef.current, ...pickedMedia];
+      const videoCount = combinedMedia.filter((m) => m.type === "video").length;
+      if (videoCount > 1) {
+        Toast.show({
+          type: "error",
+          text1: "Only 1 video allowed per post",
+        });
+        return;
+      }
+
+      const unique = combinedMedia.filter(
+        (media, index, self) =>
+          index === self.findIndex((m) => m.uri === media.uri)
+      );
+
+      if (unique.length > MAX_MEDIA) {
+        Toast.show({
+          type: "error",
+          text1: `You can only select up to ${MAX_MEDIA} media.`,
+        });
+        return;
+      }
+
+      selectedMediaRef.current = unique;
+      setSelectedMedia(unique);
     }
   };
 
@@ -212,31 +243,106 @@ export default function WritePost() {
           styles.input,
           { backgroundColor: colors.background, color: colors.onBackground },
         ]}
-        multiline={true}
+        multiline
         numberOfLines={4}
         maxLength={1000}
-        onChangeText={(text) => {
-          setContent(text);
-          console.log("Content:", text);
-          console.log("Selected image:", selectedImage);
-        }}
+        onChangeText={(text) => setContent(text)}
       />
+      <Modal visible={!!previewMedia} animationType="fade" transparent>
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "black",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+        >
+          <TouchableOpacity
+            onPress={() => setPreviewMedia(null)}
+            style={{
+              position: "absolute",
+              top: 10,
+              left: 10,
+              zIndex: 100,
+              backgroundColor: "red",
+              padding: 0,
+              borderRadius: 99,
+            }}
+          >
+            <Ionicons name="close" size={34} color="white" />
+          </TouchableOpacity>
 
-      <TouchableOpacity onPress={pickImage}>
-        {selectedImage && (
-          <Image source={{ uri: selectedImage }} style={styles.image} />
-        )}
-        {!selectedImage && (
-          <Image
-            source={require("../../assets/images/image.png")}
-            style={[
-              styles.image,
-              { borderColor: Colors.PRIMARY, borderWidth: 2 },
-            ]}
-          />
-        )}
-      </TouchableOpacity>
+          {previewMedia?.type === "image" ? (
+            <Image
+              source={{ uri: previewMedia.uri }}
+              style={{ width: "100%", height: "100%", resizeMode: "contain" }}
+            />
+          ) : previewMedia?.type === "video" ? (
+            <Video
+              source={{ uri: previewMedia.uri }}
+              style={{ width: "100%", height: "100%" }}
+              useNativeControls
+              resizeMode={ResizeMode.CONTAIN}
+              shouldPlay
+            />
+          ) : null}
+        </View>
+      </Modal>
+      <View style={styles.mediaContainer}>
+        <FlatList
+          keyboardShouldPersistTaps="always"
+          horizontal
+          data={[
+            ...selectedMedia,
+            ...(selectedMedia.length < 4 ? [{ uri: "", type: "image" }] : []),
+          ]}
+          renderItem={({ item }: { item: { uri: string; type: string } }) =>
+            item.uri ? (
+              <Pressable
+                style={styles.mediaItem}
+                onPress={() => setPreviewMedia(item)}
+              >
+                {item.type === "image" ? (
+                  <Image source={{ uri: item.uri }} style={styles.thumbnail} />
+                ) : (
+                  <View style={styles.videoThumb}>
+                    <Ionicons
+                      name="play-circle-outline"
+                      size={40}
+                      color="white"
+                      style={styles.playIcon}
+                    />
+                  </View>
+                )}
+                <TouchableOpacity
+                  style={styles.removeBtn}
+                  onPress={() => {
+                    const filtered = selectedMediaRef.current.filter(
+                      (m) => m.uri !== item.uri
+                    );
+                    selectedMediaRef.current = filtered;
+                    setSelectedMedia(filtered);
+                  }}
+                >
+                  <Ionicons name="close" size={16} color="white" />
+                </TouchableOpacity>
+              </Pressable>
+            ) : null
+          }
+        />
 
+        {selectedMedia.length === 0 && (
+          <TouchableOpacity onPress={pickMedia}>
+            <Image
+              source={require("../../assets/images/image.png")}
+              style={[
+                styles.image,
+                { borderColor: Colors.PRIMARY, borderWidth: 2 },
+              ]}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
       <View style={styles.dropdownContainer}>
         <ModalDropdown
           modalVisible={modalVisible}
@@ -248,6 +354,12 @@ export default function WritePost() {
           header="Choose audience"
         />
       </View>
+
+      {selectedMedia.length < 4 && selectedMedia.length > 0 && (
+        <TouchableOpacity onPress={pickMedia} style={styles.addMediaBtn}>
+          <Ionicons name="image" size={50} color={Colors.PRIMARY} />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -273,7 +385,6 @@ const styles = StyleSheet.create({
     marginTop: 15,
     borderRadius: 15,
   },
-
   dropdownContainer: {
     marginTop: 15,
   },
@@ -295,7 +406,45 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     backgroundColor: Colors.PRIMARY,
   },
-  postBtnContainer: {
-    marginTop: 15,
+  mediaContainer: {
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  mediaItem: {
+    width: 100,
+    height: 100,
+    marginRight: 10,
+    borderRadius: 10,
+    backgroundColor: "#000",
+  },
+  thumbnail: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+  },
+  videoThumb: {
+    width: 100,
+    height: 100,
+    borderRadius: 10,
+    backgroundColor: "#000",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  playIcon: {
+    position: "absolute",
+  },
+  removeBtn: {
+    position: "absolute",
+    top: 5,
+    right: 5,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    borderRadius: 99,
+    padding: 2,
+    zIndex: 10,
+  },
+  addMediaBtn: {
+    display: "flex",
+
+    margin: 10,
   },
 });

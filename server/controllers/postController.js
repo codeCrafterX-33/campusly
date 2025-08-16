@@ -1,14 +1,13 @@
 import client from "../db.js";
 
 export const createPost = async (req, res) => {
-  const { content, imageUrl, visibleIn, email } = req.body;
-  console.log(content, imageUrl, visibleIn, email);
+  const { content, media, visibleIn, email } = req.body;
 
   try {
     const result = await client.query(
-      `INSERT INTO POSTS (content, imageurl, createdon, createdby, club)
+      `INSERT INTO POSTS (content, media, createdon, createdby, club)
        VALUES ($1, $2, DEFAULT, $3, $4) RETURNING *`,
-      [content, imageUrl, email, visibleIn]
+      [content, { media: media }, email, visibleIn]
     );
 
     res.status(201).json({
@@ -22,7 +21,6 @@ export const createPost = async (req, res) => {
     });
   }
 };
-
 
 export const getPosts = async (req, res) => {
   const { club, userEmail, orderField = "createdon" } = req.query;
@@ -49,7 +47,6 @@ export const getPosts = async (req, res) => {
    WHERE club in (${club})
    ORDER BY ${orderField} DESC`
       );
-      console.log(result.rows);
 
       res.status(200).json({
         message: "Posts fetched successfully",

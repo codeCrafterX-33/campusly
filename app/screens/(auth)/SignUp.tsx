@@ -39,8 +39,9 @@ export default function SignUp({ navigation }: { navigation: any }) {
       // Upload image and get URL
       const imageUrl = await uploadImageToCloudinary(
         profileImage,
-        options.folder,
-        options.upload_preset
+        "profile-images",
+        options.upload_preset,
+        process.env.EXPO_PUBLIC_CLOUD_NAME!
       );
 
       // Send user data to backend
