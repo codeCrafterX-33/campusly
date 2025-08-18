@@ -10,7 +10,7 @@ import { useState } from "react";
 import { useNavigation } from "@react-navigation/native";
 // You can add image picker later
 
-export default function ProfileStepTwoScreen() {
+export default function ProfileSetupScreen() {
   const [name, setName] = useState("");
   const [bio, setBio] = useState("");
   const navigation = useNavigation();

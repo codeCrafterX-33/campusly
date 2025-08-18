@@ -9,6 +9,10 @@ import {
 } from "react-native";
 import { useContext } from "react";
 import { AuthContext } from "../../context/AuthContext";
+import Ionicons from "react-native-vector-icons/Ionicons";
+import { RFValue } from "react-native-responsive-fontsize";
+import Colors from "../../constants/Colors";
+import { useNavigation } from "@react-navigation/native";
 
 const COVER_HEIGHT = 200;
 const PROFILE_IMAGE_SIZE = 80;
@@ -19,8 +23,10 @@ interface ProfileHeaderProps {
 }
 
 const ProfileHeader = ({ scrollY, user_id }: ProfileHeaderProps) => {
-    const { userData } = useContext(AuthContext);
+  const { userData } = useContext(AuthContext);
   const loggedInUser = user_id === userData?.email;
+
+  const navigation = useNavigation<any>();
 
   const profileImageScale = scrollY.interpolate({
     inputRange: [0, COVER_HEIGHT / 2, COVER_HEIGHT],
@@ -40,7 +46,6 @@ const ProfileHeader = ({ scrollY, user_id }: ProfileHeaderProps) => {
     outputRange: [1, 0.8, 0.4],
     extrapolate: "clamp",
   });
-
 
   return (
     <View style={styles.profileHeader}>
@@ -66,11 +71,30 @@ const ProfileHeader = ({ scrollY, user_id }: ProfileHeaderProps) => {
           <Text style={styles.verificationText}>🎓</Text>
         </View>
       </Animated.View>
-      <TouchableOpacity style={loggedInUser ? styles.editProfileButton : styles.followButton}>
-         <Text style={loggedInUser ? styles.editProfileButtonText : styles.followButtonText}>
-          {loggedInUser ? "Edit Profile" : "Follow"}
-        </Text>
-      </TouchableOpacity>
+
+      {loggedInUser ? (
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate("EditProfile", {
+              userEmail: userData?.email,
+              sectionToShow: "Profileabout",
+            })
+          }
+          style={{ marginLeft: 16 }}
+        >
+          <Ionicons
+            name="create-outline"
+            size={RFValue(24)}
+            color={Colors.PRIMARY}
+          />
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity
+          style={loggedInUser ? styles.editProfileButton : styles.followButton}
+        >
+          <Text style={styles.editProfileButtonText}>"Follow"</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 };
@@ -132,6 +156,4 @@ const styles = StyleSheet.create({
     color: "#000",
     fontWeight: "bold",
   },
-
-
 });

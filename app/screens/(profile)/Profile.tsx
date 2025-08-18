@@ -48,6 +48,7 @@ const PULL_THRESHOLD = 80;
 const Profile = ({ navigation }: { navigation: any }) => {
   const { userData } = useContext(AuthContext);
   const [aboutExpanded, setAboutExpanded] = useState(false);
+  const [showReadMore, setShowReadMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { userPosts, getUserPosts } = useContext(PostContext);
   const { colors } = useTheme();
@@ -79,6 +80,15 @@ const Profile = ({ navigation }: { navigation: any }) => {
 
   const suggestionOpacity = useRef(new Animated.Value(0)).current;
   const suggestionTranslateY = useRef(new Animated.Value(-30)).current;
+
+  const getPlaceholder = (value: string | undefined, placeholder: string) => ({
+    text: value?.trim() || placeholder,
+    style: {
+      color: value?.trim() ? colors.onBackground : colors.onSurfaceVariant,
+      fontStyle: (value?.trim() ? "normal" : "italic") as "normal" | "italic",
+      opacity: value?.trim() ? 1 : 0.7,
+    },
+  });
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -251,21 +261,91 @@ const Profile = ({ navigation }: { navigation: any }) => {
               {userData?.name}
             </Text>
             <Text style={[styles.profileHandle]}>{userData?.email}</Text>
-            <Text style={[styles.profileBio, { color: colors.onBackground }]}>
-              Accounting at Afe Babalola University 🎓 | Full-stack developer |
-              Study group organizer | Coffee enthusiast ☕ | Always down to help
-              with coding!
-            </Text>
+
+            {/* {bio} */}
+            {(() => {
+              const bio = getPlaceholder(
+                userData?.bio,
+                "Mysterious stranger with no bio. Very suspicious 🤔"
+              );
+              return (
+                <Text style={[styles.profileBio, bio.style]}>{bio.text}</Text>
+              );
+            })()}
+
             <View style={styles.profileMeta}>
-              <Text style={styles.profileMetaText}>
-                🏫 Afe Babalola University
-              </Text>
-              <Text style={styles.profileMetaText}>
-                <Ionicons name="pin" size={16} color={Colors.PRIMARY} />
-                Kuvuki Hostel
-              </Text>
-              <Text style={styles.profileMetaText}>📅 Class of 2020</Text>
-              <Text style={styles.profileMetaText}>📅 Joined March 2020</Text>
+              {/* School */}
+              {(() => {
+                const school = getPlaceholder(
+                  userData?.school,
+                  "A mystery school… yet to be revealed 🕵️‍♂️"
+                );
+                return (
+                  <Text style={[styles.profileMetaText, school.style]}>
+                    <Ionicons name="school" size={16} color={Colors.PRIMARY} />
+                    {school.text}
+                  </Text>
+                );
+              })()}
+
+              {/* Location */}
+              {(() => {
+                const location = getPlaceholder(
+                  userData?.location,
+                  "Top Secret Academy 🕵️‍♂️"
+                );
+                return (
+                  <Text style={[styles.profileMetaText, location.style]}>
+                    <Ionicons
+                      name="location"
+                      size={16}
+                      color={Colors.PRIMARY}
+                    />
+                    {location.text}
+                  </Text>
+                );
+              })()}
+
+              {/* Admission Year */}
+              {(() => {
+                const admission = getPlaceholder(
+                  userData?.admissionyear,
+                  "Class of ??? 🤷‍♂️"
+                );
+                return (
+                  <Text style={[styles.profileMetaText, admission.style]}>
+                    <Ionicons
+                      name="calendar"
+                      size={16}
+                      color={Colors.PRIMARY}
+                    />
+                    {admission.text}
+                  </Text>
+                );
+              })()}
+
+              {/* Joined App */}
+              {(() => {
+                const joined = getPlaceholder(
+                  userData?.joined_at
+                    ? new Date(userData.joined_at).toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "long",
+                      })
+                    : undefined,
+                  "Joined… who knows when? 🕰️"
+                );
+                return (
+                  <Text style={[styles.profileMetaText, joined.style]}>
+                    <Ionicons
+                      name="time-outline"
+                      size={16}
+                      color={Colors.PRIMARY}
+                    />
+                    {joined.text}
+                  </Text>
+                );
+              })()}
             </View>
             <View style={styles.profileStats}>
               <TouchableOpacity style={styles.statItem}>
@@ -302,30 +382,66 @@ const Profile = ({ navigation }: { navigation: any }) => {
               { backgroundColor: colors.background },
             ]}
           >
-            <Text style={[styles.aboutTitle, { color: colors.onBackground }]}>
-              About
-            </Text>
-            <Text
-              style={[styles.aboutText, { color: colors.onBackground }]}
-              numberOfLines={aboutExpanded ? undefined : 3}
-            >
-              {userData?.about ||
-                `I’m a passionate full-stack developer with a background in accounting. I enjoy building practical digital solutions, from student-focused apps to scalable e-commerce platforms. 
-
-I'm currently studying Accounting at Afe Babalola University, where I also lead coding study groups and help others grow in tech. When I'm not coding, I’m usually exploring design trends, reading about startups, or organizing small projects with friends.
-
-I believe in constant learning, sharing knowledge, and making tech more accessible to people around me.`}
-            </Text>
-            {!aboutExpanded && (
-              <TouchableOpacity onPress={() => setAboutExpanded(true)}>
-                <Text style={styles.readMoreText}>Read more</Text>
+            <View style={[styles.aboutHeader]}>
+              <Text style={[styles.aboutTitle, { color: colors.onBackground }]}>
+                About
+              </Text>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("EditProfile")}
+              >
+                <Ionicons
+                  name="pencil-outline"
+                  size={RFValue(16)}
+                  color={Colors.PRIMARY}
+                />
               </TouchableOpacity>
-            )}
-            {aboutExpanded && (
-              <TouchableOpacity onPress={() => setAboutExpanded(false)}>
-                <Text style={styles.readMoreText}>Show less</Text>
-              </TouchableOpacity>
-            )}
+            </View>
+
+            {(() => {
+              const placeholderAbout = `Mysterious student wandering Campusly’s halls… 👀  
+Rumor has it they code apps, chase deadlines, and survive on coffee.  
+May or may not have a secret talent for finding the best study spots on campus. 🕵️‍♂️  
+Friend requests welcome, but beware… they might already have 3 group projects pending. 😏`;
+
+              const aboutData = userData?.about?.trim() || placeholderAbout;
+              const isPlaceholder = !userData?.about?.trim();
+
+              return (
+                <>
+                  <Text
+                    style={[
+                      styles.aboutText,
+                      {
+                        color: isPlaceholder
+                          ? colors.onSurfaceVariant
+                          : colors.onBackground,
+                        fontStyle: isPlaceholder ? "italic" : "normal",
+                      },
+                    ]}
+                    numberOfLines={aboutExpanded ? undefined : 3}
+                    onTextLayout={(e) => {
+                      const { lines } = e.nativeEvent;
+                      if (lines.length > 3 && !showReadMore) {
+                        setShowReadMore(true);
+                      }
+                    }}
+                  >
+                    {aboutData}
+                  </Text>
+
+                  {/* Toggle button */}
+                  {showReadMore && (
+                    <TouchableOpacity
+                      onPress={() => setAboutExpanded(!aboutExpanded)}
+                    >
+                      <Text style={styles.readMoreText}>
+                        {aboutExpanded ? "Show less" : "Read more"}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              );
+            })()}
           </View>
 
           {/* {Activity Section} */}
@@ -640,6 +756,7 @@ const styles = StyleSheet.create({
   skillsSection: {
     marginTop: 25,
     paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   skillsTitle: {
     color: "#fff",
@@ -724,6 +841,13 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 16,
     lineHeight: 22,
+    marginBottom: 12,
+  },
+
+  aboutHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 12,
   },
 });

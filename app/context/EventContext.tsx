@@ -31,7 +31,7 @@ function EventProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("fetching events.....");
       const response = await axios.get(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/event`
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/event/get-events`
       );
 
       if (userData?.email) {

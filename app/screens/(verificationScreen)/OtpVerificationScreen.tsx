@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useContext } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
 import Colors from "../../constants/Colors";
 import axios from "axios";
 import CampuslyAlert from "../../components/CampuslyAlert";
+import { AuthContext } from "../../context/AuthContext";
 
 const OTP_LENGTH = 6;
 
@@ -20,6 +21,8 @@ const OTPVerificationScreen = ({
   route: any;
   navigation: any;
 }) => {
+  const { userData } = useContext(AuthContext);
+
   const { email } = route.params; // Or phone, whatever you sent OTP to
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
   const [activeInput, setActiveInput] = useState(0);
@@ -91,7 +94,7 @@ const OTPVerificationScreen = ({
     try {
       const response = await axios.post(
         `${process.env.EXPO_PUBLIC_SERVER_URL}/otp/verify-otp`,
-        { email, otp: code }
+        { SchoolEmail: email, UserEmail: userData?.email, OTP: code }
       );
 
       console.log("✅ Success:", response.data);
@@ -99,7 +102,7 @@ const OTPVerificationScreen = ({
       setAlertMessage({ ...alertMessage, success: { ...messages.success } });
       setIsAlertVisible(true);
       setAlertType("success");
-      setOnPress(() => navigation.replace("DrawerNavigator"));
+      setOnPress(() => () => navigation.replace("DrawerNavigator"));
     } catch (err: any) {
       // Here’s where your backend messages come through
       if (err.response) {
@@ -125,7 +128,10 @@ const OTPVerificationScreen = ({
         } else if (err.response.data.message === "Invalid OTP") {
           setAlertMessage({
             ...alertMessage,
-            error: { ...messages.error, message: "Invalid OTP" },
+            error: {
+              ...messages.error,
+              message: "Invalid OTP. Please try again.",
+            },
           });
         }
 
@@ -140,11 +146,12 @@ const OTPVerificationScreen = ({
   };
 
   const handleResend = async () => {
+    setOtp(Array(OTP_LENGTH).fill(""));
     if (resendTimer > 0) return;
     // call backend to resend OTP
     const response = await axios.post(
       `${process.env.EXPO_PUBLIC_SERVER_URL}/otp/send-otp`,
-      { email: email }
+      { SchoolEmail: email }
     );
     if (response.status === 200) {
       setResendTimer(60);

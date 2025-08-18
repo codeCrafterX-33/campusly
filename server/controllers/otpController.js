@@ -65,13 +65,13 @@ export const sendOtp = async (req, res) => {
 // Verify OTP
 export const verifyOtp = async (req, res) => {
   console.log(req.body);
-  const { email, otp } = req.body;
-  const hashedOtp = hashOtp(otp);
+  const { SchoolEmail, UserEmail, OTP } = req.body;
+  const hashedOtp = hashOtp(OTP);
 
   try {
     const result = await client.query(
       `SELECT * FROM email_verifications WHERE email = $1`,
-      [email]
+      [SchoolEmail]
     );
 
     if (!result.rows.length) {
@@ -94,7 +94,7 @@ export const verifyOtp = async (req, res) => {
     if (hashedOtp !== storedOtp) {
       await client.query(
         `UPDATE email_verifications SET failed_attempts = failed_attempts + 1 WHERE email = $1`,
-        [email]
+        [SchoolEmail]
       );
       console.log("Invalid OTP");
       return res.status(400).json({ message: "Invalid OTP" });
@@ -103,12 +103,12 @@ export const verifyOtp = async (req, res) => {
     // Mark as verified
     await client.query(
       `UPDATE users SET studentstatusverified = TRUE WHERE email = $1`,
-      [email]
+      [UserEmail]
     );
 
     // Remove OTP after success
     await client.query(`DELETE FROM email_verifications WHERE email = $1`, [
-      email,
+      SchoolEmail,
     ]);
 
     res.status(200).json({ message: "Email verified" });

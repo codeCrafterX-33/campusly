@@ -47,7 +47,7 @@ export default function CampuslyAlert({
           </Text>
           <TouchableOpacity
             style={isSuccess ? styles.button : styles.buttonError}
-            onPress={onPress && buttonText === "Got it!" ? onPress : onClose}
+            onPress={onPress && buttonText === "Continue" ? onPress : onClose}
           >
             <Text style={styles.buttonText}>
               {isSuccess ? buttonText : "Try again"}

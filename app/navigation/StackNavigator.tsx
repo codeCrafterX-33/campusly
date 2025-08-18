@@ -20,12 +20,14 @@ import AddEvent from "../screens/AddEvent";
 import AllActivityScreen from "../screens/allActivityScreen/AllActivityScreen";
 import Colors from "../constants/Colors";
 import { RFValue } from "react-native-responsive-fontsize";
-import ProfileStepOneScreen from "../screens/(verificationScreen)/VerificationScreen";
-import ProfileStepTwoScreen from "../screens/(profile)/ProfileStepTwoScreen";
+import VerificationScreen from "../screens/(verificationScreen)/VerificationScreen";
+import EditProfile from "../screens/(profile)/EditProfile";
 import { useContext, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import OTPVerificationScreen from "../screens/(verificationScreen)/OtpVerificationScreen";
+import ProfileSetupScreen from "../screens/(profile)/ProfileSetupScreen";
+
 export type RootStackParamList = {
   Landing: undefined;
   SignIn: undefined;
@@ -39,9 +41,10 @@ export type RootStackParamList = {
   CreateClub: undefined;
   AddEvent: undefined;
   AllActivityScreen: undefined;
-  ProfileStepOneScreen: undefined;
-  ProfileStepTwoScreen: undefined;
+  VerificationScreen: undefined;
+  ProfileSetupScreen: undefined;
   OTPVerificationScreen: undefined;
+  EditProfile: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -72,19 +75,16 @@ export const AuthenticatedStack = () => {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { colors } = useTheme();
-  const { userData } = useContext(AuthContext);
+  const { userData, getUser } = useContext(AuthContext);
 
   useEffect(() => {
-    if (!userData?.profile_completed) {
-      navigation.navigate("ProfileStepOneScreen");
-    }
-  }, [userData]);
+    getUser();
+    console.log("User Data fetched successsfully");
+  }, [getUser, navigation]);
 
   return (
     <Stack.Navigator
-      initialRouteName={
-        userData?.profile_completed ? "DrawerNavigator" : "ProfileStepOneScreen"
-      }
+      initialRouteName="DrawerNavigator"
       screenOptions={{
         gestureEnabled: true,
       }}
@@ -176,14 +176,21 @@ export const AuthenticatedStack = () => {
         })}
       />
       <Stack.Screen
-        name="ProfileStepOneScreen"
-        component={ProfileStepOneScreen}
+        name="VerificationScreen"
+        component={VerificationScreen}
         options={{ headerShown: false }}
       />
+
       <Stack.Screen
-        name="ProfileStepTwoScreen"
-        component={ProfileStepTwoScreen}
+        name="ProfileSetupScreen"
+        component={ProfileSetupScreen}
         options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="EditProfile"
+        component={EditProfile}
+        options={{ headerShown: true }}
       />
       <Stack.Screen
         name="OTPVerificationScreen"
