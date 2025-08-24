@@ -27,6 +27,7 @@ import { AuthContext } from "../context/AuthContext";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import OTPVerificationScreen from "../screens/(verificationScreen)/OtpVerificationScreen";
 import ProfileSetupScreen from "../screens/(profile)/ProfileSetupScreen";
+import EditEducation from "../screens/(profile)/EditEducation"; 
 
 export type RootStackParamList = {
   Landing: undefined;
@@ -45,6 +46,7 @@ export type RootStackParamList = {
   ProfileSetupScreen: undefined;
   OTPVerificationScreen: undefined;
   EditProfile: undefined;
+  EditEducation: undefined;
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -196,6 +198,11 @@ export const AuthenticatedStack = () => {
         name="OTPVerificationScreen"
         component={OTPVerificationScreen}
         options={{ headerShown: false }}
+      />
+      <Stack.Screen
+        name="EditEducation"
+        component={EditEducation}
+        options={{ headerShown: true }}
       />
     </Stack.Navigator>
   );

@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import client from "../db.js";
+import pool from "../db.js";
 import crypto from "crypto";
 
 function hashOtp(otp) {
@@ -25,7 +25,7 @@ export const sendOtp = async (req, res) => {
 
   try {
     // Throttle: 60s cooldown
-    const checkCooldown = await client.query(
+    const checkCooldown = await pool.query(
       `SELECT created_at FROM email_verifications WHERE email = $1`,
       [email]
     );
@@ -40,7 +40,7 @@ export const sendOtp = async (req, res) => {
     }
 
     // Insert or update OTP
-    await client.query(
+    await pool.query(
       `INSERT INTO email_verifications (email, otp, expires_at, failed_attempts, created_at)
        VALUES ($1, $2, $3, 0, NOW())
        ON CONFLICT (email) DO UPDATE SET otp = $2, expires_at = $3, failed_attempts = 0, created_at = NOW()`,
@@ -69,7 +69,7 @@ export const verifyOtp = async (req, res) => {
   const hashedOtp = hashOtp(OTP);
 
   try {
-    const result = await client.query(
+    const result = await pool.query(
       `SELECT * FROM email_verifications WHERE email = $1`,
       [SchoolEmail]
     );
@@ -92,7 +92,7 @@ export const verifyOtp = async (req, res) => {
     }
 
     if (hashedOtp !== storedOtp) {
-      await client.query(
+      await pool.query(
         `UPDATE email_verifications SET failed_attempts = failed_attempts + 1 WHERE email = $1`,
         [SchoolEmail]
       );
@@ -101,13 +101,13 @@ export const verifyOtp = async (req, res) => {
     }
 
     // Mark as verified
-    await client.query(
+    await pool.query(
       `UPDATE users SET studentstatusverified = TRUE WHERE email = $1`,
       [UserEmail]
     );
 
     // Remove OTP after success
-    await client.query(`DELETE FROM email_verifications WHERE email = $1`, [
+    await pool.query(`DELETE FROM email_verifications WHERE email = $1`, [
       SchoolEmail,
     ]);
 

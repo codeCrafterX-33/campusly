@@ -157,7 +157,7 @@ export default function WritePost() {
             type: media.type,
           });
         }
-        console.log("postMedia", postMedia);
+        
       }
 
      

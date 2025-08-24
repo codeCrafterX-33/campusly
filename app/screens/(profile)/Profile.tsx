@@ -38,6 +38,7 @@ import PullToRefreshIndicator from "../../components/Profile/PullToRefreshIndica
 import { RFValue } from "react-native-responsive-fontsize";
 import { heightPercentageToDP as hp } from "react-native-responsive-screen";
 import { ActivitySectionMiniScreen } from "../ActivitySectionScreen";
+import EducationCard from "../../components/Profile/EducationCard";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const HEADER_HEIGHT = 56;
@@ -46,25 +47,15 @@ const COVER_HEIGHT = 200;
 const PULL_THRESHOLD = 80;
 
 const Profile = ({ navigation }: { navigation: any }) => {
-  const { userData } = useContext(AuthContext);
+  const { userData, education } = useContext(AuthContext);
   const [aboutExpanded, setAboutExpanded] = useState(false);
   const [showReadMore, setShowReadMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const { userPosts, getUserPosts } = useContext(PostContext);
   const { colors } = useTheme();
   const { showSuccessCheckmark, checkmark } = useCheckAnimation();
-  const [skills, setSkills] = useState<string[]>([
-    "React Native",
-    "Photography",
-    "Web Development",
-    "UI/UX Design",
-    "Node.js",
-    "Express",
-    "MongoDB",
-    "React",
-  ]);
-  const [newSkill, setNewSkill] = useState("");
-  const [isEditingSkills, setIsEditingSkills] = useState(false);
+  const [skills, setSkills] = useState<string[]>(userData?.skills);
+  const [interests, setInterests] = useState<string[]>(userData?.interests);
 
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("Posts");
@@ -80,6 +71,11 @@ const Profile = ({ navigation }: { navigation: any }) => {
 
   const suggestionOpacity = useRef(new Animated.Value(0)).current;
   const suggestionTranslateY = useRef(new Animated.Value(-30)).current;
+
+  useEffect(() => {
+    setSkills(userData?.skills || []);
+    setInterests(userData?.interests || []);
+  }, [userData]);
 
   const getPlaceholder = (value: string | undefined, placeholder: string) => ({
     text: value?.trim() || placeholder,
@@ -244,7 +240,7 @@ const Profile = ({ navigation }: { navigation: any }) => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={24} color="white" />
+            <Ionicons name="arrow-back" size={RFValue(24)} color="white" />
           </TouchableOpacity>
         </View>
 
@@ -258,9 +254,9 @@ const Profile = ({ navigation }: { navigation: any }) => {
           <ProfileHeader user_id={userData?.email} scrollY={scrollY} />
           <View style={styles.profileInfo}>
             <Text style={[styles.profileName, { color: colors.onBackground }]}>
-              {userData?.name}
+              {userData?.firstname} {userData?.lastname}
             </Text>
-            <Text style={[styles.profileHandle]}>{userData?.email}</Text>
+            <Text style={[styles.profileHandle]}> @{userData?.username}</Text>
 
             {/* {bio} */}
             {(() => {
@@ -282,8 +278,92 @@ const Profile = ({ navigation }: { navigation: any }) => {
                 );
                 return (
                   <Text style={[styles.profileMetaText, school.style]}>
-                    <Ionicons name="school" size={16} color={Colors.PRIMARY} />
+                    <Ionicons
+                      name="school"
+                      size={RFValue(16)}
+                      color={Colors.PRIMARY}
+                    />
                     {school.text}
+                  </Text>
+                );
+              })()}
+
+              {/* Degree and Field of Study */}
+              {(() => {
+                // Get education data from context
+                const educationData =
+                  education && Array.isArray(education) && education.length > 0
+                    ? education[0]
+                    : null;
+
+                if (!educationData) {
+                  return (
+                    <Text
+                      style={[
+                        styles.profileMetaText,
+                        { color: colors.onSurfaceVariant, fontStyle: "italic" },
+                      ]}
+                    >
+                      <Ionicons
+                        name="school-outline"
+                        size={16}
+                        color={Colors.PRIMARY}
+                      />
+                      No degree info yet 🎓
+                    </Text>
+                  );
+                }
+
+                // Parse school data safely
+                let schoolName = "";
+                try {
+                  if (typeof educationData.school === "string") {
+                    const parsed = JSON.parse(educationData.school);
+                    schoolName = parsed.name || "";
+                  } else if (
+                    educationData.school &&
+                    typeof educationData.school === "object"
+                  ) {
+                    schoolName = educationData.school.name || "";
+                  }
+                } catch (error) {
+                  console.warn("Error parsing school data:", error);
+                }
+
+                const degree = educationData.degree || "";
+                const fieldOfStudy = educationData.field_of_study || "";
+
+                let degreeText = "";
+                if (degree && fieldOfStudy) {
+                  const degreeAbbr = degree.toLowerCase().includes("bachelor")
+                    ? "BS"
+                    : degree.toLowerCase().includes("master")
+                    ? "MS"
+                    : degree.toLowerCase().includes("phd")
+                    ? "PhD"
+                    : degree.toLowerCase().includes("associate")
+                    ? "AA"
+                    : degree.toLowerCase().includes("diploma")
+                    ? "Dip"
+                    : degree.toLowerCase().includes("certificate")
+                    ? "Cert"
+                    : degree;
+
+                  degreeText = `${degreeAbbr} in ${fieldOfStudy}`;
+                } else if (degree) {
+                  degreeText = degree;
+                } else if (fieldOfStudy) {
+                  degreeText = fieldOfStudy;
+                }
+
+                return (
+                  <Text style={[styles.profileMetaText]}>
+                    <Ionicons
+                      name="school-outline"
+                      size={16}
+                      color={Colors.PRIMARY}
+                    />
+                    {degreeText}
                   </Text>
                 );
               })()}
@@ -306,24 +386,6 @@ const Profile = ({ navigation }: { navigation: any }) => {
                 );
               })()}
 
-              {/* Admission Year */}
-              {(() => {
-                const admission = getPlaceholder(
-                  userData?.admissionyear,
-                  "Class of ??? 🤷‍♂️"
-                );
-                return (
-                  <Text style={[styles.profileMetaText, admission.style]}>
-                    <Ionicons
-                      name="calendar"
-                      size={16}
-                      color={Colors.PRIMARY}
-                    />
-                    {admission.text}
-                  </Text>
-                );
-              })()}
-
               {/* Joined App */}
               {(() => {
                 const joined = getPlaceholder(
@@ -336,13 +398,13 @@ const Profile = ({ navigation }: { navigation: any }) => {
                   "Joined… who knows when? 🕰️"
                 );
                 return (
-                  <Text style={[styles.profileMetaText, joined.style]}>
+                  <Text style={[styles.profileMetaText]}>
                     <Ionicons
                       name="time-outline"
                       size={16}
                       color={Colors.PRIMARY}
                     />
-                    {joined.text}
+                    {`Joined ${joined.text}`}
                   </Text>
                 );
               })()}
@@ -387,7 +449,12 @@ const Profile = ({ navigation }: { navigation: any }) => {
                 About
               </Text>
               <TouchableOpacity
-                onPress={() => navigation.navigate("EditProfile")}
+                onPress={() =>
+                  navigation.navigate("EditProfile", {
+                    userEmail: userData?.email,
+                    sectionToEdit: "about",
+                  })
+                }
               >
                 <Ionicons
                   name="pencil-outline"
@@ -421,8 +488,10 @@ Friend requests welcome, but beware… they might already have 3 group projects 
                     numberOfLines={aboutExpanded ? undefined : 3}
                     onTextLayout={(e) => {
                       const { lines } = e.nativeEvent;
-                      if (lines.length > 3 && !showReadMore) {
+                      if (lines.length > 3) {
                         setShowReadMore(true);
+                      } else {
+                        setShowReadMore(false);
                       }
                     }}
                   >
@@ -485,13 +554,37 @@ Friend requests welcome, but beware… they might already have 3 group projects 
               { backgroundColor: colors.background },
             ]}
           >
-            <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>
-              Education
-            </Text>
-            <Text style={[styles.eduItem, { color: colors.onBackground }]}>
-              B.Sc Accounting — Afe Babalola University, 2020
-            </Text>
-            {/* Add more schools or courses */}
+            <View style={styles.educationHeader}>
+              <Text
+                style={[styles.sectionTitle, { color: colors.onBackground }]}
+              >
+                Education
+              </Text>
+              <TouchableOpacity
+                onPress={() =>
+                  navigation.navigate("EditEducation", {
+                    userEmail: userData?.email,
+                  })
+                }
+              >
+                <Ionicons
+                  name="pencil-outline"
+                  size={RFValue(16)}
+                  color={Colors.PRIMARY}
+                />
+              </TouchableOpacity>
+            </View>
+            {Array.isArray(education) && education.length > 0 ? (
+              education.map((edu: any, index: number) => (
+                <EducationCard key={index} education={edu} />
+              ))
+            ) : (
+              <Text
+                style={[styles.eduItem, { color: colors.onSurfaceVariant }]}
+              >
+                No education details added. Click the pencil icon to add.
+              </Text>
+            )}
           </View>
 
           {/* Skills & Interests Section */}
@@ -500,6 +593,8 @@ Friend requests welcome, but beware… they might already have 3 group projects 
               style={{
                 flexDirection: "row",
                 justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: RFValue(16),
               }}
             >
               <Text
@@ -508,67 +603,73 @@ Friend requests welcome, but beware… they might already have 3 group projects 
                 Skills & Interests
               </Text>
               <TouchableOpacity
-                onPress={() => setIsEditingSkills(!isEditingSkills)}
+                onPress={() =>
+                  navigation.navigate("EditProfile", {
+                    userEmail: userData?.email,
+                    sectionToEdit: "skills",
+                  })
+                }
               >
-                <Text style={{ color: Colors.PRIMARY }}>
-                  {isEditingSkills ? (
-                    "Done"
-                  ) : (
-                    <Ionicons
-                      name="pencil-outline"
-                      size={24}
-                      color={Colors.PRIMARY}
-                    />
-                  )}
-                </Text>
+                <Ionicons
+                  name="pencil-outline"
+                  size={RFValue(16)}
+                  color={Colors.PRIMARY}
+                />
               </TouchableOpacity>
             </View>
 
-            <View style={styles.skillsWrapper}>
-              {skills.map((skill, index) => (
-                <View key={index} style={styles.skillTag}>
-                  <Text style={styles.skillText}>#{skill}</Text>
-                  {isEditingSkills && (
-                    <TouchableOpacity
-                      onPress={() =>
-                        setSkills((prev) => prev.filter((_, i) => i !== index))
-                      }
-                    >
-                      <Ionicons
-                        name="close"
-                        size={14}
-                        color="#fff"
-                        style={{ marginLeft: 6 }}
-                      />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              ))}
+            {/* Skills Subsection */}
+            <View style={styles.subsection}>
+              <Text
+                style={[styles.subsectionTitle, { color: colors.onBackground }]}
+              >
+                Skills ({(skills || []).length}/5)
+              </Text>
+              <View style={styles.skillsWrapper}>
+                {(skills || []).length <= 0 && (
+                  <Text
+                    style={[
+                      styles.skillText,
+                      { color: colors.onSurfaceVariant },
+                    ]}
+                  >
+                    No skills added yet… what are you waiting for? 🚀
+                  </Text>
+                )}
+                {(skills || []).map((skill, index) => (
+                  <View key={index} style={styles.skillTag}>
+                    <Text style={styles.skillText}>#{skill}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+
+            {/* Interests Subsection */}
+            <View style={styles.subsection}>
+              <Text
+                style={[styles.subsectionTitle, { color: colors.onBackground }]}
+              >
+                Interests ({(interests || []).length}/5)
+              </Text>
+              <View style={styles.interestsWrapper}>
+                {(interests || []).length <= 0 && (
+                  <Text
+                    style={[
+                      styles.interestText,
+                      { color: colors.onSurfaceVariant },
+                    ]}
+                  >
+                    No interests added yet… are you secretly a robot? 🤖
+                  </Text>
+                )}
+                {(interests || []).map((interest, index) => (
+                  <View key={index} style={styles.interestTag}>
+                    <Text style={styles.interestText}>#{interest}</Text>
+                  </View>
+                ))}
+              </View>
             </View>
           </View>
-
-          {isEditingSkills && (
-            <View style={{ flexDirection: "row", marginBottom: 12 }}>
-              <TextInput
-                placeholder="Add a skill..."
-                value={newSkill}
-                onChangeText={(text) => setNewSkill(text)}
-                placeholderTextColor="#aaa"
-                style={styles.skillInput}
-                onSubmitEditing={() => {}}
-              />
-              <TouchableOpacity
-                onPress={() => {
-                  if (newSkill.trim() && !skills.includes(newSkill.trim())) {
-                    setSkills([...skills, newSkill.trim()]);
-                    setNewSkill("");
-                  }
-                }}
-              >
-                <Ionicons name="add-circle" size={28} color={Colors.PRIMARY} />
-              </TouchableOpacity>
-            </View>
-          )}
         </View>
       </Animated.ScrollView>
     </SafeAreaView>
@@ -736,7 +837,7 @@ const styles = StyleSheet.create({
   },
   aboutTitle: {
     color: "#fff",
-    fontSize: 22,
+    fontSize: RFValue(22),
     fontWeight: "bold",
     marginBottom: 24,
   },
@@ -760,7 +861,7 @@ const styles = StyleSheet.create({
   },
   skillsTitle: {
     color: "#fff",
-    fontSize: 22,
+    fontSize: RFValue(22),
     fontWeight: "bold",
     marginBottom: 8,
   },
@@ -781,6 +882,42 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
   },
+  interestsSection: {
+    marginTop: 25,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  interestsTitle: {
+    color: "#fff",
+    fontSize: RFValue(22),
+    fontWeight: "bold",
+    marginBottom: 8,
+  },
+  interestsWrapper: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  interestTag: {
+    backgroundColor: Colors.PRIMARY,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  interestText: {
+    color: "#fff",
+    fontSize: 14,
+  },
+  subsection: {
+    marginBottom: RFValue(20),
+  },
+  subsectionTitle: {
+    fontSize: RFValue(18),
+    fontWeight: "600",
+    marginBottom: RFValue(8),
+  },
 
   skillInput: {
     flex: 1,
@@ -800,7 +937,7 @@ const styles = StyleSheet.create({
   },
   activityTitle: {
     color: "#fff",
-    fontSize: 22,
+    fontSize: RFValue(22),
     fontWeight: "bold",
     marginBottom: 24,
   },
@@ -832,8 +969,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginTop: hp(3),
   },
+
+  educationHeader: { flexDirection: "row", justifyContent: "space-between" },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: RFValue(22),
     fontWeight: "bold",
     marginBottom: 12,
   },

@@ -83,7 +83,6 @@ const SchoolSelector = ({ onSelect }: SchoolSelectorProps) => {
       );
 
       setResults(res.data);
-      console.log(res.data);
     } catch (err) {
       console.log("Failed to fetch schools", err);
 

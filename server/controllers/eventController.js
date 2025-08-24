@@ -1,4 +1,4 @@
-import client from "../db.js";
+import pool from "../db.js";
 
 export const createEvent = async (req, res) => {
   const {
@@ -21,7 +21,7 @@ export const createEvent = async (req, res) => {
     u_email
   );
   try {
-    const result = await client.query(
+    const result = await pool.query(
       `INSERT INTO events VALUES (DEFAULT, $1, $2, $3, $4, $5, $6, $7, DEFAULT) RETURNING *`,
       [eventName, location, link, eventImage, eventDate, eventTime, u_email]
     );
@@ -41,7 +41,7 @@ export const createEvent = async (req, res) => {
 export const getEvents = async (req, res) => {
   try {
     const result =
-      await client.query(`select events.*, users.name as username from events
+      await pool.query(`select events.*, users.name as username from events
 inner join users
 on events.createdby=users.email
 order by id desc;`);
@@ -62,7 +62,7 @@ export const registerEvent = async (req, res) => {
   const { eventId, u_email } = req.body;
 
   try {
-    const result = await client.query(
+    const result = await pool.query(
       `INSERT INTO event_registration VALUES (DEFAULT, $1, $2, DEFAULT)`,
       [eventId, u_email]
     );
@@ -82,7 +82,7 @@ export const getRegisteredEvents = async (req, res) => {
   const { u_email } = req.params;
 
   try {
-    const result = await client.query(
+    const result = await pool.query(
       `SELECT events.*, event_registration.*, users.name as username FROM events
 INNER JOIN event_registration ON events.id = event_registration.event_id
 INNER JOIN users 
@@ -108,7 +108,7 @@ export const unregisterEvent = async (req, res) => {
   const { eventId } = req.body;
 
   try {
-    const result = await client.query(
+    const result = await pool.query(
       `DELETE FROM event_registration WHERE user_email = $1 AND event_id = $2`,
       [u_email, eventId]
     );

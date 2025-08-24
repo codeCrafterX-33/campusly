@@ -53,7 +53,6 @@ function PostProvider({ children }: { children: React.ReactNode }) {
         } else {
           setPosts(data.data);
           setPostMedia(data.data[0].media.media);
-          console.log("Post media", postMedia);
         }
         const latestPost = posts[0];
 

@@ -40,7 +40,7 @@ const ProfileHeader = ({ scrollY, user_id }: ProfileHeaderProps) => {
     extrapolate: "clamp",
   });
 
-  // Add opacity fade for more dramatic effect
+
   const profileImageOpacity = scrollY.interpolate({
     inputRange: [0, COVER_HEIGHT / 2, COVER_HEIGHT],
     outputRange: [1, 0.8, 0.4],
@@ -77,7 +77,7 @@ const ProfileHeader = ({ scrollY, user_id }: ProfileHeaderProps) => {
           onPress={() =>
             navigation.navigate("EditProfile", {
               userEmail: userData?.email,
-              sectionToShow: "Profileabout",
+              sectionToEdit: "intro",
             })
           }
           style={{ marginLeft: 16 }}

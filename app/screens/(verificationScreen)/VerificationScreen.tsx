@@ -159,10 +159,6 @@ export default function VerificationScreen() {
         navigation.navigate("OTPVerificationScreen", { email: SchoolEmail });
       }
 
-      // setIsAlertVisible(true);
-      // setAlertType("success");
-
-      // allow the user to continue
     } else {
       setAlertMessage({
         ...alertMessage,

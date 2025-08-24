@@ -59,7 +59,7 @@ const PostCard = ({ post }: { post: any }) => {
       {media && Array.isArray(media) && media.length > 0  && (
         <View style={styles.mediaGrid}>
           {media.map((item: any, index: number) => {
-            console.log("Media item:", item);
+       
             if (!item?.type || !item?.url)
               return (
                 <Pressable>

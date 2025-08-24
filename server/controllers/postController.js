@@ -1,10 +1,10 @@
-import client from "../db.js";
+import pool from "../db.js";
 
 export const createPost = async (req, res) => {
   const { content, media, visibleIn, email } = req.body;
 
   try {
-    const result = await client.query(
+    const result = await pool.query(
       `INSERT INTO POSTS (content, media, createdon, createdby, club)
        VALUES ($1, $2, DEFAULT, $3, $4) RETURNING *`,
       [content, { media: media }, email, visibleIn]
@@ -26,7 +26,7 @@ export const getPosts = async (req, res) => {
   const { club, userEmail, orderField = "createdon" } = req.query;
 
   if (userEmail) {
-    const result = await client.query(
+    const result = await pool.query(
       `SELECT * FROM posts 
       INNER JOIN users ON posts.createdby = users.email
       WHERE createdby = $1
@@ -41,7 +41,7 @@ export const getPosts = async (req, res) => {
 
   if (club) {
     try {
-      const result = await client.query(
+      const result = await pool.query(
         `SELECT * FROM posts
    INNER JOIN users ON posts.createdby = users.email
    WHERE club in (${club})

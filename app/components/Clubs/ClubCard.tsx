@@ -49,7 +49,7 @@ export default function ClubCard(club: CLUB) {
         }
       } catch (error) {
         if (error instanceof AxiosError) {
-          console.log(error.response?.data);
+         
           Toast.show({
             text1: "Club unfollow failed",
             text2: "Please try again",
