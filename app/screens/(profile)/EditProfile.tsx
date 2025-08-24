@@ -12,6 +12,7 @@ import {
   SafeAreaView,
   BackHandler,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import React, { useContext, useLayoutEffect, useState, useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
@@ -68,10 +69,15 @@ export default function EditProfile({ route }: { route: any }) {
   const [countryQuery, setCountryQuery] = useState("");
   const [cityQuery, setCityQuery] = useState("");
   const [countries, setCountries] = useState<
-    Array<{ name: string; flag: string; capital: string }>
+    Array<{ name: string; flag: string; capital: string; countryCode: string }>
   >([]);
   const [cities, setCities] = useState<
-    Array<{ name: string; country: string; region: string }>
+    Array<{
+      name: string;
+      country: string;
+      region: string;
+      isOutOfCountry?: boolean;
+    }>
   >([]);
   const [isSearchingCountries, setIsSearchingCountries] = useState(false);
   const [isSearchingCities, setIsSearchingCities] = useState(false);
@@ -105,8 +111,8 @@ export default function EditProfile({ route }: { route: any }) {
   };
 
   const validateHeadline = (text: string) => {
-    if (text.length > 100) {
-      setHeadlineError("Headline must be 100 characters or less");
+    if (text.length > 200) {
+      setHeadlineError("Headline must be 200 characters or less");
       return false;
     } else {
       setHeadlineError("");
@@ -190,6 +196,15 @@ export default function EditProfile({ route }: { route: any }) {
     return () => backHandler.remove();
   }, [navigation]);
 
+  // Function to convert country code to flag emoji
+  const getCountryFlag = (countryCode: string) => {
+    const codePoints = countryCode
+      .toUpperCase()
+      .split("")
+      .map((char) => 127397 + char.charCodeAt(0));
+    return String.fromCodePoint(...codePoints);
+  };
+
   // Search functions for countries and cities
   const searchCountries = async (query: string) => {
     if (!query.trim()) return;
@@ -201,9 +216,12 @@ export default function EditProfile({ route }: { route: any }) {
       );
       const countryData = response.data.map((country: any) => ({
         name: country.name.common,
-        flag: country.flags.svg,
+        flag: getCountryFlag(country.cca2 || ""),
         capital: country.capital?.[0] || "",
+        countryCode: country.cca2 || "",
       }));
+
+      console.log("Country data:", countryData);
       setCountries(countryData);
     } catch (error) {
       // Silently handle errors - don't show in UI
@@ -219,49 +237,172 @@ export default function EditProfile({ route }: { route: any }) {
 
     setIsSearchingCities(true);
     try {
-      // Using REST Countries API to search for cities by country
-      const response = await axios.get(
-        `https://restcountries.com/v3.1/name/${query}`
-      );
+      // Using Nominatim (OpenStreetMap) API - completely free, no API key needed
+      // Try multiple search approaches to get more comprehensive results
+      let response;
+      try {
+        // First try: city-specific search
+        response = await axios.get(
+          `https://nominatim.openstreetmap.org/search?q=${query}&format=json&addressdetails=1&limit=50&featuretype=city&accept-language=en`
+        );
 
-      // Extract cities from countries that match the query
-      const cityData: Array<{ name: string; country: string; region: string }> =
-        [];
+        // If we get few results, try a broader search
+        if (response.data.length < 10) {
+          console.log(
+            "City search returned few results, trying broader search..."
+          );
+          const broaderResponse = await axios.get(
+            `https://nominatim.openstreetmap.org/search?q=${query}&format=json&addressdetails=1&limit=50&accept-language=en`
+          );
 
-      response.data.forEach((country: any) => {
-        // Add capital city
-        if (country.capital && country.capital.length > 0) {
-          cityData.push({
-            name: country.capital[0],
-            country: country.name.common,
-            region: country.region || "",
-          });
+          // Combine and deduplicate results
+          const combinedResults = [...response.data, ...broaderResponse.data];
+          const uniqueResults = combinedResults.filter(
+            (place: any, index: number, self: any[]) =>
+              index ===
+              self.findIndex((p: any) => p.place_id === place.place_id)
+          );
+
+          response = { data: uniqueResults };
+          console.log("Combined search results:", uniqueResults.length);
         }
+      } catch (error) {
+        // Fallback to broader search if city search fails
+        console.log("City search failed, trying broader search...");
+        response = await axios.get(
+          `https://nominatim.openstreetmap.org/search?q=${query}&format=json&addressdetails=1&limit=50&accept-language=en`
+        );
+      }
 
-        // Add major cities if available
-        if (country.capital && country.capital.length > 1) {
-          country.capital.slice(1).forEach((city: string) => {
-            cityData.push({
-              name: city,
-              country: country.name.common,
-              region: country.region || "",
-            });
-          });
-        }
-      });
+      console.log("Nominatim response:", response.data);
+      console.log("Current country filter:", country || userData?.country);
 
-      // Remove duplicates and limit results
-      const uniqueCities = cityData
-        .filter(
-          (city, index, self) =>
-            index ===
-            self.findIndex(
-              (c) => c.name === city.name && c.country === city.country
-            )
-        )
-        .slice(0, 10);
+      const cityData = response.data
+        .filter((place: any) => {
+          // Check if this place is city-like based on multiple criteria
+          const isCityLike =
+            // Direct city indicators
+            (place.class === "place" && place.type === "city") ||
+            // Administrative cities
+            (place.class === "boundary" &&
+              place.type === "administrative" &&
+              place.addresstype === "city") ||
+            // Other city-like administrative divisions
+            (place.class === "boundary" &&
+              place.type === "administrative" &&
+              (place.addresstype === "city" ||
+                place.addresstype === "state" ||
+                place.addresstype === "county")) ||
+            // Places with city names in display_name
+            (place.display_name && place.display_name.includes("city")) ||
+            // High importance places (usually major cities)
+            (place.importance && place.importance > 0.5);
 
-      setCities(uniqueCities);
+          // Additional check: if query looks like the city name, include it
+          const queryLower = query.toLowerCase();
+          const placeNameLower = (place.name || "").toLowerCase();
+          const displayNameLower = (place.display_name || "").toLowerCase();
+
+          const queryLooksLikeCityName =
+            placeNameLower.includes(queryLower) ||
+            queryLower.includes(placeNameLower) ||
+            displayNameLower.includes(queryLower) ||
+            queryLower.includes(displayNameLower);
+
+          // Check for exact or close matches
+          const exactMatch = placeNameLower === queryLower;
+          const startsWithQuery = placeNameLower.startsWith(queryLower);
+          const queryStartsWithName = queryLower.startsWith(placeNameLower);
+
+          console.log(
+            `Place: ${
+              place.name
+            }, isCityLike: ${isCityLike}, queryLooksLikeCityName: ${queryLooksLikeCityName}, exactMatch: ${exactMatch}, startsWithQuery: ${startsWithQuery}, country: ${
+              place.address?.country
+            }, targetCountry: ${country || userData?.country}`
+          );
+
+          // If user has selected a country, filter by that country
+          if (country || userData?.country) {
+            const targetCountry = country || userData?.country;
+            const countryMatch = place.address?.country === targetCountry;
+            console.log(`Country match for ${place.name}: ${countryMatch}`);
+            // Include if it's city-like AND country matches, OR if query looks like city name
+            return (isCityLike && countryMatch) || queryLooksLikeCityName;
+          } else {
+            // If no country selected, show all cities or places that look like the query
+            return isCityLike || queryLooksLikeCityName;
+          }
+        })
+        .map((place: any) => ({
+          name: place.name || place.display_name.split(",")[0],
+          country: place.address?.country || "",
+          region:
+            place.address?.state ||
+            place.address?.province ||
+            place.address?.city ||
+            "",
+          country_code: place.address?.country_code || "",
+          isOutOfCountry: false, // Default to false for main filter
+        }))
+        .filter((city: any) => city.name && city.country) // Only cities with names and countries
+        .slice(0, 20); // Increased limit to show more results
+
+      console.log("Final filtered cities:", cityData);
+
+      // If no cities found with country filter, show all cities but mark them
+      if (cityData.length === 0 && (country || userData?.country)) {
+        console.log(
+          "No cities found with country filter, showing all cities..."
+        );
+        const allCities = response.data
+          .filter((place: any) => {
+            const isCityLike =
+              (place.class === "place" && place.type === "city") ||
+              (place.class === "boundary" &&
+                place.type === "administrative" &&
+                place.addresstype === "city") ||
+              (place.class === "boundary" &&
+                place.type === "administrative" &&
+                (place.addresstype === "city" ||
+                  place.addresstype === "state" ||
+                  place.addresstype === "county")) ||
+              (place.display_name && place.display_name.includes("city")) ||
+              (place.importance && place.importance > 0.5);
+
+            // Also include places where query looks like the city name
+            const queryLower = query.toLowerCase();
+            const placeNameLower = (place.name || "").toLowerCase();
+            const displayNameLower = (place.display_name || "").toLowerCase();
+
+            const queryLooksLikeCityName =
+              placeNameLower.includes(queryLower) ||
+              queryLower.includes(placeNameLower) ||
+              displayNameLower.includes(queryLower) ||
+              queryLower.includes(displayNameLower);
+
+            return isCityLike || queryLooksLikeCityName;
+          })
+          .map((place: any) => ({
+            name: place.name || place.display_name.split(",")[0],
+            country: place.address?.country || "",
+            region:
+              place.address?.state ||
+              place.address?.province ||
+              place.address?.city ||
+              "",
+            country_code: place.address?.country_code || "",
+            isOutOfCountry:
+              place.address?.country !== (country || userData?.country),
+          }))
+          .filter((city: any) => city.name && city.country)
+          .slice(0, 20); // Increased limit to show more results
+
+        console.log("All cities (including out-of-country):", allCities);
+        setCities(allCities);
+      } else {
+        setCities(cityData);
+      }
     } catch (error) {
       // Silently handle errors - don't show in UI
       console.warn("City search error (handled silently):", error);
@@ -864,6 +1005,7 @@ export default function EditProfile({ route }: { route: any }) {
               {education && education.length > 0 ? (
                 education.map((schoolItem: any, index: number) => {
                   const schoolName = schoolItem.school.name;
+                  const schoolLogo = schoolItem.school.logo;
                   return (
                     <TouchableOpacity
                       key={index}
@@ -877,19 +1019,52 @@ export default function EditProfile({ route }: { route: any }) {
                       }}
                     >
                       <View style={styles.educationOptionContent}>
-                        <Text
-                          style={[
-                            styles.educationOptionText,
-                            {
-                              color:
-                                school === schoolName
-                                  ? colors.onPrimary
-                                  : colors.onBackground,
-                            },
-                          ]}
-                        >
-                          {schoolName}
-                        </Text>
+                        {/* School Logo */}
+                        {schoolLogo ? (
+                          <Image
+                            source={{ uri: schoolLogo }}
+                            style={styles.schoolLogoInModal}
+                            defaultSource={require("../../assets/images/no-club.png")}
+                          />
+                        ) : (
+                          <View style={styles.schoolLogoPlaceholder}>
+                            <Text style={styles.schoolLogoPlaceholderText}>
+                              🎓
+                            </Text>
+                          </View>
+                        )}
+
+                        <View style={styles.schoolTextContainer}>
+                          <Text
+                            style={[
+                              styles.educationOptionText,
+                              {
+                                color:
+                                  school === schoolName
+                                    ? colors.onPrimary
+                                    : colors.onBackground,
+                              },
+                            ]}
+                          >
+                            {schoolName}
+                          </Text>
+                          {/* Show country if available */}
+                          {schoolItem.school.country && (
+                            <Text
+                              style={[
+                                styles.educationOptionSubtext,
+                                {
+                                  color:
+                                    school === schoolName
+                                      ? colors.onSurfaceVariant
+                                      : colors.onSurfaceVariant,
+                                },
+                              ]}
+                            >
+                              {schoolItem.school.country}
+                            </Text>
+                          )}
+                        </View>
                       </View>
                       {school === schoolName && (
                         <Ionicons
@@ -1019,15 +1194,14 @@ export default function EditProfile({ route }: { route: any }) {
                   ]}
                   onPress={() => {
                     setCountry(countryItem.name);
+                    setCountryQuery(countryItem.name); // Set query to selected country name
                     setIsCountryModalVisible(false);
-                    setCountryQuery("");
                   }}
                 >
                   <View style={styles.educationOptionContent}>
                     <Text
                       style={[
                         styles.educationOptionText,
-
                         {
                           color:
                             country === countryItem.name
@@ -1036,23 +1210,21 @@ export default function EditProfile({ route }: { route: any }) {
                         },
                       ]}
                     >
-                      {countryItem.name}
+                      {countryItem.flag} {countryItem.name}
                     </Text>
-                    {countryItem.capital && (
-                      <Text
-                        style={[
-                          styles.educationOptionSubtext,
-                          {
-                            color:
-                              country === countryItem.name
-                                ? colors.onSurfaceVariant
-                                : colors.onSurfaceVariant,
-                          },
-                        ]}
-                      >
-                        Capital: {countryItem.capital}
-                      </Text>
-                    )}
+                    <Text
+                      style={[
+                        styles.educationOptionSubtext,
+                        {
+                          color:
+                            country === countryItem.name
+                              ? colors.onSurfaceVariant
+                              : colors.onSurfaceVariant,
+                        },
+                      ]}
+                    >
+                      {countryItem.capital || "No capital city"}
+                    </Text>
                   </View>
                   {country === countryItem.name && (
                     <Ionicons
@@ -1119,7 +1291,7 @@ export default function EditProfile({ route }: { route: any }) {
 
           <View style={styles.searchInputContainer}>
             <TextInput
-              placeholder="Search by country name..."
+              placeholder="Search for cities..."
               placeholderTextColor="#666666"
               value={cityQuery}
               onChangeText={(text) => {
@@ -1167,11 +1339,16 @@ export default function EditProfile({ route }: { route: any }) {
                   style={[
                     styles.educationOption,
                     city === cityItem.name && styles.educationOptionSelected,
+                    { borderBottomColor: Colors.GRAY, borderBottomWidth: 1 },
                   ]}
                   onPress={() => {
-                    setCity(cityItem.name);
+                    // Combine city name with region/state, separated by comma
+                    const cityWithRegion = cityItem.region
+                      ? `${cityItem.name}, ${cityItem.region}`
+                      : cityItem.name;
+                    setCity(cityWithRegion);
+                    setCityQuery(cityWithRegion);
                     setIsCityModalVisible(false);
-                    setCityQuery("");
                   }}
                 >
                   <View style={styles.educationOptionContent}>
@@ -1187,6 +1364,14 @@ export default function EditProfile({ route }: { route: any }) {
                       ]}
                     >
                       {cityItem.name}
+                      {cityItem.isOutOfCountry && (
+                        <Text
+                          style={{ color: Colors.GRAY, fontSize: RFValue(12) }}
+                        >
+                          {" "}
+                          ({cityItem.country})
+                        </Text>
+                      )}
                     </Text>
                     {cityItem.region && (
                       <Text
@@ -1214,18 +1399,47 @@ export default function EditProfile({ route }: { route: any }) {
                 </TouchableOpacity>
               ))
             ) : cityQuery ? (
-              <Text
-                style={[
-                  styles.educationModalSubtitle,
-                  {
-                    color: colors.onSurfaceVariant,
-                    textAlign: "center",
-                    marginTop: 20,
-                  },
-                ]}
-              >
-                No cities found
-              </Text>
+              <View style={{ alignItems: "center", marginTop: 20 }}>
+                <Text
+                  style={[
+                    styles.educationModalSubtitle,
+                    {
+                      color: colors.onSurfaceVariant,
+                      textAlign: "center",
+                      marginBottom: 16,
+                    },
+                  ]}
+                >
+                  No cities found for "{cityQuery}"
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.educationOption,
+                    {
+                      borderBottomColor: Colors.GRAY,
+                      borderBottomWidth: 1,
+                      backgroundColor: Colors.PRIMARY,
+                      borderRadius: 8,
+                      paddingHorizontal: 16,
+                      paddingVertical: 12,
+                    },
+                  ]}
+                  onPress={() => {
+                    setCity(cityQuery);
+                    setCityQuery(cityQuery);
+                    setIsCityModalVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.educationOptionText,
+                      { color: "#ffffff", textAlign: "center" },
+                    ]}
+                  >
+                    Use "{cityQuery}" as city
+                  </Text>
+                </TouchableOpacity>
+              </View>
             ) : (
               <Text
                 style={[
@@ -1237,7 +1451,7 @@ export default function EditProfile({ route }: { route: any }) {
                   },
                 ]}
               >
-                Start typing a country name to find its cities
+                Start typing to search for cities worldwide
               </Text>
             )}
           </ScrollView>
@@ -1609,6 +1823,8 @@ const styles = StyleSheet.create({
   },
   educationOptionContent: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
   },
   educationOptionText: {
     fontSize: RFValue(16),
@@ -1655,5 +1871,27 @@ const styles = StyleSheet.create({
   searchStatusText: {
     fontSize: RFValue(14),
     textAlign: "center",
+  },
+  // School logo styles for modal
+  schoolLogoInModal: {
+    width: RFValue(32),
+    height: RFValue(32),
+    borderRadius: RFValue(6),
+    marginRight: RFValue(12),
+  },
+  schoolLogoPlaceholder: {
+    width: RFValue(32),
+    height: RFValue(32),
+    borderRadius: RFValue(6),
+    marginRight: RFValue(12),
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
+  },
+  schoolLogoPlaceholderText: {
+    fontSize: RFValue(16),
+  },
+  schoolTextContainer: {
+    flex: 1,
   },
 });

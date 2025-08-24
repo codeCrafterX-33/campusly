@@ -191,8 +191,13 @@ export default function RenderEditProfileSection({
               placeholderTextColor={colors.onSurfaceVariant}
               value={headline}
               onChangeText={onHeadlineChange}
+              multiline={true}
+              numberOfLines={2}
+              scrollEnabled={true}
+              textAlignVertical="top"
               style={[
                 styles.textInput,
+                styles.headlineInput,
                 {
                   backgroundColor: colors.surface,
                   borderColor: colors.outline,
@@ -661,6 +666,13 @@ const styles = StyleSheet.create({
     padding: RFValue(12),
     fontSize: RFValue(16),
     minHeight: RFValue(50),
+  },
+  headlineInput: {
+    minHeight: RFValue(80), // Height for approximately 2 lines
+    maxHeight: RFValue(120), // Maximum height to prevent excessive expansion
+    paddingTop: RFValue(12),
+    paddingBottom: RFValue(12),
+    lineHeight: RFValue(20), // Better line spacing for readability
   },
   educationInput: {
     flexDirection: "row",
