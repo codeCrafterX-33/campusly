@@ -261,7 +261,7 @@ const Profile = ({ navigation }: { navigation: any }) => {
             {/* {bio} */}
             {(() => {
               const bio = getPlaceholder(
-                userData?.bio,
+                userData?.headline,
                 "Mysterious stranger with no bio. Very suspicious 🤔"
               );
               return (

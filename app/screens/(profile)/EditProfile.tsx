@@ -55,19 +55,19 @@ export default function EditProfile({ route }: { route: any }) {
   const [activeSection, setActiveSection] = useState<"skills" | "interests">(
     "skills"
   );
-  const [aboutText, setAboutText] = useState("");
+  const [aboutText, setAboutText] = useState(userData?.about || "");
   const [headline, setHeadline] = useState(userData?.headline || "");
   const [country, setCountry] = useState(userData?.country || "");
   const [city, setCity] = useState(userData?.city || "");
 
-  const [firstName, setFirstName] = useState(userData?.firstName || "");
-  const [lastName, setLastName] = useState(userData?.lastName || "");
+  const [firstName, setFirstName] = useState(userData?.firstname || "");
+  const [lastName, setLastName] = useState(userData?.lastname || "");
   const [school, setSchool] = useState(userData?.school || "");
   const [isSchoolModalVisible, setIsSchoolModalVisible] = useState(false);
   const [isCountryModalVisible, setIsCountryModalVisible] = useState(false);
   const [isCityModalVisible, setIsCityModalVisible] = useState(false);
-  const [countryQuery, setCountryQuery] = useState("");
-  const [cityQuery, setCityQuery] = useState("");
+  const [countryQuery, setCountryQuery] = useState(userData?.country || "");
+  const [cityQuery, setCityQuery] = useState(userData?.city || "");
   const [countries, setCountries] = useState<
     Array<{ name: string; flag: string; capital: string; countryCode: string }>
   >([]);
@@ -81,6 +81,7 @@ export default function EditProfile({ route }: { route: any }) {
   >([]);
   const [isSearchingCountries, setIsSearchingCountries] = useState(false);
   const [isSearchingCities, setIsSearchingCities] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Validation state for intro fields
   const [firstNameError, setFirstNameError] = useState("");
@@ -237,7 +238,7 @@ export default function EditProfile({ route }: { route: any }) {
 
     setIsSearchingCities(true);
     try {
-      // Using Nominatim (OpenStreetMap) API - completely free, no API key needed
+      // Using Nominatim (OpenStreetMap) API
       // Try multiple search approaches to get more comprehensive results
       let response;
       try {
@@ -413,6 +414,9 @@ export default function EditProfile({ route }: { route: any }) {
   };
 
   const handleSave = async () => {
+    if (isSaving) return; // Prevent multiple saves
+
+    setIsSaving(true);
     try {
       // Update local state first
       const updatedUserData = {
@@ -431,20 +435,29 @@ export default function EditProfile({ route }: { route: any }) {
 
       setUserData(updatedUserData);
 
+      // Prepare data for server
+      const serverData = {
+        about: updatedUserData.about,
+        skills: updatedUserData.skills,
+        interests: updatedUserData.interests,
+        headline: updatedUserData.headline,
+        country: updatedUserData.country,
+        city: updatedUserData.city,
+        firstName: updatedUserData.firstName,
+        lastName: updatedUserData.lastName,
+        school: updatedUserData.school,
+      };
+
+      console.log("Sending data to server:", serverData);
+      console.log(
+        "Server URL:",
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/user/${userEmail}`
+      );
+
       // Update in database
       const response = await axios.put(
         `${process.env.EXPO_PUBLIC_SERVER_URL}/user/${userEmail}`,
-        {
-          about: updatedUserData.about,
-          skills: updatedUserData.skills,
-          interests: updatedUserData.interests,
-          headline: updatedUserData.headline,
-          country: updatedUserData.country,
-          city: updatedUserData.city,
-          firstName: updatedUserData.firstName,
-          lastName: updatedUserData.lastName,
-          education: updatedUserData.school,
-        }
+        serverData
       );
 
       if (response.status === 200) {
@@ -457,6 +470,8 @@ export default function EditProfile({ route }: { route: any }) {
     } catch (error) {
       console.error("Error updating user:", error);
       // You might want to show an error message to the user here
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -568,6 +583,7 @@ export default function EditProfile({ route }: { route: any }) {
               isFormValid={
                 sectionToEdit === "intro" ? isIntroFormValid : undefined
               }
+              isLoading={isSaving}
             />
           </View>
         )}
@@ -1198,7 +1214,12 @@ export default function EditProfile({ route }: { route: any }) {
                     setIsCountryModalVisible(false);
                   }}
                 >
-                  <View style={[styles.educationOptionContent, { flexDirection: "column" }]}>
+                  <View
+                    style={[
+                      styles.educationOptionContent,
+                      { flexDirection: "column", alignItems: "flex-start" },
+                    ]}
+                  >
                     <Text
                       style={[
                         styles.educationOptionText,
@@ -1223,7 +1244,7 @@ export default function EditProfile({ route }: { route: any }) {
                         },
                       ]}
                     >
-                      {countryItem.capital || "No capital city"}
+                      {countryItem.capital || "No capital"}
                     </Text>
                   </View>
                   {country === countryItem.name && (
@@ -1363,7 +1384,7 @@ export default function EditProfile({ route }: { route: any }) {
                         },
                       ]}
                     >
-                      {cityItem.name}
+                      {`${cityItem.name}, `}
                       {cityItem.isOutOfCountry && (
                         <Text
                           style={{ color: Colors.GRAY, fontSize: RFValue(12) }}

@@ -38,29 +38,31 @@ export const updateUser = async (req, res) => {
     skills,
     interests,
     headline,
-    location,
+    country,
+    city,
     firstName,
     lastName,
-    education,
+    school,
   } = req.body;
 
   try {
     const result = await pool.query(
       `UPDATE USERS 
        SET about = $1, skills = $2, interests = $3, 
-           bio = $4, location = $5, 
-           firstname = $6, lastname = $7, education = $8, updated_at = NOW()
-       WHERE email = $9
+           headline = $4, country = $5, city = $6,
+           firstname = $7, lastname = $8, school = $9, updated_at = NOW()
+       WHERE email = $10
        RETURNING *`,
       [
         about,
         skills,
         interests,
         headline,
-        location,
+        country,
+        city,
         firstName,
         lastName,
-        education,
+        school,
         email,
       ]
     );

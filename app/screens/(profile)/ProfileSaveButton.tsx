@@ -10,11 +10,13 @@ export default function ProfileSaveButton({
   dataToSave,
   handleSave,
   isFormValid,
+  isLoading = false,
 }: {
   sectionToSave: string;
   dataToSave: any;
   handleSave: () => void;
   isFormValid?: () => boolean;
+  isLoading?: boolean;
 }) {
   const { colors } = useTheme();
   const { userData, setUserData } = useContext(AuthContext);
@@ -57,15 +59,18 @@ export default function ProfileSaveButton({
       style={[
         styles.saveButton,
         {
-          backgroundColor: hasValidData
-            ? Colors.PRIMARY
-            : colors.onSurfaceVariant,
+          backgroundColor:
+            hasValidData && !isLoading
+              ? Colors.PRIMARY
+              : colors.onSurfaceVariant,
         },
       ]}
       onPress={handleSave}
-      disabled={!hasValidData}
+      disabled={!hasValidData || isLoading}
     >
-      <Text style={styles.saveButtonText}>Save</Text>
+      <Text style={styles.saveButtonText}>
+        {isLoading ? "Saving..." : "Save"}
+      </Text>
     </TouchableOpacity>
   );
 }
