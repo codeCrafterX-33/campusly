@@ -55,13 +55,13 @@ export default function EditProfile({ route }: { route: any }) {
   const [activeSection, setActiveSection] = useState<"skills" | "interests">(
     "skills"
   );
-  const [aboutText, setAboutText] = useState(userData?.about || "");
+  const [aboutText, setAboutText] = useState("");
   const [headline, setHeadline] = useState(userData?.headline || "");
   const [country, setCountry] = useState(userData?.country || "");
   const [city, setCity] = useState(userData?.city || "");
 
-  const [firstName, setFirstName] = useState(userData?.firstname || "");
-  const [lastName, setLastName] = useState(userData?.lastname || "");
+  const [firstName, setFirstName] = useState(userData?.firstName || "");
+  const [lastName, setLastName] = useState(userData?.lastName || "");
   const [school, setSchool] = useState(userData?.school || "");
   const [isSchoolModalVisible, setIsSchoolModalVisible] = useState(false);
   const [isCountryModalVisible, setIsCountryModalVisible] = useState(false);

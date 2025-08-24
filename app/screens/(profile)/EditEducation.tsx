@@ -26,6 +26,7 @@ import { format } from "date-fns";
 import universities from "../../assets/world_universities_and_domains.json";
 import { defaultDegrees, defaultFields } from "../../util/defaultValues";
 import axios from "axios";
+import CampuslyAlert from "../../components/CampuslyAlert";
 
 export default function EditEducation({ route }: { route: any }) {
   const navigation = useNavigation();
@@ -70,6 +71,9 @@ export default function EditEducation({ route }: { route: any }) {
   const [isSearchingDegrees, setIsSearchingDegrees] = useState(false);
   const [isSearchingFields, setIsSearchingFields] = useState(false);
   const [removingEducationIndex, setRemovingEducationIndex] = useState<
+    number | null
+  >(null);
+  const [editingEducationIndex, setEditingEducationIndex] = useState<
     number | null
   >(null);
   const [defaultSchools, setDefaultSchools] = useState<
@@ -130,6 +134,77 @@ export default function EditEducation({ route }: { route: any }) {
       return () => clearTimeout(delayDebounce);
     }
   }, [fieldQuery]);
+
+  const populateFormWithEducation = (educationData: any) => {
+    try {
+      // Parse school data
+      let schoolName = "";
+      let schoolLogo = "";
+      let schoolCountry = "";
+
+      if (typeof educationData.school === "string") {
+        const parsed = JSON.parse(educationData.school);
+        schoolName = parsed.name || "";
+        schoolLogo = parsed.logo || "";
+        schoolCountry = parsed.country || "";
+      } else if (
+        educationData.school &&
+        typeof educationData.school === "object"
+      ) {
+        schoolName = educationData.school.name || "";
+        schoolLogo = educationData.school.logo || "";
+        schoolCountry = educationData.school.country || "";
+      }
+
+      // Set school data
+      setNewSchool({
+        name: schoolName,
+        logo: schoolLogo,
+        country: schoolCountry,
+      });
+
+      // Set other fields
+      setNewDegree(educationData.degree || "");
+      setNewFieldOfStudy(educationData.field_of_study || "");
+      setNewGrade(educationData.grade || "");
+      setNewActivities(
+        educationData.activities ? educationData.activities.join(", ") : ""
+      );
+      setNewSocieties(
+        educationData.societies ? educationData.societies.join(", ") : ""
+      );
+
+      // Set dates
+      if (educationData.start_date) {
+        setStartDate(new Date(educationData.start_date));
+      }
+      if (educationData.end_date) {
+        setEndDate(new Date(educationData.end_date));
+      }
+    } catch (error) {
+      console.error("Error populating form:", error);
+    }
+  };
+
+  const openEditModal = (educationData: any, index: number) => {
+    setEditingEducationIndex(index);
+    populateFormWithEducation(educationData);
+    setIsAddModalVisible(true);
+  };
+
+  const openAddModal = () => {
+    setEditingEducationIndex(null);
+    // Clear all form fields
+    setNewSchool(null);
+    setNewDegree("");
+    setNewFieldOfStudy("");
+    setStartDate(null);
+    setEndDate(null);
+    setNewGrade("");
+    setNewActivities("");
+    setNewSocieties("");
+    setIsAddModalVisible(true);
+  };
 
   const fetchSchools = () => {
     setIsSearchingSchools(true);
@@ -215,17 +290,14 @@ export default function EditEducation({ route }: { route: any }) {
         </TouchableOpacity>
       ),
       headerRight: () => (
-        <TouchableOpacity
-          style={{ marginRight: 15 }}
-          onPress={() => setIsAddModalVisible(true)}
-        >
+        <TouchableOpacity style={{ marginRight: 15 }} onPress={openAddModal}>
           <Ionicons name="add" size={24} color={Colors.PRIMARY} />
         </TouchableOpacity>
       ),
     });
   }, [navigation, colors]);
 
-  const handleAddEducation = async () => {
+  const handleSaveEducation = async () => {
     if (newSchool?.name.trim() && newDegree.trim() && newFieldOfStudy.trim()) {
       setIsAddingEducation(true);
 
@@ -244,7 +316,7 @@ export default function EditEducation({ route }: { route: any }) {
               .filter((item) => item.length > 0)
           : [];
 
-        const newEducationEntry = {
+        const educationEntry = {
           school: {
             name: newSchool.name.trim(),
             logo: newSchool.logo,
@@ -259,69 +331,129 @@ export default function EditEducation({ route }: { route: any }) {
           societies: societiesList,
         };
 
-        // HYBRID APPROACH: Save to database first, then update local state
-        const currentEducation = Array.isArray(education) ? education : [];
-        const updatedEducation = [...currentEducation, newEducationEntry];
+        if (editingEducationIndex !== null) {
+          // Update existing education entry
+          const currentEducation = Array.isArray(education) ? education : [];
+          const educationToUpdate = currentEducation[editingEducationIndex];
 
-        // Save to database using the education controller
-        const response = await axios.post(
-          `${process.env.EXPO_PUBLIC_SERVER_URL}/education`,
-          {
-            userEmail,
-            school: newEducationEntry.school,
-            degree: newEducationEntry.degree,
-            fieldOfStudy: newEducationEntry.fieldOfStudy,
-            startDate: newEducationEntry.startDate,
-            endDate: newEducationEntry.endDate,
-            grade: newEducationEntry.grade,
-            activities: newEducationEntry.activities,
-            societies: newEducationEntry.societies,
+          if (educationToUpdate && educationToUpdate.id) {
+            const response = await axios.put(
+              `${process.env.EXPO_PUBLIC_SERVER_URL}/education/${educationToUpdate.id}`,
+              {
+                userEmail,
+                school: educationEntry.school,
+                degree: educationEntry.degree,
+                fieldOfStudy: educationEntry.fieldOfStudy,
+                startDate: educationEntry.startDate,
+                endDate: educationEntry.endDate,
+                grade: educationEntry.grade,
+                activities: educationEntry.activities,
+                societies: educationEntry.societies,
+              }
+            );
+
+            if (response.status === 200) {
+              console.log("Education entry updated successfully");
+            } else {
+              console.error("Failed to update education entry");
+              return;
+            }
           }
-        );
-
-        if (response.status === 201) {
-          // Database save successful - refresh data from database to ensure consistency
-          await refreshEducationData();
-
-          // Clear inputs and close modal
-          setNewSchool(null);
-          setNewDegree("");
-          setNewFieldOfStudy("");
-          setStartDate(null);
-          setEndDate(null);
-          setNewGrade("");
-          setNewActivities("");
-          setNewSocieties("");
-          setIsAddModalVisible(false);
-
-          console.log(
-            "Education entry added successfully to database and local state"
-          );
         } else {
-          // Database save failed - don't update local state
-          console.error("Failed to save education entry to database");
-          // You could show a toast/alert here to inform the user
+          // Add new education entry
+          const response = await axios.post(
+            `${process.env.EXPO_PUBLIC_SERVER_URL}/education`,
+            {
+              userEmail,
+              school: educationEntry.school,
+              degree: educationEntry.degree,
+              fieldOfStudy: educationEntry.fieldOfStudy,
+              startDate: educationEntry.startDate,
+              endDate: educationEntry.endDate,
+              grade: educationEntry.grade,
+              activities: educationEntry.activities,
+              societies: educationEntry.societies,
+            }
+          );
+
+          if (response.status !== 201) {
+            console.error("Failed to add education entry");
+            return;
+          }
         }
+
+        // Refresh data from database to ensure consistency
+        await refreshEducationData();
+
+        // Clear inputs and close modal
+        setNewSchool(null);
+        setNewDegree("");
+        setNewFieldOfStudy("");
+        setStartDate(null);
+        setEndDate(null);
+        setNewGrade("");
+        setNewActivities("");
+        setNewSocieties("");
+        setEditingEducationIndex(null);
+        setIsAddModalVisible(false);
+
+        console.log(
+          editingEducationIndex !== null
+            ? "Education entry updated successfully"
+            : "Education entry added successfully"
+        );
       } catch (error) {
-        console.error("Error adding education:", error);
-        // You could show a toast/alert here to inform the user
+        console.error("Error saving education:", error);
       } finally {
         setIsAddingEducation(false);
       }
     }
   };
 
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [educationToDelete, setEducationToDelete] = useState<{
+    index: number;
+    name: string;
+  } | null>(null);
+
   const handleRemoveEducation = async (index: number) => {
-    setRemovingEducationIndex(index);
+    // Get education data for the alert
+    const currentEducation = Array.isArray(education) ? education : [];
+    const educationData = currentEducation.find((edu: any) => edu.id === index);
+
+    let schoolName = "this education entry";
+    try {
+      if (typeof educationData.school === "string") {
+        const parsed = JSON.parse(educationData.school);
+        schoolName = parsed.name || "this education entry";
+      } else if (
+        educationData.school &&
+        typeof educationData.school === "object"
+      ) {
+        schoolName = educationData.school.name || "this education entry";
+      }
+    } catch (error) {
+      console.warn("Error parsing school data:", error);
+    }
+
+    setEducationToDelete({ index, name: schoolName });
+    setShowDeleteAlert(true);
+  };
+
+  const confirmDeleteEducation = async () => {
+    if (!educationToDelete) return;
+
+    setRemovingEducationIndex(educationToDelete.index);
+    setShowDeleteAlert(false);
 
     try {
       const currentEducation = Array.isArray(education) ? education : [];
       const updatedEducation = currentEducation.filter(
-        (_: any, i: number) => i !== index
+        (_: any, i: number) => i !== educationToDelete.index
       );
 
       const response = await axios.delete(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/education/delete/${index}`
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/education/delete/${educationToDelete.index}`
       );
 
       if (response.status === 200) {
@@ -341,6 +473,7 @@ export default function EditEducation({ route }: { route: any }) {
       // You could show a toast/alert here to inform the user
     } finally {
       setRemovingEducationIndex(null);
+      setEducationToDelete(null);
     }
   };
 
@@ -370,14 +503,15 @@ export default function EditEducation({ route }: { route: any }) {
   };
 
   const handleSave = async () => {
+       navigation.goBack();
     setIsSubmitting(true);
     try {
       // Refresh education data from server to ensure consistency
       await refreshEducationData();
       console.log("Education data refreshed from server");
-      navigation.goBack();
+   
     } catch (error) {
-      console.error("Error during save operation:", error);
+      console.warn("Error during save operation:", error);
     } finally {
       setIsSubmitting(false);
     }
@@ -426,13 +560,16 @@ export default function EditEducation({ route }: { route: any }) {
             }
 
             return (
-              <View
+              <TouchableOpacity
                 key={index}
                 style={[
                   styles.educationCard,
                   { backgroundColor: colors.surface },
                 ]}
+                onPress={() => openEditModal(edu, index)}
+                activeOpacity={0.7}
               >
+                {/* Education card is now clickable - tap to edit */}
                 {/* School Logo */}
                 {schoolLogo ? (
                   <Image
@@ -494,19 +631,31 @@ export default function EditEducation({ route }: { route: any }) {
                   )}
                 </View>
 
-                {/* Remove Button */}
-                <TouchableOpacity
-                  onPress={() => handleRemoveEducation(edu.id)}
-                  style={styles.removeButton}
-                  disabled={removingEducationIndex === index}
-                >
-                  {removingEducationIndex === index ? (
-                    <Text style={styles.removingText}>...</Text>
-                  ) : (
-                    <Ionicons name="close-circle" size={24} color="#ff4444" />
-                  )}
-                </TouchableOpacity>
-              </View>
+                {/* Action Buttons Container */}
+                <View style={styles.actionButtonsContainer}>
+                  {/* Edit Button */}
+                  <TouchableOpacity
+                    onPress={() => openEditModal(edu, index)}
+                    style={styles.editButton}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="pencil" size={16} color={Colors.PRIMARY} />
+                  </TouchableOpacity>
+
+                  {/* Remove Button */}
+                  <TouchableOpacity
+                    onPress={() => handleRemoveEducation(edu.id)}
+                    style={styles.removeButton}
+                    disabled={removingEducationIndex === index}
+                  >
+                    {removingEducationIndex === index ? (
+                      <Text style={styles.removingText}>...</Text>
+                    ) : (
+                      <Ionicons name="close-circle" size={24} color="#ff4444" />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </TouchableOpacity>
             );
           })
         ) : (
@@ -572,7 +721,19 @@ export default function EditEducation({ route }: { route: any }) {
         <View style={styles.modalOverlay}>
           <TouchableOpacity
             style={styles.modalBackdrop}
-            onPress={() => setIsAddModalVisible(false)}
+            onPress={() => {
+              setIsAddModalVisible(false);
+              setEditingEducationIndex(null);
+              // Clear form when modal is closed
+              setNewSchool(null);
+              setNewDegree("");
+              setNewFieldOfStudy("");
+              setStartDate(null);
+              setEndDate(null);
+              setNewGrade("");
+              setNewActivities("");
+              setNewSocieties("");
+            }}
           />
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -590,7 +751,19 @@ export default function EditEducation({ route }: { route: any }) {
                 <View style={styles.modalTitleRow}>
                   <TouchableOpacity
                     style={styles.cancelButton}
-                    onPress={() => setIsAddModalVisible(false)}
+                    onPress={() => {
+                      setIsAddModalVisible(false);
+                      setEditingEducationIndex(null);
+                      // Clear form when modal is closed
+                      setNewSchool(null);
+                      setNewDegree("");
+                      setNewFieldOfStudy("");
+                      setStartDate(null);
+                      setEndDate(null);
+                      setNewGrade("");
+                      setNewActivities("");
+                      setNewSocieties("");
+                    }}
                   >
                     <Ionicons
                       name="close"
@@ -601,7 +774,9 @@ export default function EditEducation({ route }: { route: any }) {
                   <Text
                     style={[styles.modalTitle, { color: colors.onBackground }]}
                   >
-                    Add New Education
+                    {editingEducationIndex !== null
+                      ? "Edit Education"
+                      : "Add New Education"}
                   </Text>
                   <View style={styles.cancelButton} />
                 </View>
@@ -976,18 +1151,22 @@ export default function EditEducation({ route }: { route: any }) {
                         : Colors.PRIMARY,
                     },
                   ]}
-                  onPress={handleAddEducation}
+                  onPress={handleSaveEducation}
                   disabled={isAddingEducation}
                 >
                   {isAddingEducation ? (
                     <View style={styles.loadingContainer}>
                       <Text style={[styles.addButtonText, { color: "white" }]}>
-                        Adding...
+                        {editingEducationIndex !== null
+                          ? "Updating..."
+                          : "Adding..."}
                       </Text>
                     </View>
                   ) : (
                     <Text style={[styles.addButtonText, { color: "white" }]}>
-                      Add Education Entry
+                      {editingEducationIndex !== null
+                        ? "Update Education"
+                        : "Add Education Entry"}
                     </Text>
                   )}
                 </TouchableOpacity>
@@ -1595,6 +1774,31 @@ export default function EditEducation({ route }: { route: any }) {
         }}
         onCancel={() => setIsEndDatePickerVisible(false)}
       />
+
+      {/* Delete Confirmation Alert */}
+      <CampuslyAlert
+        isVisible={showDeleteAlert}
+        type="error"
+        onClose={() => setShowDeleteAlert(false)}
+        messages={{
+          success: {
+            title: "Deleted! ✂️",
+            message:
+              "Poof! That education entry is gone for good. Hope you didn’t need it for your CV… 👀",
+            icon: "🎉",
+          },
+          error: {
+            title: "Heads Up! 🚨",
+            message: `About to drop ${educationToDelete?.name} like a tough elective. Once it’s gone, no retakes! 📚🔥`,
+            icon: "🤓",
+          },
+        }}
+        onPress={confirmDeleteEducation}
+        buttonText="Yes, Drop It"
+        buttonText2="Nevermind"
+        onPress2={() => setShowDeleteAlert(false)}
+        overrideDefault={true}
+      />
     </SafeAreaView>
   );
 }
@@ -1649,15 +1853,29 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   institutionText: {
-    fontSize: RFValue(16),
+    fontSize: RFValue(14),
     fontWeight: "600",
     marginBottom: RFValue(4),
-    lineHeight: RFValue(20),
+    lineHeight: RFValue(18),
   },
   degreeText: {
-    fontSize: RFValue(14),
-    lineHeight: RFValue(18),
+    fontSize: RFValue(12),
+    lineHeight: RFValue(16),
     opacity: 0.8,
+  },
+  actionButtonsContainer: {
+    flexDirection: "column",
+    alignItems: "center",
+    gap: RFValue(4),
+  },
+  editButton: {
+    padding: RFValue(8),
+    alignSelf: "flex-start",
+    marginTop: RFValue(4),
+    backgroundColor: "rgba(0, 122, 255, 0.1)",
+    borderRadius: RFValue(6),
+    borderWidth: 1,
+    borderColor: "rgba(0, 122, 255, 0.3)",
   },
   removeButton: {
     padding: RFValue(8),

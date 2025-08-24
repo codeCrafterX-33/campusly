@@ -405,7 +405,7 @@ export default function RenderEditProfileSection({
               textAlignVertical="top"
               autoFocus={sectionToEdit === "about"}
               scrollEnabled={true}
-              maxLength={500}
+              maxLength={1000}
               onSubmitEditing={() => {
                 aboutRef.current?.blur();
               }}
@@ -419,13 +419,13 @@ export default function RenderEditProfileSection({
                 styles.characterCounterText,
                 {
                   color:
-                    aboutText.length > 400
+                    aboutText.length > 800
                       ? "#ff4444"
                       : colors.onSurfaceVariant,
                 },
               ]}
             >
-              {aboutText.length}/500
+              {aboutText.length}/1000
             </Text>
           </View>
         </View>

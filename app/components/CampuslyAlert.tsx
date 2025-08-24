@@ -8,7 +8,10 @@ export default function CampuslyAlert({
   onClose,
   messages,
   onPress,
+  onPress2,
   buttonText,
+  buttonText2,
+  overrideDefault,
 }: {
   isVisible: boolean;
   type: string;
@@ -26,7 +29,10 @@ export default function CampuslyAlert({
     };
   };
   onPress?: () => void;
+  onPress2?: () => void;
   buttonText?: string;
+  buttonText2?: string;
+  overrideDefault?: boolean;
 }) {
   const isSuccess = type === "success";
 
@@ -45,14 +51,36 @@ export default function CampuslyAlert({
           <Text style={styles.message}>
             {isSuccess ? messages.success.message : messages.error.message}
           </Text>
+
+          <View style={overrideDefault && styles.overridecontainer}>
           <TouchableOpacity
             style={isSuccess ? styles.button : styles.buttonError}
-            onPress={onPress && buttonText === "Continue" ? onPress : onClose}
+            onPress={
+              onPress && buttonText === "Continue"
+                ? onPress
+                : overrideDefault && buttonText
+                ? onPress
+                : onClose
+            }
           >
             <Text style={styles.buttonText}>
-              {isSuccess ? buttonText : "Try again"}
+              {isSuccess
+                ? buttonText
+                : overrideDefault && buttonText
+                ? buttonText
+                : "Try again"}
             </Text>
           </TouchableOpacity>
+
+          {buttonText2 && (
+            <TouchableOpacity
+              style={styles.button}
+              onPress={onPress2 && buttonText2 ? onPress2 : onClose}
+            >
+              <Text style={styles.buttonText}>{buttonText2}</Text>
+            </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
     </Modal>
@@ -78,6 +106,14 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 8,
   },
+
+  overridecontainer: {
+    flexDirection: "row",
+    width: "100%",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
   success: {
     borderLeftWidth: 6,
     borderLeftColor: Colors.PRIMARY, // Campusly green

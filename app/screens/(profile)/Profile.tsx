@@ -277,12 +277,14 @@ const Profile = ({ navigation }: { navigation: any }) => {
                   "A mystery school… yet to be revealed 🕵️‍♂️"
                 );
                 return (
-                  <Text style={[styles.profileMetaText, school.style]}>
+                  <Text
+                    style={[styles.profileMetaText, { color: Colors.GRAY }]}
+                  >
                     <Ionicons
                       name="school"
                       size={RFValue(16)}
                       color={Colors.PRIMARY}
-                    />
+                    />{" "}
                     {school.text}
                   </Text>
                 );
@@ -308,7 +310,7 @@ const Profile = ({ navigation }: { navigation: any }) => {
                         name="school-outline"
                         size={16}
                         color={Colors.PRIMARY}
-                      />
+                      />{" "}
                       No degree info yet 🎓
                     </Text>
                   );
@@ -336,17 +338,17 @@ const Profile = ({ navigation }: { navigation: any }) => {
                 let degreeText = "";
                 if (degree && fieldOfStudy) {
                   const degreeAbbr = degree.toLowerCase().includes("bachelor")
-                    ? "BS"
+                    ? "BSc"
                     : degree.toLowerCase().includes("master")
-                    ? "MS"
+                    ? "MSc"
                     : degree.toLowerCase().includes("phd")
                     ? "PhD"
                     : degree.toLowerCase().includes("associate")
-                    ? "AA"
+                    ? "AAS"
                     : degree.toLowerCase().includes("diploma")
                     ? "Dip"
                     : degree.toLowerCase().includes("certificate")
-                    ? "Cert"
+                    ? "Cert."
                     : degree;
 
                   degreeText = `${degreeAbbr} in ${fieldOfStudy}`;
@@ -357,12 +359,14 @@ const Profile = ({ navigation }: { navigation: any }) => {
                 }
 
                 return (
-                  <Text style={[styles.profileMetaText]}>
+                  <Text
+                    style={[styles.profileMetaText, { color: Colors.GRAY }]}
+                  >
                     <Ionicons
                       name="school-outline"
                       size={16}
                       color={Colors.PRIMARY}
-                    />
+                    />{" "}
                     {degreeText}
                   </Text>
                 );
@@ -371,16 +375,18 @@ const Profile = ({ navigation }: { navigation: any }) => {
               {/* Location */}
               {(() => {
                 const location = getPlaceholder(
-                  userData?.location,
+                  userData?.city + ", " + userData?.country,
                   "Top Secret Academy 🕵️‍♂️"
                 );
                 return (
-                  <Text style={[styles.profileMetaText, location.style]}>
+                  <Text
+                    style={[styles.profileMetaText, { color: Colors.GRAY }]}
+                  >
                     <Ionicons
                       name="location"
                       size={16}
                       color={Colors.PRIMARY}
-                    />
+                    />{" "}
                     {location.text}
                   </Text>
                 );
@@ -398,12 +404,14 @@ const Profile = ({ navigation }: { navigation: any }) => {
                   "Joined… who knows when? 🕰️"
                 );
                 return (
-                  <Text style={[styles.profileMetaText]}>
+                  <Text
+                    style={[styles.profileMetaText, { color: Colors.GRAY }]}
+                  >
                     <Ionicons
                       name="time-outline"
                       size={16}
                       color={Colors.PRIMARY}
-                    />
+                    />{" "}
                     {`Joined ${joined.text}`}
                   </Text>
                 );
