@@ -1198,7 +1198,7 @@ export default function EditProfile({ route }: { route: any }) {
                     setIsCountryModalVisible(false);
                   }}
                 >
-                  <View style={styles.educationOptionContent}>
+                  <View style={[styles.educationOptionContent, { flexDirection: "column" }]}>
                     <Text
                       style={[
                         styles.educationOptionText,
