@@ -1,5 +1,5 @@
 import { useTheme } from "react-native-paper";
-import { View, Text, Image, StyleSheet } from "react-native";
+import { View, Text, Image, StyleSheet, Alert } from "react-native";
 import Colors from "../../constants/Colors";
 import { useThemeContext } from "../../context/ThemeContext";
 import Button from "../ui/Button";
@@ -7,9 +7,10 @@ import { useState, useContext } from "react";
 import axios, { AxiosError } from "axios";
 import { AuthContext } from "../../context/AuthContext";
 import { ClubContext } from "../../context/ClubContext";
-
 import Toast from "react-native-toast-message";
 import { RFValue } from "react-native-responsive-fontsize";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 export interface CLUB {
   id: number;
@@ -21,35 +22,37 @@ export interface CLUB {
   isAdmin: boolean;
   refreshData: () => void;
   isFollowed: boolean;
+  showEditDelete?: boolean;
 }
 
 export default function ClubCard(club: CLUB) {
   const { colors } = useTheme();
   const { isDarkMode } = useThemeContext();
   const [isLoading, setIsLoading] = useState(false);
-  const { getFollowedClubs } = useContext(ClubContext);
-  const { user } = useContext(AuthContext);
+  const { getFollowedClubs, updateClub, deleteClub, getUserCreatedClubs } =
+    useContext(ClubContext);
+  const { userData } = useContext(AuthContext);
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
 
   const onFollowBtnClick = async () => {
     setIsLoading(true);
     if (club.isFollowed) {
       try {
         const response = await axios.delete(
-          `${process.env.EXPO_PUBLIC_SERVER_URL}/club/unfollowclub/${user?.email}`,
+          `${process.env.EXPO_PUBLIC_SERVER_URL}/club/unfollowclub/${userData?.id}`,
           {
             data: { clubId: club?.id },
           }
         );
-        await club.refreshData();
 
         if (response.status === 200) {
+          await getFollowedClubs();
           console.log("Club unfollowed");
         } else {
           console.log("Club unfollow failed");
         }
       } catch (error) {
         if (error instanceof AxiosError) {
-         
           Toast.show({
             text1: "Club unfollow failed",
             text2: "Please try again",
@@ -63,16 +66,15 @@ export default function ClubCard(club: CLUB) {
     } else {
       try {
         const response = await axios.post(
-          `${process.env.EXPO_PUBLIC_SERVER_URL}/club/followclub`,
+          `${process.env.EXPO_PUBLIC_SERVER_URL}/club/followclub/${userData?.id}`,
           {
             clubId: club?.id,
-            u_email: user?.email,
+            user_email: userData?.email,
           }
         );
 
-        await club.refreshData();
-
         if (response.status === 201) {
+          await getFollowedClubs();
           console.log("Club followed");
         } else {
           console.log("Club unfollowed");
@@ -90,6 +92,37 @@ export default function ClubCard(club: CLUB) {
         setIsLoading(false);
       }
     }
+  };
+
+  const onEditClick = () => {
+    navigation.navigate("EditClub", { club });
+  };
+
+  const onDeleteClick = () => {
+    Alert.alert(
+      "Delete Club",
+      `Are you sure you want to delete "${club.name}"? This action cannot be undone.`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteClub(club.id);
+              // Refresh both followed clubs and user created clubs
+              await getFollowedClubs();
+              await getUserCreatedClubs();
+            } catch (error) {
+              console.log("Error deleting club:", error);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -122,14 +155,35 @@ export default function ClubCard(club: CLUB) {
         {club.about}
       </Text>
 
-      <Button
-        onPress={() => onFollowBtnClick()}
-        isLoading={isLoading}
-        outline={club.isFollowed}
-        viewStyle={styles.button}
-      >
-        {club.isFollowed ? "Joined" : "Join"}
-      </Button>
+      {club.showEditDelete ? (
+        // Edit and Delete buttons for user-created clubs
+        <View style={styles.buttonContainer}>
+          <Button
+            onPress={onEditClick}
+            outline={true}
+            viewStyle={[styles.button, styles.editButton]}
+          >
+            Edit
+          </Button>
+          <Button
+            onPress={onDeleteClick}
+            outline={false}
+            viewStyle={[styles.button, styles.deleteButton]}
+          >
+            Delete
+          </Button>
+        </View>
+      ) : (
+        // Follow/Unfollow button for joined clubs
+        <Button
+          onPress={() => onFollowBtnClick()}
+          isLoading={isLoading}
+          outline={club.isFollowed}
+          viewStyle={styles.button}
+        >
+          {club.isFollowed ? "Joined" : "Join"}
+        </Button>
+      )}
     </View>
   );
 }
@@ -210,5 +264,17 @@ const styles = StyleSheet.create({
   },
   button: {
     width: RFValue(70),
+  },
+  buttonContainer: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 8,
+  },
+  editButton: {
+    width: RFValue(60),
+  },
+  deleteButton: {
+    width: RFValue(60),
+    backgroundColor: "#EF4444",
   },
 });

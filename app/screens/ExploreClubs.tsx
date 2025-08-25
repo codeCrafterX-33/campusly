@@ -18,7 +18,7 @@ import Colors from "../constants/Colors";
 import { AuthContext } from "../context/AuthContext";
 
 export default function ExploreClubs() {
-  const { user } = useContext(AuthContext);
+  const { userData } = useContext(AuthContext);
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { colors } = useTheme();
   const [isLoading, setIsLoading] = useState(false);
@@ -64,7 +64,7 @@ export default function ExploreClubs() {
   };
 
   const isAdmin = (createdby: string) => {
-    return createdby === user?.email;
+    return createdby === userData?.email;
   };
 
   return (
@@ -84,6 +84,7 @@ export default function ExploreClubs() {
               isFollowed={isFollowed(item.id)}
               refreshData={getFollowedClubs}
               isAdmin={isAdmin(item.createdby)}
+              showEditDelete={isAdmin(item.createdby)}
             />
           )}
           keyExtractor={(item) => item.id.toString()}

@@ -31,6 +31,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import OTPVerificationScreen from "../screens/(verificationScreen)/OtpVerificationScreen";
 import ProfileSetupScreen from "../screens/(profile)/ProfileSetupScreen";
 import EditEducation from "../screens/(profile)/EditEducation";
+import EditClub from "../screens/EditClub";
 
 export type RootStackParamList = {
   Landing: undefined;
@@ -50,6 +51,7 @@ export type RootStackParamList = {
   OTPVerificationScreen: undefined;
   EditProfile: undefined;
   EditEducation: undefined;
+  EditClub: { club: any };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -293,6 +295,16 @@ export const AuthenticatedStack = () => {
         component={EditEducation}
         options={{
           headerShown: true,
+          ...TransitionPresets.SlideFromRightIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+        }}
+      />
+      <Stack.Screen
+        name="EditClub"
+        component={EditClub}
+        options={{
+          headerShown: true,
+          headerTitle: "Edit Club",
           ...TransitionPresets.SlideFromRightIOS,
           cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
         }}

@@ -17,6 +17,7 @@ import { ClubContext } from "../context/ClubContext";
 import CommunityScreen from "../screens/(homeTopTab)/CommunityScreen";
 import Clubs from "../screens/ClubsHome";
 import ExploreClubs from "../screens/ExploreClubs";
+import FilteredClubs from "../screens/FilteredClubs";
 import { RFValue } from "react-native-responsive-fontsize";
 const TopTab = createMaterialTopTabNavigator();
 
@@ -65,6 +66,13 @@ export default function ClubTopNavigator() {
         options={{
           tabBarLabel: "Home",
           tabBarItemStyle: { flex: 1 },
+        }}
+      />
+      <TopTab.Screen
+        name="MyClubs"
+        children={() => <FilteredClubs />}
+        options={{
+          tabBarLabel: "My Clubs",
         }}
       />
       <TopTab.Screen

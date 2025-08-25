@@ -10,6 +10,7 @@ import { PostContext } from "../context/PostContext";
 import usePersistedState from "../util/PersistedState";
 import { Colors } from "react-native/Libraries/NewAppScreen";
 import LatestPost from "../components/Home/LatestPost";
+
 export default function Clubs() {
   const { colors } = useTheme();
   // Importing the ClubContext to access followed clubs and the function to get them
@@ -26,6 +27,7 @@ export default function Clubs() {
   const fetchPosts = async () => {
     try {
       if (followedClubs.length === 0) {
+        setFollowedClubsPosts([]); // Clear posts if no clubs
         return;
       }
       console.log(
@@ -45,9 +47,14 @@ export default function Clubs() {
     }
   };
 
+  // Fetch posts whenever followedClubs changes (when joining/leaving clubs)
+  useEffect(() => {
+    fetchPosts();
+  }, [followedClubs]);
+
   useFocusEffect(
     useCallback(() => {
-      // Fetch posts when the component mounts or user changes
+      // Fetch posts when the component comes into focus
       try {
         setIsLoading(true);
         fetchPosts();
@@ -56,7 +63,7 @@ export default function Clubs() {
       } finally {
         setIsLoading(false);
       }
-    }, [user])
+    }, [followedClubs]) // Now depends on followedClubs
   );
 
   if (isLoading) {
@@ -81,10 +88,8 @@ export default function Clubs() {
             clubOnRefresh={() => fetchPosts()}
             club_id={followedClubs.map((club: any) => club.club_id)}
           />
-
         )}
       </View>
-      
     </View>
   );
 }

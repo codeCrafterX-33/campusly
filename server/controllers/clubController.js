@@ -39,13 +39,13 @@ export const getClubs = async (req, res) => {
 };
 
 export const getUserFollowedClubs = async (req, res) => {
-  const { u_email } = req.params;
-  console.log("Fetching club followers for user", u_email);
+  const { user_id } = req.params;
+  console.log("Fetching club followers for user", user_id);
   try {
     const result = await pool.query(
-      `select clubs.name, clubs.club_logo, clubfollowers.* from clubs
-INNER JOIN clubfollowers ON clubs.id=clubfollowers.club_id WHERE clubfollowers.u_email = $1;`,
-      [u_email]
+      `select clubs.name, clubs.about, clubs.club_logo, clubfollowers.* from clubs
+INNER JOIN clubfollowers ON clubs.id=clubfollowers.club_id WHERE clubfollowers.user_id = $1;`,
+      [user_id]
     );
 
     res.status(200).json({
@@ -60,13 +60,116 @@ INNER JOIN clubfollowers ON clubs.id=clubfollowers.club_id WHERE clubfollowers.u
   }
 };
 
+export const getUserCreatedClubs = async (req, res) => {
+  const { user_id } = req.params;
+  console.log("Fetching clubs created by user", user_id);
+  try {
+    const result = await pool.query(
+      `SELECT * FROM clubs WHERE user_id = $1 ORDER BY name ASC`,
+      [user_id]
+    );
+
+    res.status(200).json({
+      message: "User created clubs fetched successfully",
+      data: result.rows,
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "User created clubs fetching failed",
+      error: error.message,
+    });
+  }
+};
+
+export const updateClub = async (req, res) => {
+  const { id } = req.params;
+  const { name, description, imageUrl } = req.body;
+  const { user_email } = req.body;
+
+  try {
+    // First check if the user is the creator of the club
+    const checkResult = await pool.query(
+      `SELECT createdby FROM clubs WHERE id = $1`,
+      [id]
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        message: "Club not found",
+      });
+    }
+
+    if (checkResult.rows[0].createdby !== user_email) {
+      return res.status(403).json({
+        message: "You can only edit clubs you created",
+      });
+    }
+
+    const result = await pool.query(
+      `UPDATE clubs SET name = $1, about = $2, club_logo = $3 WHERE id = $4 RETURNING *`,
+      [name, description, imageUrl, id]
+    );
+
+    res.status(200).json({
+      message: "Club updated successfully",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Club update failed",
+      error: error.message,
+    });
+  }
+};
+
+export const deleteClub = async (req, res) => {
+  const { id } = req.params;
+  const { user_email } = req.body;
+
+  try {
+    // First check if the user is the creator of the club
+    const checkResult = await pool.query(
+      `SELECT createdby FROM clubs WHERE id = $1`,
+      [id]
+    );
+
+    if (checkResult.rows.length === 0) {
+      return res.status(404).json({
+        message: "Club not found",
+      });
+    }
+
+    if (checkResult.rows[0].createdby !== user_email) {
+      return res.status(403).json({
+        message: "You can only delete clubs you created",
+      });
+    }
+
+    // Delete club followers first (due to foreign key constraints)
+    await pool.query(`DELETE FROM clubfollowers WHERE club_id = $1`, [id]);
+
+    // Delete the club
+    await pool.query(`DELETE FROM clubs WHERE id = $1`, [id]);
+
+    res.status(200).json({
+      message: "Club deleted successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      message: "Club deletion failed",
+      error: error.message,
+    });
+  }
+};
+
 export const followClub = async (req, res) => {
-  const { clubId, u_email } = req.body;
+  const { user_id } = req.params;
+  const { clubId, user_email } = req.body;
 
   try {
     const result = await pool.query(
-      `INSERT INTO clubfollowers VALUES (DEFAULT, $1, $2)`,
-      [clubId, u_email]
+      `INSERT INTO clubfollowers VALUES (DEFAULT, $1, $2, $3)`,
+      [clubId, user_email, user_id]
     );
 
     res.status(201).json({
@@ -81,13 +184,13 @@ export const followClub = async (req, res) => {
 };
 
 export const unfollowClub = async (req, res) => {
-  const { u_email } = req.params;
+  const { user_id } = req.params;
   const { clubId } = req.body;
-  console.log("Fetching club followers for user", u_email);
+  console.log("Unfollowing club", clubId, "for user", user_id);
   try {
     const result = await pool.query(
-      `DELETE FROM clubfollowers WHERE u_email = $1 AND club_id = $2`,
-      [u_email, clubId]
+      `DELETE FROM clubfollowers WHERE club_id = $1 AND user_id = $2`,
+      [clubId, user_id]
     );
 
     res.status(200).json({
