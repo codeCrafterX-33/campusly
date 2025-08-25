@@ -8,11 +8,12 @@ import {
   TextInput,
   Keyboard,
 } from "react-native";
-import React, { useLayoutEffect, useState } from "react";
+import React, { useLayoutEffect, useState, useEffect } from "react";
 import moment from "moment";
 import {
   useNavigation,
   CompositeNavigationProp,
+  useRoute,
 } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTheme } from "react-native-paper";
@@ -38,8 +39,21 @@ interface UploadResponse {
   secure_url: string;
 }
 
+interface RouteParams {
+  isEditing?: boolean;
+  eventData?: {
+    id: number;
+    name: string;
+    bannerurl: string;
+    location: string;
+    link: string;
+    event_date: string;
+    event_time: string;
+  };
+}
+
 export default function AddEvent() {
-  const { user } = useContext(AuthContext);
+  const { userData } = useContext(AuthContext);
   const navigation =
     useNavigation<
       CompositeNavigationProp<
@@ -47,6 +61,7 @@ export default function AddEvent() {
         DrawerNavigationProp<any>
       >
     >();
+  const route = useRoute();
   const { colors } = useTheme();
   const [loading, setLoading] = useState(false);
   const [eventName, setEventName] = useState<string>("");
@@ -64,6 +79,35 @@ export default function AddEvent() {
   const [eventTime, setEventTime] = useState<Date | null>(null);
   const [openDatePicker, setOpenDatePicker] = useState(false);
   const [openTimePicker, setOpenTimePicker] = useState(false);
+
+  // Get route params
+  const params = route.params as RouteParams;
+  const isEditing = params?.isEditing || false;
+  const eventData = params?.eventData;
+
+  // Pre-fill form data when editing
+  useEffect(() => {
+    if (isEditing && eventData) {
+      setEventName(eventData.name);
+      setEventLocation(eventData.location);
+      setEventLink(eventData.link);
+      setEventImage(eventData.bannerurl);
+
+      // Parse date and time from existing event
+      if (eventData.event_date) {
+        const parsedDate = moment(
+          eventData.event_date,
+          "MMMM Do YYYY"
+        ).toDate();
+        setEventDate(parsedDate);
+      }
+
+      if (eventData.event_time) {
+        const parsedTime = moment(eventData.event_time, "hh:mm a").toDate();
+        setEventTime(parsedTime);
+      }
+    }
+  }, [isEditing, eventData]);
 
   const showDatePicker = () => {
     setOpenDatePicker(true);
@@ -133,7 +177,8 @@ export default function AddEvent() {
       setLocationError(null);
     }
 
-    if (!image) {
+    // For editing, image is optional if it already exists
+    if (!image && !isEditing) {
       setImageError("Please select a banner");
       isValid = false;
     } else {
@@ -170,14 +215,14 @@ export default function AddEvent() {
     link: string,
     image: string | null,
     eventDate: Date | null,
-    eventTime: Date | null,
-    u_email: string
+    eventTime: Date | null
   ) => {
     setLoading(true);
     try {
-      let imageUrl = null;
+      let imageUrl = eventImage; // Use existing image if editing
 
-      if (image) {
+      // Only upload new image if it's different from the existing one
+      if (image && image !== eventData?.bannerurl) {
         // Create form data for image upload
         const formData = new FormData();
         const uri = image;
@@ -206,37 +251,71 @@ export default function AddEvent() {
         const uploadResult = await uploadResponse.json();
         imageUrl = uploadResult.secure_url;
       }
-      if (imageUrl) {
-        const result = await axios.post(
-          `${process.env.EXPO_PUBLIC_SERVER_URL}/event`,
-          {
-            eventName: eventName,
-            location: eventLocation,
-            link: eventLink,
-            eventImage: imageUrl,
-            eventDate: moment(eventDate).format("MMMM Do YYYY"),
-            eventTime: moment(eventTime).format("hh:mm a"),
-            u_email: u_email,
-          }
-        );
-        if (result.status === 201) {
-          Toast.show({
-            text1: "Great! New event added",
-            type: "success",
-          });
 
-          navigation.navigate("DrawerNavigator", {
-            screen: "TabLayout",
-            params: {
-              screen: "Events",
-            },
-          });
+      if (imageUrl) {
+        if (isEditing && eventData) {
+          // Update existing event
+          const result = await axios.put(
+            `${process.env.EXPO_PUBLIC_SERVER_URL}/event/update/${eventData.id}`,
+            {
+              eventName: name,
+              location: location,
+              link: link,
+              eventImage: imageUrl,
+              eventDate: moment(eventDate).format("MMMM Do YYYY"),
+              eventTime: moment(eventTime).format("hh:mm a"),
+              user_id: userData?.id,
+            }
+          );
+
+          if (result.status === 200) {
+            Toast.show({
+              text1: "Event updated successfully! 🎉",
+              type: "success",
+            });
+
+            navigation.navigate("DrawerNavigator", {
+              screen: "TabLayout",
+              params: {
+                screen: "Events",
+              },
+            });
+          }
+        } else {
+          // Create new event
+          const result = await axios.post(
+            `${process.env.EXPO_PUBLIC_SERVER_URL}/event`,
+            {
+              eventName: name,
+              location: location,
+              link: link,
+              eventImage: imageUrl,
+              eventDate: moment(eventDate).format("MMMM Do YYYY"),
+              eventTime: moment(eventTime).format("hh:mm a"),
+              u_email: userData?.email,
+              user_id: userData?.id,
+            }
+          );
+
+          if (result.status === 201) {
+            Toast.show({
+              text1: "Great! New event added 🎉",
+              type: "success",
+            });
+
+            navigation.navigate("DrawerNavigator", {
+              screen: "TabLayout",
+              params: {
+                screen: "Events",
+              },
+            });
+          }
         }
       }
     } catch (error) {
       console.log(error);
       Toast.show({
-        text1: "Failed to create event",
+        text1: isEditing ? "Failed to update event" : "Failed to create event",
         type: "error",
       });
     } finally {
@@ -253,28 +332,13 @@ export default function AddEvent() {
       const date = eventDate;
       const time = eventTime;
 
-      const isValid = validateInputs(
-        eventName,
-        eventLocation,
-        eventLink,
-        eventImage,
-        eventDate,
-        eventTime
-      );
+      const isValid = validateInputs(name, location, link, image, date, time);
 
       if (isValid) {
-        uploadData(
-          eventName,
-          eventLocation,
-          eventLink,
-          eventImage,
-          eventDate,
-          eventTime,
-          user?.email
-        );
+        uploadData(name, location, link, image, date, time);
       } else {
         Toast.show({
-          text1: "Please fill all the fields",
+          text1: "Please fill all the required fields",
           type: "error",
         });
         Keyboard.dismiss();
@@ -358,23 +422,33 @@ export default function AddEvent() {
           <Text style={[styles.postBtn, { color: "white" }]}>
             {loading ? (
               <ActivityIndicator size="small" color="white" />
+            ) : isEditing ? (
+              "Update"
             ) : (
               "Create"
             )}
           </Text>
         </TouchableOpacity>
       ),
-      headerTitle: "Add Event",
+      headerTitle: isEditing ? "Edit Event" : "Add Event",
       headerTitleStyle: {
         fontSize: RFValue(16),
         fontWeight: "bold",
         color: colors.onBackground,
       },
     });
-  }, [navigation, colors, onPostBtnClick, loading]);
+  }, [navigation, colors, onPostBtnClick, loading, isEditing]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Editing Indicator */}
+      {isEditing && (
+        <View style={styles.editingIndicator}>
+          <Ionicons name="create-outline" size={16} color={Colors.PRIMARY} />
+          <Text style={styles.editingText}>Editing Event</Text>
+        </View>
+      )}
+
       <TouchableOpacity onPress={pickImage}>
         {eventImage ? (
           <Image source={{ uri: eventImage }} style={styles.image} />
@@ -392,7 +466,11 @@ export default function AddEvent() {
         )}
       </TouchableOpacity>
       {imageError && <Text style={styles.errorText}>{imageError}</Text>}
-      <Text style={styles.helperText}>Recommended: Square image, max 5MB</Text>
+      <Text style={styles.helperText}>
+        {isEditing
+          ? "Tap to change banner image"
+          : "Recommended: Square image, max 5MB"}
+      </Text>
 
       <TextInput
         placeholder="Event Name"
@@ -410,7 +488,7 @@ export default function AddEvent() {
         onChangeText={handleNameChange}
         maxLength={30}
         autoCapitalize="words"
-        autoFocus={true}
+        autoFocus={!isEditing}
       />
       {nameError && <Text style={styles.errorText}>{nameError}</Text>}
 
@@ -515,6 +593,23 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
     paddingHorizontal: RFValue(15),
+  },
+  editingIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.PRIMARY + "20",
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    alignSelf: "flex-start",
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  editingText: {
+    color: Colors.PRIMARY,
+    fontSize: RFValue(12),
+    fontWeight: "600",
+    marginLeft: 4,
   },
   postBtn: {
     fontSize: RFValue(16),

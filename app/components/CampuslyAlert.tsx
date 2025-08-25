@@ -12,6 +12,8 @@ export default function CampuslyAlert({
   buttonText,
   buttonText2,
   overrideDefault,
+  isLoading,
+  loadingText,
 }: {
   isVisible: boolean;
   type: string;
@@ -33,8 +35,30 @@ export default function CampuslyAlert({
   buttonText?: string;
   buttonText2?: string;
   overrideDefault?: boolean;
+  isLoading?: boolean;
+  loadingText?: string;
 }) {
   const isSuccess = type === "success";
+
+  // Fun loading texts for different scenarios
+  const getLoadingText = () => {
+    if (loadingText) return loadingText;
+
+    const funLoadingTexts = [
+      "Hold on tight! 🚀",
+      "Magic in progress ✨",
+      "Almost there! 🎯",
+      "Working my magic 🪄",
+      "Just a sec! ⚡",
+      "Processing... 🎪",
+      "Loading awesome! 🌟",
+      "Getting it done! 💪",
+      "Almost ready! 🎉",
+      "Preparing greatness! 🏆",
+    ];
+
+    return funLoadingTexts[Math.floor(Math.random() * funLoadingTexts.length)];
+  };
 
   return (
     <Modal transparent visible={isVisible} animationType="fade">
@@ -53,32 +77,40 @@ export default function CampuslyAlert({
           </Text>
 
           <View style={overrideDefault && styles.overridecontainer}>
-          <TouchableOpacity
-            style={isSuccess ? styles.button : styles.buttonError}
-            onPress={
-              onPress && buttonText === "Continue"
-                ? onPress
-                : overrideDefault && buttonText
-                ? onPress
-                : onClose
-            }
-          >
-            <Text style={styles.buttonText}>
-              {isSuccess
-                ? buttonText
-                : overrideDefault && buttonText
-                ? buttonText
-                : "Try again"}
-            </Text>
-          </TouchableOpacity>
-
-          {buttonText2 && (
             <TouchableOpacity
-              style={styles.button}
-              onPress={onPress2 && buttonText2 ? onPress2 : onClose}
+              style={[
+                isSuccess ? styles.button : styles.buttonError,
+                isLoading && styles.buttonDisabled,
+              ]}
+              onPress={
+                isLoading
+                  ? undefined
+                  : onPress && buttonText === "Continue"
+                  ? onPress
+                  : overrideDefault && buttonText
+                  ? onPress
+                  : onClose
+              }
+              disabled={isLoading}
             >
-              <Text style={styles.buttonText}>{buttonText2}</Text>
+              <Text style={styles.buttonText}>
+                {isLoading
+                  ? getLoadingText()
+                  : isSuccess
+                  ? buttonText
+                  : overrideDefault && buttonText
+                  ? buttonText
+                  : "Try again"}
+              </Text>
             </TouchableOpacity>
+
+            {buttonText2 && !isLoading && (
+              <TouchableOpacity
+                style={styles.button}
+                onPress={onPress2 && buttonText2 ? onPress2 : onClose}
+              >
+                <Text style={styles.buttonText}>{buttonText2}</Text>
+              </TouchableOpacity>
             )}
           </View>
         </View>
@@ -158,5 +190,8 @@ const styles = StyleSheet.create({
   },
   buttonTextError: {
     color: "#fff",
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
 });

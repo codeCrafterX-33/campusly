@@ -50,11 +50,11 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
             setEducation(educationResponse.data.data || []);
             console.log("Education data:", educationResponse.data.data);
           } catch (educationError) {
-            console.error("Failed to fetch education data:", educationError);
+            console.warn("Failed to fetch education data:", educationError);
             setEducation([]); // Set empty array if education fetch fails
           }
         } catch (error) {
-          console.error("Failed to fetch user data:", error);
+          console.warn("Failed to fetch user data:", error);
           setEducation([]); // Set empty array if user fetch fails
         }
       } else {

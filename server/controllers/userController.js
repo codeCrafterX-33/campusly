@@ -1,10 +1,17 @@
 import pool from "../db.js";
 
+async function getUserIdFromEmail(email) {
+  const userQuery = "SELECT id FROM users WHERE email = $1";
+  const userResult = await pool.query(userQuery, [email]);
+  return userResult.rows[0].id;
+}
+
 export const getUserByEmail = async (req, res) => {
   const { email } = req.params;
   try {
-    const result = await pool.query(`SELECT * FROM USERS WHERE email = $1`, [
-      email,
+    const userId = await getUserIdFromEmail(email);
+    const result = await pool.query(`SELECT * FROM USERS WHERE id = $1`, [
+      userId,
     ]);
     res
       .status(200)

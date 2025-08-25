@@ -10,8 +10,11 @@ import AddPost from "../screens/AddPost";
 import DrawerNavigator from "./DrawerNavigator";
 import Event from "../screens/(tab)/Event";
 import Profile from "../screens/(profile)/Profile";
-import { TransitionPresets } from "@react-navigation/stack";
-import { TouchableOpacity } from "react-native";
+import {
+  TransitionPresets,
+  CardStyleInterpolators,
+} from "@react-navigation/stack";
+import { TouchableOpacity, Easing } from "react-native";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import ExploreClubs from "../screens/ExploreClubs";
 import { useTheme } from "react-native-paper";
@@ -27,7 +30,7 @@ import { AuthContext } from "../context/AuthContext";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import OTPVerificationScreen from "../screens/(verificationScreen)/OtpVerificationScreen";
 import ProfileSetupScreen from "../screens/(profile)/ProfileSetupScreen";
-import EditEducation from "../screens/(profile)/EditEducation"; 
+import EditEducation from "../screens/(profile)/EditEducation";
 
 export type RootStackParamList = {
   Landing: undefined;
@@ -51,23 +54,84 @@ export type RootStackParamList = {
 
 const Stack = createStackNavigator<RootStackParamList>();
 
+// Custom transition configurations
+const customTransition = {
+  gestureDirection: "horizontal" as const,
+  transitionSpec: {
+    open: {
+      animation: "timing" as const,
+      config: {
+        duration: 300,
+        easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+      },
+    },
+    close: {
+      animation: "timing" as const,
+      config: {
+        duration: 300,
+        easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+      },
+    },
+  },
+  cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+};
+
+const fadeTransition = {
+  gestureDirection: "vertical" as const,
+  transitionSpec: {
+    open: {
+      animation: "timing" as const,
+      config: {
+        duration: 400,
+        easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+      },
+    },
+    close: {
+      animation: "timing" as const,
+      config: {
+        duration: 400,
+        easing: Easing.bezier(0.25, 0.46, 0.45, 0.94),
+      },
+    },
+  },
+  cardStyleInterpolator: CardStyleInterpolators.forFadeFromBottomAndroid,
+};
+
 export const StackNavigator = () => {
   return (
-    <Stack.Navigator initialRouteName="Landing">
+    <Stack.Navigator
+      initialRouteName="Landing"
+      screenOptions={{
+        gestureEnabled: true,
+        ...customTransition,
+      }}
+    >
       <Stack.Screen
         name="Landing"
         component={LandingScreen}
-        options={{ headerShown: false, headerTitle: "" }}
+        options={{
+          headerShown: false,
+          headerTitle: "",
+          ...fadeTransition,
+        }}
       />
       <Stack.Screen
         name="SignIn"
         component={SignIn}
-        options={{ headerTitle: "", headerTransparent: true }}
+        options={{
+          headerTitle: "",
+          headerTransparent: true,
+          ...fadeTransition,
+        }}
       />
       <Stack.Screen
         name="SignUp"
         component={SignUp}
-        options={{ headerTitle: "", headerTransparent: true }}
+        options={{
+          headerTitle: "",
+          headerTransparent: true,
+          ...fadeTransition,
+        }}
       />
     </Stack.Navigator>
   );
@@ -89,6 +153,17 @@ export const AuthenticatedStack = () => {
       initialRouteName="DrawerNavigator"
       screenOptions={{
         gestureEnabled: true,
+        ...customTransition,
+        headerStyle: {
+          backgroundColor: colors.background,
+          elevation: 0,
+          shadowOpacity: 0,
+        },
+        headerTitleStyle: {
+          color: colors.onBackground,
+          fontSize: RFValue(18),
+          fontWeight: "600",
+        },
       }}
     >
       <Stack.Screen
@@ -98,6 +173,7 @@ export const AuthenticatedStack = () => {
           headerShown: false,
           gestureEnabled: true,
           ...TransitionPresets.SlideFromLeftIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
         }}
       />
       <Stack.Screen
@@ -107,7 +183,8 @@ export const AuthenticatedStack = () => {
           headerShown: true,
           headerTitle: "Add New Post",
           headerBackTitle: "Back",
-          animation: "slide_from_bottom",
+          ...TransitionPresets.ModalSlideFromBottomIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forModalPresentationIOS,
         }}
       />
 
@@ -119,8 +196,9 @@ export const AuthenticatedStack = () => {
           headerTintColor: colors.onBackground,
           headerShown: false,
           headerTitle: "Profile",
-          gestureEnabled: false,
+          gestureEnabled: true,
           ...TransitionPresets.SlideFromRightIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
         })}
       />
 
@@ -130,6 +208,7 @@ export const AuthenticatedStack = () => {
         options={({ navigation }) => ({
           headerShown: true,
           ...TransitionPresets.SlideFromRightIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
           headerLeft: () => (
             <TouchableOpacity onPress={() => navigation.goBack()}>
               <Icon name="arrow-left" size={24} color={colors.onBackground} />
@@ -145,6 +224,7 @@ export const AuthenticatedStack = () => {
           headerShown: true,
           headerTitle: "Add Event",
           ...TransitionPresets.SlideFromRightIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
         }}
       />
 
@@ -163,6 +243,7 @@ export const AuthenticatedStack = () => {
           },
 
           ...TransitionPresets.SlideFromRightIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
           headerLeft: () => (
             <TouchableOpacity
               style={{ paddingHorizontal: RFValue(7) }}
@@ -192,17 +273,29 @@ export const AuthenticatedStack = () => {
       <Stack.Screen
         name="EditProfile"
         component={EditProfile}
-        options={{ headerShown: true }}
+        options={{
+          headerShown: true,
+          ...TransitionPresets.SlideFromRightIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+        }}
       />
       <Stack.Screen
         name="OTPVerificationScreen"
         component={OTPVerificationScreen}
-        options={{ headerShown: false }}
+        options={{
+          headerShown: false,
+          ...TransitionPresets.ModalSlideFromBottomIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forModalPresentationIOS,
+        }}
       />
       <Stack.Screen
         name="EditEducation"
         component={EditEducation}
-        options={{ headerShown: true }}
+        options={{
+          headerShown: true,
+          ...TransitionPresets.SlideFromRightIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+        }}
       />
     </Stack.Navigator>
   );

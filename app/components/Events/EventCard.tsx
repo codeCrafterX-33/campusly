@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Image, Alert, Share } from "react-native";
+import { View, Text, StyleSheet, Image, Share } from "react-native";
 import { useTheme } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
 import Colors from "../../constants/Colors";
@@ -6,9 +6,13 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 import Button from "../ui/Button";
 import { useContext, useState } from "react";
 import { EventContext } from "../../context/EventContext";
+import { AuthContext } from "../../context/AuthContext";
 import { showEventToast } from "../ToastMessages";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
+import CampuslyAlert from "../CampuslyAlert";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 type EVENT = {
   id: number;
@@ -25,58 +29,26 @@ type EVENT = {
   refreshData?: () => void;
   filter?: string;
   event_id?: number;
+  user_id?: number;
 };
 
 export default function EventCard(event: EVENT) {
-  const { registerEvent, unregisterEvent } = useContext(EventContext);
+  const { registerEvent, unregisterEvent, deleteEvent } =
+    useContext(EventContext);
+  const { userData } = useContext(AuthContext);
   const { colors } = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const [isLoading, setIsLoading] = useState(false);
+  const [showUnregisterAlert, setShowUnregisterAlert] = useState(false);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+
+  // Check if current user is the creator of this event
+  const isEventCreator = userData?.id === event.user_id;
 
   const onRegisterBtnClick = async () => {
     if (event.isRegistered) {
-      // If the user is already registered, unregister them
-
-      try {
-        Alert.alert(
-          "Wait up! 🛑",
-          "Are you sure you want to bail on this event? 😢 We'll miss you!",
-          [
-            {
-              text: "Yeah, gotta go",
-              onPress: async () => {
-                setIsLoading(true); // Set loading state to true while unregistering
-                try {
-                  const unregister = await unregisterEvent(
-                    event.filter === "upcoming" ? event.id : event.event_id
-                  );
-                  if (unregister?.status === 200) {
-                    showEventToast("unregister"); // random fun unregister toast
-                    event.refreshData?.();
-                  } else {
-                    showEventToast("unregisterError");
-                  }
-                } catch (error) {
-                  console.log("Error unregistering from event:", error);
-                  showEventToast("unregisterError");
-                } finally {
-                  setIsLoading(false);
-                }
-              },
-            },
-            {
-              text: "Nah, I'm staying",
-              onPress: () => {
-                setIsLoading(false); // Reset loading state if user cancels
-              },
-              style: "cancel",
-            },
-          ],
-          { cancelable: true }
-        );
-      } catch (error) {
-        console.log("Error unregistering from event:", error);
-        showEventToast("unregisterError");
-      }
+      // If the user is already registered, show unregister confirmation
+      setShowUnregisterAlert(true);
     } else {
       try {
         setIsLoading(true); // Set loading state to true while registering
@@ -92,6 +64,61 @@ export default function EventCard(event: EVENT) {
         setIsLoading(false);
       }
     }
+  };
+
+  const handleUnregister = async () => {
+    setIsLoading(true);
+    try {
+      const unregister = await unregisterEvent(
+        event.filter === "upcoming" ? event.id : event.event_id
+      );
+      if (unregister?.status === 200) {
+        showEventToast("unregister");
+        event.refreshData?.();
+      } else {
+        showEventToast("unregisterError");
+      }
+    } catch (error) {
+      console.log("Error unregistering from event:", error);
+      showEventToast("unregisterError");
+    } finally {
+      setIsLoading(false);
+      setShowUnregisterAlert(false);
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    setIsLoading(true);
+    try {
+      const deleteResult = await deleteEvent(event.id.toString());
+      if (deleteResult?.status === 200) {
+        showEventToast("deleteSuccess");
+        event.refreshData?.();
+      } else {
+        showEventToast("deleteError");
+      }
+    } catch (error) {
+      console.log("Error deleting event:", error);
+      showEventToast("deleteError");
+    } finally {
+      setIsLoading(false);
+      setShowDeleteAlert(false);
+    }
+  };
+
+  const handleEditEvent = () => {
+    navigation.navigate("AddEvent", {
+      isEditing: true,
+      eventData: {
+        id: event.id,
+        name: event.name,
+        bannerurl: event.bannerurl,
+        location: event.location,
+        link: event.link,
+        event_date: event.event_date,
+        event_time: event.event_time,
+      },
+    });
   };
 
   const shareEvent = async () => {
@@ -129,6 +156,35 @@ https://campusly.vercel.app/events/${event.id}
           {event.event_date} at {event.event_time}
         </Text>
       </View>
+
+      {/* Creator Actions */}
+      {isEventCreator && (
+        <View style={styles.creatorActions}>
+          <View style={styles.creatorButton}>
+            <Button outline onPress={handleEditEvent}>
+              <Ionicons
+                name="create-outline"
+                size={20}
+                color={Colors.PRIMARY}
+              />
+              <Text
+                style={[styles.creatorButtonText, { color: Colors.PRIMARY }]}
+              >
+                Edit
+              </Text>
+            </Button>
+          </View>
+          <View style={styles.creatorButton}>
+            <Button outline onPress={() => setShowDeleteAlert(true)}>
+              <Ionicons name="trash-outline" size={20} color="#EF4444" />
+              <Text style={[styles.creatorButtonText, { color: "#EF4444" }]}>
+                Delete
+              </Text>
+            </Button>
+          </View>
+        </View>
+      )}
+
       <View style={styles.buttonContainer}>
         <Button
           fullWidth
@@ -139,15 +195,73 @@ https://campusly.vercel.app/events/${event.id}
         >
           <Ionicons name="share-outline" size={30} color={Colors.PRIMARY} />
         </Button>
-        <Button
-          fullWidth
-          isLoading={isLoading}
-          onPress={() => onRegisterBtnClick()}
-          dim={event.isRegistered}
-        >
-          {event.isRegistered ? "Registered" : "Register"}
-        </Button>
+        {!isEventCreator && (
+          <Button
+            fullWidth
+            isLoading={isLoading}
+            onPress={() => onRegisterBtnClick()}
+            dim={event.isRegistered}
+          >
+            {event.isRegistered ? "Registered" : "Register"}
+          </Button>
+        )}
       </View>
+
+      {/* Unregister Alert */}
+      <CampuslyAlert
+        isVisible={showUnregisterAlert}
+        type="error"
+        onClose={() => setShowUnregisterAlert(false)}
+        messages={{
+          success: {
+            title: "Wait up! 🛑",
+            message:
+              "Are you sure you want to bail on this event? 😢 We'll miss you!",
+            icon: "⚠️",
+          },
+          error: {
+            title: "Wait up! 🛑",
+            message:
+              "Are you sure you want to bail on this event? 😢 We'll miss you!",
+            icon: "⚠️",
+          },
+        }}
+        onPress={handleUnregister}
+        onPress2={() => setShowUnregisterAlert(false)}
+        buttonText="Yeah, gotta go"
+        buttonText2="Nah, I'm staying"
+        overrideDefault={true}
+        isLoading={isLoading}
+        loadingText="Unregistering... 🏃‍♂️"
+      />
+
+      {/* Delete Alert */}
+      <CampuslyAlert
+        isVisible={showDeleteAlert}
+        type="error"
+        onClose={() => setShowDeleteAlert(false)}
+        messages={{
+          success: {
+            title: "Delete Event? 🗑️",
+            message:
+              "This action cannot be undone. All registrations will be lost! 😱",
+            icon: "⚠️",
+          },
+          error: {
+            title: "Delete Event? 🗑️",
+            message:
+              "This action cannot be undone. All registrations will be lost! 😱",
+            icon: "⚠️",
+          },
+        }}
+        onPress={handleDeleteEvent}
+        onPress2={() => setShowDeleteAlert(false)}
+        buttonText="Yes, delete it"
+        buttonText2="Cancel"
+        overrideDefault={true}
+        isLoading={isLoading}
+        loadingText="Deleting... 🗑️"
+      />
     </View>
   );
 }
@@ -193,6 +307,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 5,
     gap: 5,
+  },
+  creatorActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 15,
+    marginBottom: 15,
+    gap: 10,
+  },
+  creatorButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 5,
+  },
+  creatorButtonText: {
+    fontSize: RFValue(14),
+    fontWeight: "600",
   },
   buttonContainer: {
     display: "flex",

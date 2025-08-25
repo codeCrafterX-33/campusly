@@ -53,11 +53,17 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
         tabBarInactiveTintColor: "gray",
         tabBarStyle: {
           backgroundColor: colors.background,
-          opacity: 0.8,
+          opacity: 0.95,
           height: 70,
           position: "absolute",
           alignItems: "center",
           justifyContent: "center",
+          borderTopWidth: 0,
+          elevation: 8,
+          shadowColor: "#000",
+          shadowOffset: { width: 0, height: -2 },
+          shadowOpacity: 0.1,
+          shadowRadius: 4,
         },
         tabBarLabelStyle: {
           fontSize: 12,
@@ -66,6 +72,8 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
         tabBarIconStyle: {
           marginBottom: 10,
         },
+        tabBarHideOnKeyboard: true,
+        animationEnabled: true,
       }}
     >
       <Tab.Screen

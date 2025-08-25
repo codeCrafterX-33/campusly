@@ -10,6 +10,8 @@ const EventContext = createContext<any>({
   setEvents: () => {},
   registerEvent: () => {},
   unregisterEvent: () => {},
+  updateEvent: () => {},
+  deleteEvent: () => {},
   refreshing: false,
   onRefresh: () => {},
   getRegisteredEvents: () => {},
@@ -57,12 +59,14 @@ function EventProvider({ children }: { children: React.ReactNode }) {
   };
 
   const getRegisteredEvents = async () => {
+    console.log("userData?.id", userData?.id);
     const response = await axios.get(
-      `${process.env.EXPO_PUBLIC_SERVER_URL}/event/registered/${userData?.email}`
+      `${process.env.EXPO_PUBLIC_SERVER_URL}/event/registered/${userData?.id}`
     );
     if (response.status === 200) {
       setRegisteredEvents(response.data.data);
       console.log("Registered events fetched successfully");
+      console.log(response.data.data);
       return response.status;
     } else {
       console.log("Error fetching registered events");
@@ -76,7 +80,7 @@ function EventProvider({ children }: { children: React.ReactNode }) {
         `${process.env.EXPO_PUBLIC_SERVER_URL}/event/register`,
         {
           eventId: eventId,
-          u_email: userData?.email,
+          user_id: userData?.id,
         }
       );
       if (response.status === 201) {
@@ -92,7 +96,7 @@ function EventProvider({ children }: { children: React.ReactNode }) {
   const unregisterEvent = async (eventId: string) => {
     try {
       const response = await axios.delete(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/event/unregister/${userData?.email}`,
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/event/unregister/${userData?.id}`,
         {
           data: { eventId: eventId },
         }
@@ -104,6 +108,45 @@ function EventProvider({ children }: { children: React.ReactNode }) {
       return { status: response.status };
     } catch (error) {
       console.log(error);
+    }
+  };
+
+  const updateEvent = async (eventId: string, eventData: any) => {
+    try {
+      const response = await axios.put(
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/event/update/${eventId}`,
+        {
+          ...eventData,
+          user_id: userData?.id,
+        }
+      );
+      if (response.status === 200) {
+        console.log("Event updated successfully");
+        await GetEvents(); // Refresh events list
+      }
+      return { status: response.status, data: response.data };
+    } catch (error) {
+      console.log("Error updating event:", error);
+      throw error;
+    }
+  };
+
+  const deleteEvent = async (eventId: string) => {
+    try {
+      const response = await axios.delete(
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/event/delete/${eventId}`,
+        {
+          data: { user_id: userData?.id },
+        }
+      );
+      if (response.status === 200) {
+        console.log("Event deleted successfully");
+        await GetEvents(); // Refresh events list
+      }
+      return { status: response.status, data: response.data };
+    } catch (error) {
+      console.log("Error deleting event:", error);
+      throw error;
     }
   };
 
@@ -119,6 +162,8 @@ function EventProvider({ children }: { children: React.ReactNode }) {
     getEvents: GetEvents,
     registerEvent: registerEvent,
     unregisterEvent: unregisterEvent,
+    updateEvent: updateEvent,
+    deleteEvent: deleteEvent,
     setEvents: setEvents,
     refreshing: refreshing,
     onRefresh: onRefresh,

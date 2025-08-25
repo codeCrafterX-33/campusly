@@ -19,11 +19,20 @@ export default function DrawerNavigator() {
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{
         swipeEnabled: true,
-        swipeEdgeWidth: Dimensions.get("window").width * 1,
+        swipeEdgeWidth: Dimensions.get("window").width * 0.3,
         drawerType: "front",
         headerStyle: {
           backgroundColor: colors.background,
+          elevation: 0,
+          shadowOpacity: 0,
         },
+        drawerStyle: {
+          backgroundColor: colors.background,
+          width: Dimensions.get("window").width * 0.8,
+        },
+        overlayColor: "rgba(0, 0, 0, 0.5)",
+        animationEnabled: true,
+        animationType: "slide",
       }}
     >
       <Drawer.Screen

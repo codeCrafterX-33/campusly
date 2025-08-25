@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -10,8 +10,11 @@ import {
   Dimensions,
   StatusBar,
   StyleSheet,
+  BackHandler,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 const HEADER_HEIGHT = 56;
@@ -46,6 +49,19 @@ const StudentProfile = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("Posts");
   const scrollY = useRef(new Animated.Value(0)).current;
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
+
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        navigation.goBack();
+        return true;
+      }
+    );
+
+    return () => backHandler.remove();
+  }, [navigation]);
 
   const handleScrollBeginDrag = (event: any) => {
     const { contentOffset } = event.nativeEvent;
@@ -355,7 +371,10 @@ const StudentProfile = () => {
 
       {/* Animated Header */}
       <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
-        <TouchableOpacity style={styles.headerButton}>
+        <TouchableOpacity
+          style={styles.headerButton}
+          onPress={() => navigation.goBack()}
+        >
           <Text style={styles.headerButtonText}>←</Text>
         </TouchableOpacity>
         <View style={styles.headerTitle}>
@@ -395,7 +414,10 @@ const StudentProfile = () => {
             }}
             style={styles.coverPhoto}
           />
-          <TouchableOpacity style={styles.backButton}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+          >
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
         </View>

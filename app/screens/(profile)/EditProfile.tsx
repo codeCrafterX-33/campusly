@@ -60,8 +60,8 @@ export default function EditProfile({ route }: { route: any }) {
   const [country, setCountry] = useState(userData?.country || "");
   const [city, setCity] = useState(userData?.city || "");
 
-  const [firstName, setFirstName] = useState(userData?.firstName || "");
-  const [lastName, setLastName] = useState(userData?.lastName || "");
+  const [firstName, setFirstName] = useState(userData?.firstname || "");
+  const [lastName, setLastName] = useState(userData?.lastname || "");
   const [school, setSchool] = useState(userData?.school || "");
   const [isSchoolModalVisible, setIsSchoolModalVisible] = useState(false);
   const [isCountryModalVisible, setIsCountryModalVisible] = useState(false);
@@ -181,6 +181,20 @@ export default function EditProfile({ route }: { route: any }) {
       ),
     });
   }, [navigation]);
+
+  // Initialize form fields with user data
+  useEffect(() => {
+    if (userData) {
+      setFirstName(userData.firstname || "");
+      setLastName(userData.lastname || "");
+      setHeadline(userData.headline || "");
+      setCountry(userData.country || "");
+      setCity(userData.city || "");
+      setAboutText(userData.about || "");
+      setSkills(userData.skills || []);
+      setInterests(userData.interests || []);
+    }
+  }, [userData]);
 
   // Handle back press
   useEffect(() => {

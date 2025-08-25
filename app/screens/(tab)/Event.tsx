@@ -13,6 +13,7 @@ import Button from "../../components/ui/Button";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/StackNavigator";
+import { useNavigation } from "@react-navigation/native";
 import axios from "axios";
 import { useEffect, useState, useLayoutEffect, useContext } from "react";
 import EventCard from "../../components/Events/EventCard";
@@ -49,10 +50,32 @@ export default function EventView({ navigation }: EventViewProps) {
     eventIsRegistered,
   } = useContext(EventContext);
 
+  // Get the root navigation for complex navigation
+  const rootNavigation = useNavigation();
+
   useEffect(() => {
     const handleBackPress = () => {
-      navigation.goBack();
-      return true;
+      // Check if there's a previous screen in the navigation stack
+      if (navigation.canGoBack()) {
+        navigation.goBack();
+        return true; // Prevent default back behavior
+      }
+
+      // If we can't go back, try to navigate to a specific screen
+      // This handles the case when Event is accessed from AllActivityScreen
+      try {
+        // Try to navigate to the main screen (Home tab)
+        (rootNavigation as any).navigate("DrawerNavigator", {
+          screen: "TabLayout",
+          params: {
+            screen: "Home",
+          },
+        });
+        return true; // Prevent default back behavior
+      } catch (error) {
+        // If navigation fails, allow default back behavior (exit app)
+        return false;
+      }
     };
 
     const backHandler = BackHandler.addEventListener(
@@ -61,7 +84,7 @@ export default function EventView({ navigation }: EventViewProps) {
     );
 
     return () => backHandler.remove();
-  }, [navigation]);
+  }, [navigation, rootNavigation]);
 
   useLayoutEffect(() => {
     getEvents();
@@ -206,7 +229,7 @@ export default function EventView({ navigation }: EventViewProps) {
         </Pressable>
       </View>
 
-      {filter === "registered" && registeredEvents.length === 0 && (
+      {filter === "registered" && registeredEvents.length <= 0 && (
         <View style={styles.noRegisteredEvents}>
           <Text
             style={[

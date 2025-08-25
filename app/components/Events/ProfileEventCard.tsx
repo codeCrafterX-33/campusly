@@ -3,7 +3,6 @@ import {
   Text,
   StyleSheet,
   Image,
-  Alert,
   Share,
   TouchableOpacity,
 } from "react-native";
@@ -12,11 +11,14 @@ import { RFValue } from "react-native-responsive-fontsize";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import React, { useContext, useState } from "react";
 import { EventContext } from "../../context/EventContext";
+import { AuthContext } from "../../context/AuthContext";
 import { showEventToast } from "../ToastMessages";
 import Colors from "../../constants/Colors";
 import Button from "../ui/Button";
 import { LinearGradient } from "expo-linear-gradient";
-
+import CampuslyAlert from "../CampuslyAlert";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 type EVENT = {
   id: number;
@@ -33,46 +35,25 @@ type EVENT = {
   refreshData?: () => void;
   filter?: string;
   event_id?: number;
+  user_id?: number;
 };
 
 export default function EventCard(event: EVENT) {
   const { colors } = useTheme();
-  const { registerEvent, unregisterEvent } = useContext(EventContext);
+  const { registerEvent, unregisterEvent, deleteEvent } =
+    useContext(EventContext);
+  const { userData } = useContext(AuthContext);
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const [isLoading, setIsLoading] = useState(false);
+  const [showUnregisterAlert, setShowUnregisterAlert] = useState(false);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+
+  // Check if current user is the creator of this event
+  const isEventCreator = userData?.id === event.user_id;
 
   const onRegisterBtnClick = async () => {
     if (event.isRegistered) {
-      Alert.alert(
-        "Wait up! 🛑",
-        "Are you sure you want to bail on this event? 😢 We'll miss you!",
-        [
-          {
-            text: "Yeah, gotta go",
-            onPress: async () => {
-              setIsLoading(true);
-              try {
-                const res = await unregisterEvent(
-                  event.filter === "upcoming" ? event.id : event.event_id
-                );
-                if (res?.status === 200) {
-                  showEventToast("unregister");
-                  event.refreshData?.();
-                } else {
-                  showEventToast("unregisterError");
-                }
-              } catch (err) {
-                showEventToast("unregisterError");
-              } finally {
-                setIsLoading(false);
-              }
-            },
-          },
-          {
-            text: "Nah, I'm staying",
-            style: "cancel",
-          },
-        ]
-      );
+      setShowUnregisterAlert(true);
     } else {
       try {
         setIsLoading(true);
@@ -87,6 +68,60 @@ export default function EventCard(event: EVENT) {
         setIsLoading(false);
       }
     }
+  };
+
+  const handleUnregister = async () => {
+    setIsLoading(true);
+    try {
+      const res = await unregisterEvent(
+        event.filter === "upcoming" ? event.id : event.event_id
+      );
+      if (res?.status === 200) {
+        showEventToast("unregister");
+        event.refreshData?.();
+      } else {
+        showEventToast("unregisterError");
+      }
+    } catch (err) {
+      showEventToast("unregisterError");
+    } finally {
+      setIsLoading(false);
+      setShowUnregisterAlert(false);
+    }
+  };
+
+  const handleDeleteEvent = async () => {
+    setIsLoading(true);
+    try {
+      const deleteResult = await deleteEvent(event.id.toString());
+      if (deleteResult?.status === 200) {
+        showEventToast("deleteSuccess");
+        event.refreshData?.();
+      } else {
+        showEventToast("deleteError");
+      }
+    } catch (error) {
+      console.log("Error deleting event:", error);
+      showEventToast("deleteError");
+    } finally {
+      setIsLoading(false);
+      setShowDeleteAlert(false);
+    }
+  };
+
+  const handleEditEvent = () => {
+    navigation.navigate("AddEvent", {
+      isEditing: true,
+      eventData: {
+        id: event.id,
+        name: event.name,
+        bannerurl: event.bannerurl,
+        location: event.location,
+        link: event.link,
+        event_date: event.event_date,
+        event_time: event.event_time,
+      },
+    });
   };
 
   const shareEvent = async () => {
@@ -123,6 +158,35 @@ https://campusly.vercel.app/events/${event.id}`;
 
       <View style={styles.details}>
         <Text style={styles.organizer}>Hosted by {event.username}</Text>
+
+        {/* Creator Actions */}
+        {isEventCreator && (
+          <View style={styles.creatorActions}>
+            <View style={styles.creatorButton}>
+              <Button outline onPress={handleEditEvent}>
+                <Ionicons
+                  name="create-outline"
+                  size={18}
+                  color={Colors.PRIMARY}
+                />
+                <Text
+                  style={[styles.creatorButtonText, { color: Colors.PRIMARY }]}
+                >
+                  Edit
+                </Text>
+              </Button>
+            </View>
+            <View style={styles.creatorButton}>
+              <Button outline onPress={() => setShowDeleteAlert(true)}>
+                <Ionicons name="trash-outline" size={18} color="#EF4444" />
+                <Text style={[styles.creatorButtonText, { color: "#EF4444" }]}>
+                  Delete
+                </Text>
+              </Button>
+            </View>
+          </View>
+        )}
+
         <View style={styles.buttonRow}>
           <TouchableOpacity onPress={shareEvent} style={styles.iconButton}>
             <Ionicons
@@ -131,16 +195,74 @@ https://campusly.vercel.app/events/${event.id}`;
               color={Colors.PRIMARY}
             />
           </TouchableOpacity>
-          <Button
-            fullWidth
-            isLoading={isLoading}
-            onPress={onRegisterBtnClick}
-            dim={event.isRegistered}
-          >
-            {event.isRegistered ? "Registered" : "Register"}
-          </Button>
+          {!isEventCreator && (
+            <Button
+              fullWidth
+              isLoading={isLoading}
+              onPress={onRegisterBtnClick}
+              dim={event.isRegistered}
+            >
+              {event.isRegistered ? "Registered" : "Register"}
+            </Button>
+          )}
         </View>
       </View>
+
+      {/* Unregister Alert */}
+      <CampuslyAlert
+        isVisible={showUnregisterAlert}
+        type="error"
+        onClose={() => setShowUnregisterAlert(false)}
+        messages={{
+          success: {
+            title: "Wait up! 🛑",
+            message:
+              "Are you sure you want to bail on this event? 😢 We'll miss you!",
+            icon: "⚠️",
+          },
+          error: {
+            title: "Wait up! 🛑",
+            message:
+              "Are you sure you want to bail on this event? 😢 We'll miss you!",
+            icon: "⚠️",
+          },
+        }}
+        onPress={handleUnregister}
+        onPress2={() => setShowUnregisterAlert(false)}
+        buttonText="Yeah, gotta go"
+        buttonText2="Nah, I'm staying"
+        overrideDefault={true}
+        isLoading={isLoading}
+        loadingText="Unregistering... 🏃‍♂️"
+      />
+
+      {/* Delete Alert */}
+      <CampuslyAlert
+        isVisible={showDeleteAlert}
+        type="error"
+        onClose={() => setShowDeleteAlert(false)}
+        messages={{
+          success: {
+            title: "Delete Event? 🗑️",
+            message:
+              "This action cannot be undone. All registrations will be lost! 😱",
+            icon: "⚠️",
+          },
+          error: {
+            title: "Delete Event? 🗑️",
+            message:
+              "This action cannot be undone. All registrations will be lost! 😱",
+            icon: "⚠️",
+          },
+        }}
+        onPress={handleDeleteEvent}
+        onPress2={() => setShowDeleteAlert(false)}
+        buttonText="Yes, delete it"
+        buttonText2="Cancel"
+        overrideDefault={true}
+        isLoading={isLoading}
+        loadingText="Deleting... 🗑️"
+      />
     </View>
   );
 }
@@ -196,6 +318,19 @@ const styles = StyleSheet.create({
     fontSize: RFValue(12),
     color: Colors.PRIMARY,
     marginBottom: 10,
+  },
+  creatorActions: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 15,
+    gap: 10,
+  },
+  creatorButton: {
+    flex: 1,
+  },
+  creatorButtonText: {
+    fontSize: RFValue(12),
+    fontWeight: "600",
   },
   buttonRow: {
     flexDirection: "row",

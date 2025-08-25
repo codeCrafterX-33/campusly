@@ -253,9 +253,21 @@ const Profile = ({ navigation }: { navigation: any }) => {
         >
           <ProfileHeader user_id={userData?.email} scrollY={scrollY} />
           <View style={styles.profileInfo}>
-            <Text style={[styles.profileName, { color: colors.onBackground }]}>
-              {userData?.firstname} {userData?.lastname}
-            </Text>
+            <View style={styles.nameContainer}>
+              <Text
+                style={[styles.profileName, { color: colors.onBackground }]}
+              >
+                {userData?.firstname} {userData?.lastname}
+              </Text>
+              {userData?.studentstatusverified && (
+                <Ionicons
+                  name="checkmark-circle"
+                  size={RFValue(20)}
+                  color={Colors.PRIMARY}
+                  style={styles.verificationCheckmark}
+                />
+              )}
+            </View>
             <Text style={[styles.profileHandle]}> @{userData?.username}</Text>
 
             {/* {bio} */}
@@ -801,6 +813,14 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: "bold",
     marginBottom: 4,
+  },
+  nameContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  verificationCheckmark: {
+    marginLeft: RFValue(8),
   },
   profileHandle: {
     color: "#8B98A5",
