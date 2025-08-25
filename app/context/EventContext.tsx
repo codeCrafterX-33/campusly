@@ -18,6 +18,9 @@ const EventContext = createContext<any>({
   registeredEvents: [],
   setRegisteredEvents: () => {},
   eventIsRegistered: () => {},
+  getUserCreatedEvents: () => {},
+  userCreatedEvents: [],
+  setUserCreatedEvents: () => {},
 });
 
 function EventProvider({ children }: { children: React.ReactNode }) {
@@ -25,6 +28,10 @@ function EventProvider({ children }: { children: React.ReactNode }) {
   const [events, setEvents] = usePersistedState("events", []);
   const [registeredEvents, setRegisteredEvents] = usePersistedState(
     "registeredEvents",
+    []
+  );
+  const [userCreatedEvents, setUserCreatedEvents] = usePersistedState(
+    "userCreatedEvents",
     []
   );
   const [refreshing, setRefreshing] = useState(false);
@@ -157,6 +164,25 @@ function EventProvider({ children }: { children: React.ReactNode }) {
     return event ? true : false;
   };
 
+  const getUserCreatedEvents = async () => {
+    try {
+      const response = await axios.get(
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/event/user-created/${userData?.id}`
+      );
+      if (response.status === 200) {
+        setUserCreatedEvents(response.data.data);
+        console.log("User created events fetched successfully");
+        console.log(response.data.data);
+        return response.status;
+      } else {
+        console.log("Error fetching user created events");
+      }
+      return response.status;
+    } catch (error) {
+      console.log("Error fetching user created events:", error);
+    }
+  };
+
   const value = {
     events: events,
     getEvents: GetEvents,
@@ -171,6 +197,9 @@ function EventProvider({ children }: { children: React.ReactNode }) {
     registeredEvents: registeredEvents,
     setRegisteredEvents: setRegisteredEvents,
     eventIsRegistered: eventIsRegistered,
+    getUserCreatedEvents: getUserCreatedEvents,
+    userCreatedEvents: userCreatedEvents,
+    setUserCreatedEvents: setUserCreatedEvents,
   };
 
   return (

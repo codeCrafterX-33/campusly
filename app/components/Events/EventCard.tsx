@@ -45,6 +45,10 @@ export default function EventCard(event: EVENT) {
   // Check if current user is the creator of this event
   const isEventCreator = userData?.id === event.user_id;
 
+  // Determine if we should show creator actions based on the filter and creator status
+  const shouldShowCreatorActions =
+    isEventCreator && event.filter !== "registered";
+
   const onRegisterBtnClick = async () => {
     if (event.isRegistered) {
       // If the user is already registered, show unregister confirmation
@@ -69,9 +73,10 @@ export default function EventCard(event: EVENT) {
   const handleUnregister = async () => {
     setIsLoading(true);
     try {
-      const unregister = await unregisterEvent(
-        event.filter === "upcoming" ? event.id : event.event_id
-      );
+      // Use event_id for registered events, id for upcoming events
+      const eventIdToUnregister =
+        event.filter === "registered" ? event.event_id : event.id;
+      const unregister = await unregisterEvent(eventIdToUnregister);
       if (unregister?.status === 200) {
         showEventToast("unregister");
         event.refreshData?.();
@@ -158,7 +163,7 @@ https://campusly.vercel.app/events/${event.id}
       </View>
 
       {/* Creator Actions */}
-      {isEventCreator && (
+      {shouldShowCreatorActions && (
         <View style={styles.creatorActions}>
           <View style={styles.creatorButton}>
             <Button outline onPress={handleEditEvent}>
@@ -195,7 +200,7 @@ https://campusly.vercel.app/events/${event.id}
         >
           <Ionicons name="share-outline" size={30} color={Colors.PRIMARY} />
         </Button>
-        {!isEventCreator && (
+        {(!isEventCreator || event.filter === "registered") && (
           <Button
             fullWidth
             isLoading={isLoading}

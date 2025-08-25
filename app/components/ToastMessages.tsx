@@ -35,13 +35,16 @@ export const showEventToast = (type = "register") => {
       : eventRegisterMessages;
   const randomMessage = messages[Math.floor(Math.random() * messages.length)];
 
-  if (
-    type === "register" ||
-    type === "unregister" ||
-    type === "deleteSuccess"
-  ) {
+  if (type === "register" || type === "deleteSuccess") {
     Toast.show({
       type: "success",
+      text1: randomMessage,
+      visibilityTime: 3000,
+      position: "bottom",
+    });
+  } else if (type === "unregister") {
+    Toast.show({
+      type: "error",
       text1: randomMessage,
       visibilityTime: 3000,
       position: "bottom",

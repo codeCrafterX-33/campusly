@@ -115,25 +115,18 @@ export const deleteEvent = async (req, res) => {
   const { user_id } = req.body;
 
   try {
-    // First check if the user is the creator of the event
     const checkResult = await pool.query(
       `SELECT user_id FROM events WHERE id = $1`,
       [eventId]
     );
-
     if (checkResult.rows.length === 0) {
-      return res.status(404).json({
-        message: "Event not found",
-      });
+      return res.status(404).json({ message: "Event not found" });
     }
-
     if (checkResult.rows[0].user_id !== user_id) {
-      return res.status(403).json({
-        message: "You can only delete events you created",
-      });
+      return res
+        .status(403)
+        .json({ message: "You can only delete events you created" });
     }
-
-    // Delete event registrations first (due to foreign key constraint)
     await pool.query(`DELETE FROM event_registration WHERE event_id = $1`, [
       eventId,
     ]);
@@ -143,15 +136,38 @@ export const deleteEvent = async (req, res) => {
       `DELETE FROM events WHERE id = $1 RETURNING *`,
       [eventId]
     );
-
-    res.status(200).json({
-      message: "Event deleted successfully",
-      data: result.rows[0],
-    });
+    res
+      .status(200)
+      .json({ message: "Event deleted successfully", data: result.rows[0] });
   } catch (error) {
     console.error("Error deleting event:", error.message);
+    res
+      .status(500)
+      .json({ message: "Event deletion failed", error: error.message });
+  }
+};
+
+export const getUserCreatedEvents = async (req, res) => {
+  const { user_id } = req.params;
+
+  try {
+    const result = await pool.query(
+      `SELECT events.*, users.firstname || ' ' || users.lastname as username 
+       FROM events 
+       INNER JOIN users ON events.user_id = users.id 
+       WHERE events.user_id = $1 
+       ORDER BY events.id DESC`,
+      [user_id]
+    );
+
+    res.status(200).json({
+      message: "User created events fetched successfully",
+      data: result.rows,
+    });
+  } catch (error) {
+    console.error("Error fetching user created events:", error.message);
     res.status(500).json({
-      message: "Event deletion failed",
+      message: "Failed to fetch user created events",
       error: error.message,
     });
   }
