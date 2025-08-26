@@ -1,5 +1,5 @@
 import { useTheme } from "react-native-paper";
-import { View, Text, Image, StyleSheet } from "react-native";
+import { View, Text, Image, StyleSheet, TouchableOpacity } from "react-native";
 import Colors from "../../constants/Colors";
 import { useThemeContext } from "../../context/ThemeContext";
 import Button from "../ui/Button";
@@ -24,6 +24,7 @@ export interface CLUB {
   refreshData: () => void;
   isFollowed: boolean;
   showEditDelete?: boolean;
+  user_id: number;
 }
 
 export default function ClubCard(club: CLUB) {
@@ -97,8 +98,36 @@ export default function ClubCard(club: CLUB) {
     }
   };
 
+  const onCardPress = () => {
+    // Only pass serializable club data, excluding functions
+    const clubData = {
+      id: club.id,
+      name: club.name,
+      about: club.about,
+      club_logo: club.club_logo,
+      createdby: club.createdby,
+      createdon: club.createdon,
+      isAdmin: club.isAdmin,
+      isFollowed: club.isFollowed,
+      user_id: club.user_id,
+    };
+    navigation.navigate("ClubScreen", { club: clubData });
+  };
+
   const onEditClick = () => {
-    navigation.navigate("EditClub", { club });
+    // Only pass serializable club data, excluding functions
+    const clubData = {
+      id: club.id,
+      name: club.name,
+      about: club.about,
+      club_logo: club.club_logo,
+      createdby: club.createdby,
+      createdon: club.createdon,
+      isAdmin: club.isAdmin,
+      isFollowed: club.isFollowed,
+      user_id: club.user_id,
+    };
+    navigation.navigate("EditClub", { club: clubData });
   };
 
   const onDeleteClick = () => {
@@ -122,11 +151,13 @@ export default function ClubCard(club: CLUB) {
   };
 
   return (
-    <View
+    <TouchableOpacity
       style={[
         styles.container,
         !isDarkMode ? styles.containerLight : styles.containerDark,
       ]}
+      onPress={onCardPress}
+      activeOpacity={0.8}
     >
       {club.isAdmin && <Text style={styles.adminText}>Admin</Text>}
       <Image
@@ -174,7 +205,7 @@ export default function ClubCard(club: CLUB) {
       ) : (
         // Follow/Unfollow button for joined clubs
         <Button
-          onPress={() => onFollowBtnClick()}
+          onPress={onFollowBtnClick}
           isLoading={isLoading}
           outline={club.isFollowed}
           viewStyle={[styles.button, styles.joinButton]}
@@ -208,7 +239,7 @@ export default function ClubCard(club: CLUB) {
         isLoading={isDeleting}
         loadingText="Deleting club..."
       />
-    </View>
+    </TouchableOpacity>
   );
 }
 

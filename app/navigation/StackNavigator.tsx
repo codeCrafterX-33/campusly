@@ -32,6 +32,7 @@ import OTPVerificationScreen from "../screens/(verificationScreen)/OtpVerificati
 import ProfileSetupScreen from "../screens/(profile)/ProfileSetupScreen";
 import EditEducation from "../screens/(profile)/EditEducation";
 import EditClub from "../screens/EditClub";
+import ClubScreen from "../screens/ClubScreen";
 
 export type RootStackParamList = {
   Landing: undefined;
@@ -52,6 +53,7 @@ export type RootStackParamList = {
   EditProfile: undefined;
   EditEducation: undefined;
   EditClub: { club: any };
+  ClubScreen: { club: any };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -305,6 +307,16 @@ export const AuthenticatedStack = () => {
         options={{
           headerShown: true,
           headerTitle: "Edit Club",
+          headerLeft: () => null,
+          ...TransitionPresets.SlideFromRightIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+        }}
+      />
+      <Stack.Screen
+        name="ClubScreen"
+        component={ClubScreen}
+        options={{
+          headerShown: false,
           ...TransitionPresets.SlideFromRightIOS,
           cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
         }}

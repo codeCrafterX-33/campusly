@@ -30,7 +30,7 @@ type RouteParams = {
     name: string;
     about: string;
     club_logo: string;
-    user_id: string;
+    user_id: number;
   };
 };
 
@@ -264,7 +264,7 @@ export default function EditClub() {
                 placeholderTextColor={colors.onSurfaceVariant}
                 value={name}
                 onChangeText={setName}
-                maxLength={50}
+                maxLength={30}
               />
             </View>
 

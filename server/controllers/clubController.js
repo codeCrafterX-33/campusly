@@ -1,14 +1,14 @@
 import pool from "../db.js";
 
 export const createClub = async (req, res) => {
-  const { name, description, imageUrl, u_email } = req.body;
+  const { name, description, imageUrl, user_email, user_id } = req.body;
 
   console.log(name, description, imageUrl);
 
   try {
     const result = await pool.query(
-      `INSERT INTO clubs VALUES (DEFAULT, $1, $2, $3, DEFAULT, $4) RETURNING *`,
-      [name, imageUrl, description, u_email]
+      `INSERT INTO clubs VALUES (DEFAULT, $1, $2, $3, DEFAULT, $4, $5) RETURNING *`,
+      [name, imageUrl, description, user_email, user_id]
     );
 
     res.status(201).json({

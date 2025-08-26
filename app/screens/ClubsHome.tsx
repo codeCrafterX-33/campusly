@@ -22,20 +22,27 @@ export default function Clubs() {
     "followedClubsPosts",
     []
   );
-  const { user } = useContext(AuthContext);
+  const { userData } = useContext(AuthContext);
+  const { userCreatedClubs, getUserCreatedClubs } = useContext(ClubContext);
 
   const fetchPosts = async () => {
     try {
-      if (followedClubs.length === 0) {
+      // Get the IDs of the followed clubs and the user created clubs
+      const followedClubsIDs = followedClubs.map((club: any) => club.club_id);
+      const userCreatedClubsIDs = userCreatedClubs.map((club: any) => club.id);
+      if (userCreatedClubsIDs.length > 0) {
+        followedClubsIDs.push(...userCreatedClubsIDs);
+      }
+      if (followedClubsIDs.length > 0) {
+        console.log("followedClubsIDs", followedClubsIDs);
+      }
+      if (followedClubsIDs.length === 0) {
         setFollowedClubsPosts([]); // Clear posts if no clubs
         return;
       }
-      console.log(
-        "fetching posts with club_id",
-        followedClubs.map((club: any) => club.club_id)
-      );
+      console.log("fetching posts with club_id", followedClubsIDs);
       await getPosts({
-        id: followedClubs.map((club: any) => club.club_id),
+        id: followedClubsIDs,
         setClubPosts: setFollowedClubsPosts,
         clubPosts: followedClubsPosts,
       });

@@ -33,7 +33,7 @@ interface UploadResponse {
 }
 
 export default function CreateClub() {
-  const { user } = useContext(AuthContext);
+  const { userData } = useContext(AuthContext);
   const navigation =
     useNavigation<
       CompositeNavigationProp<
@@ -133,7 +133,8 @@ export default function CreateClub() {
           name: name,
           description: description,
           imageUrl: imageUrl,
-          u_email: user?.email,
+          user_email: userData?.email,
+          user_id: userData?.id,
         }
       );
 
