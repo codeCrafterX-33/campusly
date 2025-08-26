@@ -21,9 +21,42 @@ type TabType = "joined" | "my";
 export default function FilteredClubs() {
   const { colors } = useTheme();
   const [activeTab, setActiveTab] = useState<TabType>("joined");
+  const { getFollowedClubs, getUserCreatedClubs } = useContext(ClubContext);
+
+  // Load initial data when component mounts
+  useFocusEffect(
+    React.useCallback(() => {
+      const loadInitialData = async () => {
+        try {
+          await Promise.all([getFollowedClubs(), getUserCreatedClubs()]);
+        } catch (error) {
+          console.log("Error loading initial data:", error);
+        }
+      };
+      loadInitialData();
+    }, [])
+  );
+
+  const handleTabChange = async (tab: TabType) => {
+    setActiveTab(tab);
+
+    // Silently refresh data for the newly selected tab
+    try {
+      if (tab === "joined") {
+        await getFollowedClubs();
+      } else {
+        await getUserCreatedClubs();
+      }
+    } catch (error) {
+      console.log("Error refreshing tab data:", error);
+    }
+  };
 
   const renderTabButton = (tab: TabType, label: string) => (
-    <TouchableOpacity style={styles.filter} onPress={() => setActiveTab(tab)}>
+    <TouchableOpacity
+      style={styles.filter}
+      onPress={() => handleTabChange(tab)}
+    >
       <Text
         style={[
           styles.tabText,
@@ -56,33 +89,6 @@ function JoinedClubsTab() {
   const { colors } = useTheme();
   const { followedClubs, getFollowedClubs, refreshing, onRefresh } =
     useContext(ClubContext);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      const fetchData = async () => {
-        setIsLoading(true);
-        try {
-          await getFollowedClubs();
-        } catch (error) {
-          console.log(error);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      fetchData();
-    }, [])
-  );
-
-  if (isLoading) {
-    return (
-      <View
-        style={[styles.loaderContainer, { backgroundColor: colors.background }]}
-      >
-        <ActivityIndicator size="large" color={Colors.PRIMARY} />
-      </View>
-    );
-  }
 
   if (followedClubs.length === 0) {
     return (
@@ -134,33 +140,6 @@ function MyClubsTab() {
   const { colors } = useTheme();
   const { userCreatedClubs, getUserCreatedClubs, refreshing, onRefresh } =
     useContext(ClubContext);
-  const [isLoading, setIsLoading] = useState(false);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      const fetchData = async () => {
-        setIsLoading(true);
-        try {
-          await getUserCreatedClubs();
-        } catch (error) {
-          console.log(error);
-        } finally {
-          setIsLoading(false);
-        }
-      };
-      fetchData();
-    }, [])
-  );
-
-  if (isLoading) {
-    return (
-      <View
-        style={[styles.loaderContainer, { backgroundColor: colors.background }]}
-      >
-        <ActivityIndicator size="large" color={Colors.PRIMARY} />
-      </View>
-    );
-  }
 
   if (userCreatedClubs.length === 0) {
     return (
@@ -192,7 +171,7 @@ function MyClubsTab() {
         )}
         keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ padding: 16 }}
-        numColumns={2}
+        numColumns={1}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}

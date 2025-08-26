@@ -1,5 +1,5 @@
 import { useTheme } from "react-native-paper";
-import { View, Text, Image, StyleSheet, Alert } from "react-native";
+import { View, Text, Image, StyleSheet } from "react-native";
 import Colors from "../../constants/Colors";
 import { useThemeContext } from "../../context/ThemeContext";
 import Button from "../ui/Button";
@@ -11,6 +11,7 @@ import Toast from "react-native-toast-message";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import CampuslyAlert from "../CampuslyAlert";
 
 export interface CLUB {
   id: number;
@@ -29,6 +30,8 @@ export default function ClubCard(club: CLUB) {
   const { colors } = useTheme();
   const { isDarkMode } = useThemeContext();
   const [isLoading, setIsLoading] = useState(false);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { getFollowedClubs, updateClub, deleteClub, getUserCreatedClubs } =
     useContext(ClubContext);
   const { userData } = useContext(AuthContext);
@@ -99,30 +102,23 @@ export default function ClubCard(club: CLUB) {
   };
 
   const onDeleteClick = () => {
-    Alert.alert(
-      "Delete Club",
-      `Are you sure you want to delete "${club.name}"? This action cannot be undone.`,
-      [
-        {
-          text: "Cancel",
-          style: "cancel",
-        },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              await deleteClub(club.id);
-              // Refresh both followed clubs and user created clubs
-              await getFollowedClubs();
-              await getUserCreatedClubs();
-            } catch (error) {
-              console.log("Error deleting club:", error);
-            }
-          },
-        },
-      ]
-    );
+    setShowDeleteAlert(true);
+  };
+
+  const handleDeleteClub = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteClub(club.id);
+      // Refresh both followed clubs and user created clubs
+      await getFollowedClubs();
+      await getUserCreatedClubs();
+      setShowDeleteAlert(false);
+    } catch (error) {
+      console.log("Error deleting club:", error);
+      setShowDeleteAlert(false);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -184,6 +180,32 @@ export default function ClubCard(club: CLUB) {
           {club.isFollowed ? "Joined" : "Join"}
         </Button>
       )}
+
+      {/* Delete Club Alert */}
+      <CampuslyAlert
+        isVisible={showDeleteAlert}
+        type="error"
+        onClose={() => setShowDeleteAlert(false)}
+        messages={{
+          success: {
+            title: "Success! 🎉",
+            message: "Operation completed successfully!",
+            icon: "✅",
+          },
+          error: {
+            title: "Wait! 🚨",
+            message: `Are you sure you want to delete "${club.name}"? This action is like dropping your favorite class - there's no going back! 📚💔`,
+            icon: "🗑️",
+          },
+        }}
+        onPress={handleDeleteClub}
+        onPress2={() => setShowDeleteAlert(false)}
+        buttonText="Yes, Delete It"
+        buttonText2="Nevermind"
+        overrideDefault={true}
+        isLoading={isDeleting}
+        loadingText="Deleting club..."
+      />
     </View>
   );
 }
@@ -267,14 +289,18 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     flexDirection: "row",
-    gap: 8,
-    marginTop: 8,
+    gap: 12,
+    marginTop: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
   editButton: {
-    width: RFValue(60),
+    width: RFValue(80),
+    height: RFValue(40),
   },
   deleteButton: {
-    width: RFValue(60),
+    width: RFValue(80),
+    height: RFValue(40),
     backgroundColor: "#EF4444",
   },
 });
