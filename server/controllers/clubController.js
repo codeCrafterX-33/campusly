@@ -82,15 +82,15 @@ export const getUserCreatedClubs = async (req, res) => {
 };
 
 export const updateClub = async (req, res) => {
-  const { id } = req.params;
+  const { club_id } = req.params;
   const { name, description, imageUrl } = req.body;
-  const { user_email } = req.body;
+  const { user_id } = req.body;
 
   try {
     // First check if the user is the creator of the club
     const checkResult = await pool.query(
-      `SELECT createdby FROM clubs WHERE id = $1`,
-      [id]
+      `SELECT user_id FROM clubs WHERE id = $1 AND user_id = $2`,
+      [club_id, user_id]
     );
 
     if (checkResult.rows.length === 0) {
@@ -99,7 +99,7 @@ export const updateClub = async (req, res) => {
       });
     }
 
-    if (checkResult.rows[0].createdby !== user_email) {
+    if (checkResult.rows[0].user_id !== user_id) {
       return res.status(403).json({
         message: "You can only edit clubs you created",
       });
@@ -107,7 +107,7 @@ export const updateClub = async (req, res) => {
 
     const result = await pool.query(
       `UPDATE clubs SET name = $1, about = $2, club_logo = $3 WHERE id = $4 RETURNING *`,
-      [name, description, imageUrl, id]
+      [name, description, imageUrl, club_id]
     );
 
     res.status(200).json({
@@ -123,14 +123,14 @@ export const updateClub = async (req, res) => {
 };
 
 export const deleteClub = async (req, res) => {
-  const { id } = req.params;
-  const { user_email } = req.body;
+  const { club_id } = req.params;
+  const { user_id } = req.body;
 
   try {
     // First check if the user is the creator of the club
     const checkResult = await pool.query(
-      `SELECT createdby FROM clubs WHERE id = $1`,
-      [id]
+      `SELECT user_id FROM clubs WHERE id = $1 AND user_id = $2`,
+      [club_id, user_id]
     );
 
     if (checkResult.rows.length === 0) {
@@ -139,17 +139,17 @@ export const deleteClub = async (req, res) => {
       });
     }
 
-    if (checkResult.rows[0].createdby !== user_email) {
+    if (checkResult.rows[0].user_id !== user_id) {
       return res.status(403).json({
         message: "You can only delete clubs you created",
       });
     }
 
     // Delete club followers first (due to foreign key constraints)
-    await pool.query(`DELETE FROM clubfollowers WHERE club_id = $1`, [id]);
+    await pool.query(`DELETE FROM clubfollowers WHERE club_id = $1`, [club_id]);
 
     // Delete the club
-    await pool.query(`DELETE FROM clubs WHERE id = $1`, [id]);
+    await pool.query(`DELETE FROM clubs WHERE id = $1`, [club_id]);
 
     res.status(200).json({
       message: "Club deleted successfully",

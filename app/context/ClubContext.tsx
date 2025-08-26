@@ -132,7 +132,7 @@ function ClubProvider({ children }: { children: React.ReactNode }) {
 
   const updateClub = async (clubId: number, clubData: any) => {
     try {
-      if (!userData || !userData.email) {
+      if (!userData || !userData.id) {
         Toast.show({
           text1: "Cannot update club",
           text2: "Please log in to update your clubs.",
@@ -142,10 +142,10 @@ function ClubProvider({ children }: { children: React.ReactNode }) {
       }
 
       const response = await axios.put(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/club/${clubId}`,
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/club/updateclub/${clubId}`,
         {
           ...clubData,
-          user_email: userData.email,
+          user_id: userData.id,
         }
       );
 
@@ -174,7 +174,7 @@ function ClubProvider({ children }: { children: React.ReactNode }) {
 
   const deleteClub = async (clubId: number) => {
     try {
-      if (!userData || !userData.email) {
+      if (!userData || !userData.id) {
         Toast.show({
           text1: "Cannot delete club",
           text2: "Please log in to delete your clubs.",
@@ -184,7 +184,7 @@ function ClubProvider({ children }: { children: React.ReactNode }) {
       }
 
       const response = await axios.delete(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/club/${clubId}`,
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/club/deleteclub/${clubId}`,
         {
           data: { user_id: userData.id },
         }

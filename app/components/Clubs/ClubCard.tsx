@@ -158,6 +158,7 @@ export default function ClubCard(club: CLUB) {
             onPress={onEditClick}
             outline={true}
             viewStyle={[styles.button, styles.editButton]}
+            smallText={true}
           >
             Edit
           </Button>
@@ -165,6 +166,7 @@ export default function ClubCard(club: CLUB) {
             onPress={onDeleteClick}
             outline={false}
             viewStyle={[styles.button, styles.deleteButton]}
+            smallText={true}
           >
             Delete
           </Button>
@@ -175,7 +177,7 @@ export default function ClubCard(club: CLUB) {
           onPress={() => onFollowBtnClick()}
           isLoading={isLoading}
           outline={club.isFollowed}
-          viewStyle={styles.button}
+          viewStyle={[styles.button, styles.joinButton]}
         >
           {club.isFollowed ? "Joined" : "Join"}
         </Button>
@@ -285,22 +287,29 @@ const styles = StyleSheet.create({
     borderRadius: 5,
   },
   button: {
-    width: RFValue(70),
+    flex: 1,
+    minWidth: RFValue(60),
   },
   buttonContainer: {
     flexDirection: "row",
-    gap: 12,
+    gap: 8,
     marginTop: 12,
     justifyContent: "center",
     alignItems: "center",
+    width: "100%",
   },
   editButton: {
-    width: RFValue(80),
+    flex: 1,
     height: RFValue(40),
+    minWidth: RFValue(60),
   },
   deleteButton: {
-    width: RFValue(80),
+    flex: 1,
     height: RFValue(40),
+    minWidth: RFValue(60),
     backgroundColor: "#EF4444",
+  },
+  joinButton: {
+    marginTop: 12,
   },
 });

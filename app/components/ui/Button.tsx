@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import Colors from "../../constants/Colors";
+import { RFValue } from "react-native-responsive-fontsize";
 
 type ButtonProps = {
   children: React.ReactNode;
@@ -20,6 +21,7 @@ type ButtonProps = {
   disabled?: boolean;
   fullWidth?: boolean;
   dim?: boolean;
+  smallText?: boolean;
 };
 
 export default function Button({
@@ -32,6 +34,7 @@ export default function Button({
   disabled,
   fullWidth,
   dim = false,
+  smallText = false,
 }: ButtonProps) {
   return (
     <TouchableOpacity
@@ -54,6 +57,7 @@ export default function Button({
         <Text
           style={[
             outline ? styles.outlineButtonText : styles.buttonText,
+            smallText && styles.smallText,
             textStyle,
           ]}
         >
@@ -82,14 +86,17 @@ const styles = StyleSheet.create({
   buttonText: {
     fontWeight: "bold",
     color: Colors.WHITE,
-    fontSize: 18,
+    fontSize: RFValue(14),
     textAlign: "center",
   },
   outlineButtonText: {
     color: Colors.PRIMARY,
     fontWeight: "bold",
-    fontSize: 18,
+    fontSize: RFValue(14),
     textAlign: "center",
+  },
+  smallText: {
+    fontSize: RFValue(12),
   },
   outlineButton: {
     padding: 10,

@@ -64,8 +64,11 @@ export default function ExploreClubs() {
   };
 
   const isAdmin = (createdby: string) => {
-    return createdby === userData?.email;
+    return createdby === userData?.id;
   };
+
+  // Filter out clubs created by the current user
+  const filteredClubs = clubs.filter((club: any) => !isAdmin(club.user_id));
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -77,14 +80,14 @@ export default function ExploreClubs() {
         <FlatList
           onRefresh={onRefresh}
           refreshing={refreshing}
-          data={clubs}
+          data={filteredClubs}
           renderItem={({ item }) => (
             <ClubCard
               {...item}
               isFollowed={isFollowed(item.id)}
               refreshData={getFollowedClubs}
-              isAdmin={isAdmin(item.createdby)}
-              showEditDelete={isAdmin(item.createdby)}
+              isAdmin={false}
+              showEditDelete={false}
             />
           )}
           keyExtractor={(item) => item.id.toString()}

@@ -16,8 +16,8 @@ router.post("/", createClub);
 router.get("/", getClubs);
 router.get("/followedclubs/:user_id", getUserFollowedClubs);
 router.get("/userclubs/:user_id", getUserCreatedClubs);
-router.put("/:id", updateClub);
-router.delete("/:id", deleteClub);
+router.put("/updateclub/:club_id", updateClub);
+router.delete("/deleteclub/:club_id", deleteClub);
 router.post("/followclub/:user_id", followClub);
 router.delete("/unfollowclub/:user_id", unfollowClub);
 
