@@ -266,6 +266,16 @@ export default function EditClub() {
                 onChangeText={setName}
                 maxLength={30}
               />
+              <Text
+                style={[
+                  styles.characterCount,
+                  {
+                    color: name.length >= 24 ? "red" : colors.onSurfaceVariant,
+                  },
+                ]}
+              >
+                {name.length}/30
+              </Text>
             </View>
 
             {/* Description Input */}
@@ -295,7 +305,12 @@ export default function EditClub() {
               <Text
                 style={[
                   styles.characterCount,
-                  { color: colors.onSurfaceVariant },
+                  {
+                    color:
+                      description.length >= 400
+                        ? "red"
+                        : colors.onSurfaceVariant,
+                  },
                 ]}
               >
                 {description.length}/500
