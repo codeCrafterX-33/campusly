@@ -100,7 +100,9 @@ export default function PostsTab({
         <Tabs.FlatList
           data={publicPosts}
           renderItem={({ item }) => <PostCard post={item} />}
-          keyExtractor={(item: any) => item.id.toString() + item.createdon}
+          keyExtractor={(item: any) =>
+            (item.id?.toString() || "") + (item.createdon || "")
+          }
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

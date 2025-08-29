@@ -93,7 +93,7 @@ export default function EventCard(event: EVENT) {
   const handleDeleteEvent = async () => {
     setIsLoading(true);
     try {
-      const deleteResult = await deleteEvent(event.id.toString());
+      const deleteResult = await deleteEvent(event.id?.toString() || "");
       if (deleteResult?.status === 200) {
         showEventToast("deleteSuccess");
         event.refreshData?.();

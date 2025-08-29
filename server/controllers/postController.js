@@ -1,13 +1,13 @@
 import pool from "../db.js";
 
 export const createPost = async (req, res) => {
-  const { content, media, visibleIn, email } = req.body;
+  const { content, media, visibleIn, email, user_id } = req.body;
 
   try {
     const result = await pool.query(
-      `INSERT INTO POSTS (content, media, createdon, createdby, club)
-       VALUES ($1, $2, DEFAULT, $3, $4) RETURNING *`,
-      [content, { media: media }, email, visibleIn]
+      `INSERT INTO POSTS (content, media, createdon, createdby, club, user_id) 
+       VALUES ($1, $2, DEFAULT, $3, $4, $5) RETURNING *`,
+      [content, { media: media }, email, visibleIn, user_id]
     );
 
     res.status(201).json({

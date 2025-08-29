@@ -43,7 +43,7 @@ export const getUserFollowedClubs = async (req, res) => {
   console.log("Fetching club followers for user", user_id);
   try {
     const result = await pool.query(
-      `select clubs.name, clubs.about, clubs.club_logo, clubfollowers.* from clubs
+      `select clubs.id, clubs.name, clubs.about, clubs.club_logo, clubfollowers.club_id, clubfollowers.user_id from clubs
 INNER JOIN clubfollowers ON clubs.id=clubfollowers.club_id WHERE clubfollowers.user_id = $1;`,
       [user_id]
     );

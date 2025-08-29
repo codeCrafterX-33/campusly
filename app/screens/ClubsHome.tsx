@@ -33,9 +33,7 @@ export default function Clubs() {
       if (userCreatedClubsIDs.length > 0) {
         followedClubsIDs.push(...userCreatedClubsIDs);
       }
-      if (followedClubsIDs.length > 0) {
-        console.log("followedClubsIDs", followedClubsIDs);
-      }
+
       if (followedClubsIDs.length === 0) {
         setFollowedClubsPosts([]); // Clear posts if no clubs
         return;
@@ -46,9 +44,6 @@ export default function Clubs() {
         setClubPosts: setFollowedClubsPosts,
         clubPosts: followedClubsPosts,
       });
-      if (followedClubsPosts.length > 0) {
-        console.log("followedClubsPosts", followedClubsPosts);
-      }
     } catch (error) {
       console.log(error);
     }

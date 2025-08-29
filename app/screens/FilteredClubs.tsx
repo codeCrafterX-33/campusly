@@ -87,8 +87,13 @@ export default function FilteredClubs() {
 // Joined Clubs Tab
 function JoinedClubsTab() {
   const { colors } = useTheme();
-  const { followedClubs, getFollowedClubs, refreshing, onRefresh } =
-    useContext(ClubContext);
+  const {
+    followedClubs,
+    getFollowedClubs,
+    refreshing,
+    onRefresh,
+    isClubFollowed,
+  } = useContext(ClubContext);
 
   if (followedClubs.length === 0) {
     return (
@@ -112,14 +117,14 @@ function JoinedClubsTab() {
         renderItem={({ item }) => (
           <ClubCard
             {...item}
-            isFollowed={true}
+            isFollowed={isClubFollowed(item.id)}
             refreshData={getFollowedClubs}
             isAdmin={false}
             showEditDelete={false}
           />
         )}
-        keyExtractor={(item) => item.id.toString()}
         contentContainerStyle={{ padding: 16 }}
+        keyExtractor={(item, index) => item?.id?.toString() || index.toString()}
         numColumns={2}
         refreshControl={
           <RefreshControl
@@ -169,7 +174,7 @@ function MyClubsTab() {
             showEditDelete={true}
           />
         )}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item, index) => item?.id?.toString() || index.toString()}
         contentContainerStyle={{ padding: 16 }}
         numColumns={1}
         refreshControl={

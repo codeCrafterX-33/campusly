@@ -19,6 +19,7 @@ const ClubContext = createContext<any>({
   deleteClub: () => {},
   refreshing: false,
   onRefresh: () => {},
+  isClubFollowed: () => {},
 });
 
 function ClubProvider({ children }: { children: React.ReactNode }) {
@@ -81,11 +82,13 @@ function ClubProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       if (userData.id) {
+        console.log("Fetching followed clubs for user", userData.id);
         const response = await axios.get(
           `${
             process.env.EXPO_PUBLIC_SERVER_URL
           }/club/followedclubs/${encodeURIComponent(userData.id)}`
         );
+        console.log("Response", response.data.data);
         if (response.status === 200) {
           setFollowedClubs(response.data.data);
           console.log("Club followers fetched successfully");
@@ -213,6 +216,11 @@ function ClubProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const isClubFollowed = (clubId: number) => {
+    const club = followedClubs.find((club: any) => club.club_id === clubId);
+    return club ? true : false;
+  };
+
   const value = {
     clubs: clubs,
     setClubs: setClubs,
@@ -227,6 +235,7 @@ function ClubProvider({ children }: { children: React.ReactNode }) {
     setUserCreatedClubs: setUserCreatedClubs,
     updateClub: updateClub,
     deleteClub: deleteClub,
+    isClubFollowed: isClubFollowed,
   };
 
   return <ClubContext.Provider value={value}>{children}</ClubContext.Provider>;

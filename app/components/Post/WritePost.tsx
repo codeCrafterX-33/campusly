@@ -58,7 +58,12 @@ export default function WritePost() {
     }[]
   >([]);
   const { userData } = useContext(AuthContext);
-  const { getFollowedClubs, followedClubs } = useContext(ClubContext);
+  const {
+    getFollowedClubs,
+    followedClubs,
+    getUserCreatedClubs,
+    userCreatedClubs,
+  } = useContext(ClubContext);
   const { getPosts } = useContext(PostContext);
   const navigation =
     useNavigation<
@@ -67,11 +72,14 @@ export default function WritePost() {
         BottomTabNavigationProp<RootTabParamList>
       >
     >();
-  const [item, setItems] = useState<
+  const [followedClubsItems, setFollowedClubsItems] = useState<
     { club_id: number; club_name: string; club_logo: string }[]
   >([]);
   const [modalVisible, setModalVisible] = useState(false);
-  const [value, setValue] = useState({ club_name: "Public", club_id: 0 });
+  const [followedClubValue, setFollowedClubValue] = useState({
+    club_name: "Public",
+    club_id: 0,
+  });
   const [content, setContent] = useState("");
   const inputRef = useRef<TextInput>(null);
   const [previewMedia, setPreviewMedia] = useState<null | {
@@ -83,10 +91,17 @@ export default function WritePost() {
 
   useEffect(() => {
     getFollowedClubs();
-    if (followedClubs) {
-      setItems(
-        followedClubs.map((club: any) => ({
-          club_id: club.club_id,
+    getUserCreatedClubs();
+
+    const followedClubsAndUserCreatedClubs = [
+      ...followedClubs,
+      ...userCreatedClubs,
+    ];
+
+    if (followedClubsAndUserCreatedClubs) {
+      setFollowedClubsItems(
+        followedClubsAndUserCreatedClubs.map((club: any) => ({
+          club_id: club.club_id || club.id,
           club_logo: club.club_logo,
           club_name: club.name,
         }))
@@ -121,7 +136,7 @@ export default function WritePost() {
       ),
       headerTitle: "",
     });
-  }, [content, value, colors, loading]);
+  }, [content, followedClubValue, colors, loading]);
 
   useEffect(() => {
     if (!modalVisible) {
@@ -157,17 +172,16 @@ export default function WritePost() {
             type: media.type,
           });
         }
-        
       }
 
-     
       const result = await axios.post(
         `${process.env.EXPO_PUBLIC_SERVER_URL}/post`,
         {
           content: content,
           media: postMedia,
-          visibleIn: value.club_id,
+          visibleIn: followedClubValue.club_id,
           email: userData?.email,
+          user_id: userData?.id,
         }
       );
 
@@ -346,11 +360,11 @@ export default function WritePost() {
       <View style={styles.dropdownContainer}>
         <ModalDropdown
           modalVisible={modalVisible}
-          value={value}
-          items={item}
+          value={followedClubValue}
+          items={followedClubsItems}
           setModalVisible={setModalVisible}
-          setValue={setValue}
-          setItems={setItems}
+          setValue={setFollowedClubValue}
+          setItems={setFollowedClubsItems}
           header="Choose audience"
         />
       </View>

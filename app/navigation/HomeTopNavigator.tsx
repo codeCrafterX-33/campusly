@@ -85,7 +85,11 @@ export default function HomeTopNavigator() {
               key={club.id}
               name={club.name + " " + club.id}
               children={() => (
-                <CommunityScreen club_id={club.club_id.toString()} />
+                <CommunityScreen
+                  club_id={
+                    club.club_id?.toString() || club.id?.toString() || ""
+                  }
+                />
               )}
               options={{
                 tabBarLabel: club.name,

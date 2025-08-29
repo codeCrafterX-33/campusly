@@ -38,7 +38,7 @@ const PostList = ({
       <FlatList
         data={posts}
         renderItem={({ item, index }) => <PostCard post={item} />}
-        keyExtractor={(item, index) => item.id + index.toString()}
+        keyExtractor={(item, index) => (item.id || "") + index.toString()}
         refreshing={clubRefreshing ? clubRefreshing : refreshing}
         onRefresh={clubOnRefresh ? clubOnRefresh : handleRefresh}
         contentContainerStyle={{ paddingBottom: 100 }}
@@ -52,8 +52,9 @@ const PostList = ({
               justifyContent: "center",
             }}
           >
-        
-            <Text style={[{color:color.onBackground}]}>No posts available</Text>
+            <Text style={[{ color: color.onBackground }]}>
+              No posts available
+            </Text>
           </View>
         }
         refreshControl={

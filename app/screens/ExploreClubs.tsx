@@ -29,6 +29,7 @@ export default function ExploreClubs() {
     refreshing,
     getFollowedClubs,
     followedClubs,
+    isClubFollowed,
   } = useContext(ClubContext);
 
   useEffect(() => {
@@ -58,13 +59,8 @@ export default function ExploreClubs() {
     return () => backHandler.remove();
   }, [navigation]);
 
-  const isFollowed = (clubId: number) => {
-    const club = followedClubs.find((club: any) => club.club_id === clubId);
-    return club ? true : false;
-  };
-
-  const isAdmin = (createdby: string) => {
-    return createdby === userData?.id;
+  const isAdmin = (user_id: number) => {
+    return user_id === userData?.id;
   };
 
   // Filter out clubs created by the current user
@@ -84,13 +80,11 @@ export default function ExploreClubs() {
           renderItem={({ item }) => (
             <ClubCard
               {...item}
-              isFollowed={isFollowed(item.id)}
+              isFollowed={isClubFollowed(item.id)}
               refreshData={getFollowedClubs}
               isAdmin={false}
-              showEditDelete={false}
             />
           )}
-          keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={{ padding: 16 }}
           numColumns={2}
           ListFooterComponent={<View style={{ height: 100 }} />}

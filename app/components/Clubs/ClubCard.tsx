@@ -14,17 +14,18 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import CampuslyAlert from "../CampuslyAlert";
 
 export interface CLUB {
-  id: number;
-  name: string;
-  club_logo: string;
+  id?: number;
+  name?: string;
+  club_logo?: string;
   about: string;
-  createdon: string;
-  createdby: string;
-  isAdmin: boolean;
+  createdon?: string;
+  createdby?: string;
+  isAdmin?: boolean;
   refreshData: () => void;
   isFollowed: boolean;
   showEditDelete?: boolean;
-  user_id: number;
+  user_id?: number;
+  club_id?: number;
 }
 
 export default function ClubCard(club: CLUB) {
@@ -45,7 +46,7 @@ export default function ClubCard(club: CLUB) {
         const response = await axios.delete(
           `${process.env.EXPO_PUBLIC_SERVER_URL}/club/unfollowclub/${userData?.id}`,
           {
-            data: { clubId: club?.id },
+            data: { clubId: club.club_id || club.id },
           }
         );
 
@@ -72,7 +73,7 @@ export default function ClubCard(club: CLUB) {
         const response = await axios.post(
           `${process.env.EXPO_PUBLIC_SERVER_URL}/club/followclub/${userData?.id}`,
           {
-            clubId: club?.id,
+            clubId: club.id,
             user_email: userData?.email,
           }
         );
@@ -110,6 +111,7 @@ export default function ClubCard(club: CLUB) {
       isAdmin: club.isAdmin,
       isFollowed: club.isFollowed,
       user_id: club.user_id,
+      club_id: club.club_id,
     };
     navigation.navigate("ClubScreen", { club: clubData });
   };
@@ -126,6 +128,7 @@ export default function ClubCard(club: CLUB) {
       isAdmin: club.isAdmin,
       isFollowed: club.isFollowed,
       user_id: club.user_id,
+      club_id: club.club_id,
     };
     navigation.navigate("EditClub", { club: clubData });
   };

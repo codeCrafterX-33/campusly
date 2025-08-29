@@ -17,6 +17,7 @@ interface Item {
   club_id: number;
   club_name: string;
   club_logo: string;
+  id?: number;
 }
 
 const ModalDropdown = ({
@@ -90,7 +91,9 @@ const ModalDropdown = ({
 
               <TouchableOpacity
                 style={styles.defaultItem}
-                onPress={() => selectOption({ club_name: "Public", club_id: 0 })}
+                onPress={() =>
+                  selectOption({ club_name: "Public", club_id: 0 })
+                }
               >
                 <View style={styles.dropdownIconContainer}>
                   <Ionicons name="earth" size={20} color="white" />
@@ -122,7 +125,7 @@ const ModalDropdown = ({
                     onPress={() =>
                       selectOption({
                         club_name: item.club_name,
-                        club_id: item.club_id,
+                        club_id: item.club_id || item.id,
                       })
                     }
                   >
