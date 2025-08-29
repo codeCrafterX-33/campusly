@@ -40,7 +40,7 @@ import {
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
 
-// Video component using new expo-video API
+// Video component 
 const VideoComponent = ({
   uri,
   shouldPlay,
