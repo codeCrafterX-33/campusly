@@ -34,11 +34,43 @@ import { PostContext } from "../../context/PostContext";
 import { ClubContext } from "../../context/ClubContext";
 import uploadImageToCloudinary from "../../util/uploadToCloudinary";
 import { postOptions } from "../../configs/CloudinaryConfig";
-import { Video, ResizeMode } from "expo-av";
+import { VideoView, useVideoPlayer } from "expo-video";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
+
+// Video component using new expo-video API
+const VideoComponent = ({
+  uri,
+  shouldPlay,
+}: {
+  uri: string;
+  shouldPlay: boolean;
+}) => {
+  const player = useVideoPlayer(uri, (player) => {
+    player.loop = true;
+    player.muted = false;
+  });
+
+  useEffect(() => {
+    if (shouldPlay) {
+      player.play();
+    } else {
+      player.pause();
+    }
+  }, [shouldPlay, player]);
+
+  return (
+    <VideoView
+      style={{ width: "100%", height: "100%" }}
+      player={player}
+      allowsFullscreen
+      allowsPictureInPicture
+      contentFit="contain"
+    />
+  );
+};
 
 interface UploadResponse {
   url: string;
@@ -292,13 +324,7 @@ export default function WritePost() {
               style={{ width: "100%", height: "100%", resizeMode: "contain" }}
             />
           ) : previewMedia?.type === "video" ? (
-            <Video
-              source={{ uri: previewMedia.uri }}
-              style={{ width: "100%", height: "100%" }}
-              useNativeControls
-              resizeMode={ResizeMode.CONTAIN}
-              shouldPlay
-            />
+            <VideoComponent uri={previewMedia.uri} shouldPlay={true} />
           ) : null}
         </View>
       </Modal>

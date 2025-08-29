@@ -8,20 +8,54 @@ import {
   Pressable,
   FlatList,
   TouchableOpacity,
+  ScrollView,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import UserAvatar from "./Useravatar";
 import Colors from "../../constants/Colors";
 import { useTheme } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
-import { Video, ResizeMode } from "expo-av";
+import { VideoView, useVideoPlayer } from "expo-video";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+// Video component using new expo-video API
+const VideoComponent = ({
+  uri,
+  shouldPlay,
+}: {
+  uri: string;
+  shouldPlay: boolean;
+}) => {
+  const player = useVideoPlayer(uri, (player) => {
+    player.loop = false;
+    player.muted = false;
+  });
+
+  React.useEffect(() => {
+    if (shouldPlay) {
+      player.play();
+    } else {
+      player.pause();
+    }
+  }, [shouldPlay, player]);
+
+  return (
+    <VideoView
+      style={styles.fullscreenImage}
+      player={player}
+      allowsFullscreen
+      allowsPictureInPicture
+      contentFit="contain"
+    />
+  );
+};
 
 const PostCard = ({ post }: { post: any }) => {
   const { colors } = useTheme();
   const [modalVisible, setModalVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const carouselRef = useRef<FlatList>(null);
   if (!post) return null;
 
   const name = post.name || "Anonymous";
@@ -56,10 +90,9 @@ const PostCard = ({ post }: { post: any }) => {
       )}
 
       {/* Media preview */}
-      {media && Array.isArray(media) && media.length > 0  && (
+      {media && Array.isArray(media) && media.length > 0 && (
         <View style={styles.mediaGrid}>
           {media.map((item: any, index: number) => {
-       
             if (!item?.type || !item?.url)
               return (
                 <Pressable>
@@ -95,30 +128,105 @@ const PostCard = ({ post }: { post: any }) => {
       )}
 
       <Modal visible={modalVisible} transparent={true}>
-        <Pressable
-          style={styles.fullscreenContainer}
-          onPress={() => setModalVisible(false)}
-        >
-          {media[previewIndex] ? (
-            media[previewIndex].type.trim().toLowerCase() === "image" ? (
-              <Image
-                source={{ uri: media[previewIndex].url }}
-                style={styles.fullscreenImage}
-                resizeMode="contain"
-              />
-            ) : media[previewIndex].type.trim().toLowerCase() === "video" ? (
-              <Video
-                source={{ uri: media[previewIndex].url }}
-                style={styles.fullscreenImage}
-                useNativeControls
-                resizeMode={ResizeMode.CONTAIN}
-                shouldPlay
-              />
-            ) : null
-          ) : (
-            <Image source={{ uri: post.imageurl }} style={styles.image} />
+        <View style={styles.fullscreenContainer}>
+          {/* Close button */}
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setModalVisible(false)}
+          >
+            <Ionicons name="close" size={30} color="white" />
+          </TouchableOpacity>
+
+          {/* Media counter */}
+          {media.length > 1 && (
+            <View style={styles.mediaCounter}>
+              <Text style={styles.mediaCounterText}>
+                {previewIndex + 1} / {media.length}
+              </Text>
+            </View>
           )}
-        </Pressable>
+
+          {/* Carousel */}
+          <FlatList
+            ref={carouselRef}
+            data={
+              media.length > 0 ? media : [{ type: "image", url: post.imageurl }]
+            }
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            initialScrollIndex={previewIndex}
+            getItemLayout={(data, index) => ({
+              length: SCREEN_WIDTH,
+              offset: SCREEN_WIDTH * index,
+              index,
+            })}
+            onMomentumScrollEnd={(event) => {
+              const newIndex = Math.round(
+                event.nativeEvent.contentOffset.x / SCREEN_WIDTH
+              );
+              setPreviewIndex(newIndex);
+            }}
+            keyExtractor={(item, index) => index.toString()}
+            renderItem={({ item, index }) => {
+              if (!item?.type || !item?.url) {
+                return (
+                  <View style={styles.mediaSlide}>
+                    <Text style={styles.noMediaText}>No media available</Text>
+                  </View>
+                );
+              }
+
+              const type = item.type.trim().toLowerCase();
+              return (
+                <View style={styles.mediaSlide}>
+                  {type === "image" ? (
+                    <Image
+                      source={{ uri: item.url }}
+                      style={styles.fullscreenImage}
+                      resizeMode="contain"
+                    />
+                  ) : type === "video" ? (
+                    <VideoComponent
+                      uri={item.url}
+                      shouldPlay={index === previewIndex}
+                    />
+                  ) : (
+                    <Image
+                      source={{ uri: item.url }}
+                      style={styles.fullscreenImage}
+                      resizeMode="contain"
+                    />
+                  )}
+                </View>
+              );
+            }}
+          />
+
+          {/* Navigation dots for multiple media */}
+          {media.length > 1 && (
+            <View style={styles.dotsContainer}>
+              {media.map((_: any, index: number) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.dot,
+                    index === previewIndex
+                      ? styles.activeDot
+                      : styles.inactiveDot,
+                  ]}
+                  onPress={() => {
+                    setPreviewIndex(index);
+                    carouselRef.current?.scrollToIndex({
+                      index,
+                      animated: true,
+                    });
+                  }}
+                />
+              ))}
+            </View>
+          )}
+        </View>
       </Modal>
 
       <View style={styles.footerContainer}>
@@ -169,6 +277,60 @@ const styles = StyleSheet.create({
   fullscreenImage: {
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
+  },
+  closeButton: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 1000,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    borderRadius: 20,
+    padding: 5,
+  },
+  mediaCounter: {
+    position: "absolute",
+    top: 50,
+    left: 20,
+    zIndex: 1000,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    borderRadius: 15,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+  },
+  mediaCounterText: {
+    color: "white",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  mediaSlide: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  noMediaText: {
+    color: "white",
+    fontSize: 18,
+    textAlign: "center",
+  },
+  dotsContainer: {
+    position: "absolute",
+    bottom: 50,
+    flexDirection: "row",
+    alignSelf: "center",
+    zIndex: 1000,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    backgroundColor: "white",
+  },
+  inactiveDot: {
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
   },
   footerContainer: {
     marginTop: 10,

@@ -28,7 +28,11 @@
       "bundler": "metro",
       "output": "server"
     },
-    "plugins": ["expo-router", "expo-splash-screen"],
+    "plugins": [
+      "expo-router",
+      "expo-splash-screen",
+      "expo-video"
+    ],
     "extra": {
       "router": {},
       "eas": {
