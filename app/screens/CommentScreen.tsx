@@ -29,6 +29,8 @@ import { PostContext } from "../context/PostContext";
 import uploadImageToCloudinary from "../util/uploadToCloudinary";
 import { postOptions } from "../configs/CloudinaryConfig";
 import Colors from "../constants/Colors";
+import MiniPostCard from "../components/Post/MiniPostCard";
+import UserAvatar from "../components/Post/Useravatar";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -231,7 +233,7 @@ const CommentScreen = () => {
           <Ionicons name="close" size={24} color={colors.onBackground} />
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.onBackground }]}>
-          Add Comment
+          Reply
         </Text>
         <TouchableOpacity
           onPress={onCommentPost}
@@ -258,47 +260,45 @@ const CommentScreen = () => {
         keyboardShouldPersistTaps="always"
         showsVerticalScrollIndicator={false}
       >
-        {/* Original Post Preview */}
-        <View
-          style={[
-            styles.originalPostPreview,
-            { backgroundColor: colors.surface || colors.background },
-          ]}
-        >
-          <Text style={[styles.originalPostLabel, { color: Colors.GRAY }]}>
-            Replying to <Text style={{ color: Colors.PRIMARY }}>@{name}</Text>
-          </Text>
-          {content && (
-            <Text
-              style={[
-                styles.originalPostContent,
-                { color: colors.onBackground },
-              ]}
-              numberOfLines={2}
-            >
-              {content}
-            </Text>
-          )}
+        {/* mini Post Card */}
+        <View style={styles.postCardContainer}>
+          <MiniPostCard post={post} />
         </View>
 
-        {/* Comment Input */}
-        <TextInput
-          ref={commentInputRef}
-          placeholder="Post your reply"
-          placeholderTextColor={Colors.GRAY}
-          style={[
-            styles.commentInput,
-            {
-              backgroundColor: colors.background,
-              color: colors.onBackground,
-            },
-          ]}
-          multiline
-          numberOfLines={8}
-          maxLength={1000}
-          value={commentContent}
-          onChangeText={setCommentContent}
-        />
+        {/* Replying to text */}
+        <View style={styles.replyingToContainer}>
+          <View style={styles.emptyBox}></View>
+          <Text style={[styles.replyingToText, { color: Colors.GRAY }]}>
+            Replying to <Text style={{ color: Colors.PRIMARY }}>@{name}</Text>
+          </Text>
+        </View>
+
+        {/* Comment Input with User Image */}
+        <View style={styles.inputContainer}>
+          <Image
+            source={{
+              uri: userData?.image || "https://via.placeholder.com/50",
+            }}
+            style={styles.userImage}
+          />
+          <TextInput
+            ref={commentInputRef}
+            placeholder="Post your reply"
+            placeholderTextColor={Colors.GRAY}
+            style={[
+              styles.commentInput,
+              {
+                backgroundColor: colors.background,
+                color: colors.onBackground,
+              },
+            ]}
+            multiline
+            numberOfLines={8}
+            maxLength={1000}
+            value={commentContent}
+            onChangeText={setCommentContent}
+          />
+        </View>
 
         {/* Selected Media */}
         {selectedMedia.length > 0 && (
@@ -453,8 +453,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: 50,
-    borderBottomWidth: 0.5,
+    borderBottomWidth: 0.2,
     borderBottomColor: Colors.GRAY,
     zIndex: 1000,
     elevation: 10,
@@ -489,27 +488,46 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
-  originalPostPreview: {
-    padding: 12,
+  postCardContainer: {
+    
+  },
+  replyingToContainer: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderLeftWidth: 1,
+    borderLeftColor: Colors.PRIMARY,
     borderRadius: 8,
+  },
+  replyingToText: {
+    fontSize: 16,
+    fontWeight: "500",
+  },
+  emptyBox: {
+    width: 48,
+    marginLeft: -20,
+    borderRadius: 24,
+    marginRight: 12,
+    alignSelf: "flex-start",
+  },
+  inputContainer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
     marginBottom: 16,
   },
-  originalPostLabel: {
-    fontSize: 14,
-    marginBottom: 4,
-  },
-  originalPostContent: {
-    fontSize: 16,
+  userImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 12,
+    marginTop: 0,
   },
   commentInput: {
-    borderWidth: 1,
-    borderColor: Colors.GRAY,
-    borderRadius: 12,
-    padding: 16,
+    flex: 1,
     fontSize: 18,
+    paddingTop: 10,
     textAlignVertical: "top",
     minHeight: 200,
-    marginBottom: 16,
   },
   selectedImagesContainer: {
     marginBottom: 16,
