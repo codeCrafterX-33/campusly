@@ -33,6 +33,8 @@ import ProfileSetupScreen from "../screens/(profile)/ProfileSetupScreen";
 import EditEducation from "../screens/(profile)/EditEducation";
 import EditClub from "../screens/EditClub";
 import ClubScreen from "../screens/ClubScreen";
+import PostScreen from "../screens/PostScreen";
+import CommentScreen from "../screens/CommentScreen";
 
 export type RootStackParamList = {
   Landing: undefined;
@@ -54,6 +56,8 @@ export type RootStackParamList = {
   EditEducation: undefined;
   EditClub: { club: any };
   ClubScreen: { club: any };
+  PostScreen: { post: any };
+  CommentScreen: { post: any };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -319,6 +323,24 @@ export const AuthenticatedStack = () => {
           headerShown: false,
           ...TransitionPresets.SlideFromRightIOS,
           cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+        }}
+      />
+      <Stack.Screen
+        name="PostScreen"
+        component={PostScreen}
+        options={{
+          headerShown: false,
+          ...TransitionPresets.SlideFromRightIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+        }}
+      />
+      <Stack.Screen
+        name="CommentScreen"
+        component={CommentScreen}
+        options={{
+          headerShown: false,
+          ...TransitionPresets.ModalSlideFromBottomIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forModalPresentationIOS,
         }}
       />
     </Stack.Navigator>

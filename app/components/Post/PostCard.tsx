@@ -10,12 +10,17 @@ import {
   TouchableOpacity,
   ScrollView,
 } from "react-native";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useContext } from "react";
 import UserAvatar from "./Useravatar";
 import Colors from "../../constants/Colors";
 import { useTheme } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { VideoView, useVideoPlayer } from "expo-video";
+import { AuthContext } from "../../context/AuthContext";
+import { PostContext } from "../../context/PostContext";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../navigation/StackNavigator";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -47,19 +52,34 @@ const VideoComponent = ({
       allowsFullscreen
       allowsPictureInPicture
       contentFit="contain"
+      nativeControls={true}
     />
   );
 };
 
-const PostCard = ({ post }: { post: any }) => {
+const PostCard = ({
+  post,
+  onCommentPress,
+}: {
+  post: any;
+  onCommentPress?: () => void;
+}) => {
   const { colors } = useTheme();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [modalVisible, setModalVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [loading, setLoading] = useState(false);
+
+  const { userData } = useContext(AuthContext);
+  const { getPosts } = useContext(PostContext);
   const carouselRef = useRef<FlatList>(null);
+
+  // Comment functionality moved to dedicated CommentScreen
   if (!post) return null;
 
-  const name = post.name || "Anonymous";
-  const content = post.content || "No content";
+  const name = post.username || "Anonymous";
+  const content = post.content;
   const image = post.image || "https://via.placeholder.com/50";
   const createdon = post.createdon || new Date().toISOString();
 
@@ -70,8 +90,17 @@ const PostCard = ({ post }: { post: any }) => {
     media = post.media.media;
   }
 
+  // Comment functionality moved to dedicated CommentScreen
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <Pressable
+      onPress={() => navigation.navigate("PostScreen", { post })}
+      style={({ pressed }) => [
+        styles.container,
+        { backgroundColor: colors.background },
+        pressed && styles.pressedContainer,
+      ]}
+    >
       <UserAvatar
         name={name}
         image={image}
@@ -79,53 +108,98 @@ const PostCard = ({ post }: { post: any }) => {
         style={{ backgroundColor: colors.background }}
       />
 
-      <Text style={[styles.content, { color: colors.onBackground }]}>
-        {content}
-      </Text>
+      <View style={styles.postBody}>
+        {content && (
+          <Text style={[styles.content, { color: colors.onBackground }]}>
+            {content}
+          </Text>
+        )}
 
-      {post.imageurl && (
-        <Pressable onPress={() => setModalVisible(true)}>
-          <Image source={{ uri: post.imageurl }} style={styles.image} />
-        </Pressable>
-      )}
+        {post.imageurl && (
+          <Pressable
+            onPress={(e) => {
+              e.stopPropagation();
+              setModalVisible(true);
+            }}
+          >
+            <Image source={{ uri: post.imageurl }} style={styles.image} />
+          </Pressable>
+        )}
 
-      {/* Media preview */}
-      {media && Array.isArray(media) && media.length > 0 && (
-        <View style={styles.mediaGrid}>
-          {media.map((item: any, index: number) => {
-            if (!item?.type || !item?.url)
+        {/* Media preview */}
+        {media && Array.isArray(media) && media.length > 0 && (
+          <View style={styles.mediaGrid}>
+            {media.map((item: any, index: number) => {
+              if (!item?.type || !item?.url) {
+                console.log("Missing media item:", item);
+                return (
+                  <Pressable>
+                    <Text>No media</Text>
+                  </Pressable>
+                );
+              }
+              const type = item.type.trim().toLowerCase();
+
+              // Check if this is the last item in an odd-numbered row
+              const isLastInOddRow =
+                media.length % 2 !== 0 && // Total count is odd
+                index === media.length - 1; // This is the last item
+
+              // Use full width for single items or last items in odd rows
+              const useFullWidth = media.length === 1 || isLastInOddRow;
+
               return (
-                <Pressable>
-                  <Text>No media</Text>
+                <Pressable
+                  key={index}
+                  style={[useFullWidth && styles.fullWidthMediaContainer]}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    setPreviewIndex(index);
+                    setModalVisible(true);
+                  }}
+                >
+                  {type === "image" ? (
+                    <Image
+                      source={{ uri: item.url }}
+                      style={
+                        useFullWidth ? styles.singleMediaItem : styles.mediaItem
+                      }
+                    />
+                  ) : type === "video" ? (
+                    <View style={styles.videoThumb}>
+                      <Image
+                        source={{
+                          uri: item.url.replace(
+                            "/upload/",
+                            "/upload/w_500,h_500,c_fill,q_auto,f_jpg/"
+                          ),
+                        }}
+                        style={
+                          useFullWidth
+                            ? styles.singleMediaThumbnail
+                            : styles.mediaThumbnail
+                        }
+                      />
+                      <View style={styles.videoOverlay}>
+                        <Ionicons
+                          name="play-circle-outline"
+                          size={40}
+                          color="white"
+                        />
+                      </View>
+                    </View>
+                  ) : (
+                    <Image
+                      source={{ uri: post.imageurl }}
+                      style={styles.image}
+                    />
+                  )}
                 </Pressable>
               );
-            const type = item.type.trim().toLowerCase();
-            return (
-              <Pressable
-                key={index}
-                onPress={() => {
-                  setPreviewIndex(index);
-                  setModalVisible(true);
-                }}
-              >
-                {type === "image" ? (
-                  <Image source={{ uri: item.url }} style={styles.mediaItem} />
-                ) : type === "video" ? (
-                  <View style={[styles.mediaItem, styles.videoThumb]}>
-                    <Ionicons
-                      name="play-circle-outline"
-                      size={40}
-                      color="white"
-                    />
-                  </View>
-                ) : (
-                  <Image source={{ uri: post.imageurl }} style={styles.image} />
-                )}
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
+            })}
+          </View>
+        )}
+      </View>
 
       <Modal visible={modalVisible} transparent={true}>
         <View style={styles.fullscreenContainer}>
@@ -229,17 +303,54 @@ const PostCard = ({ post }: { post: any }) => {
         </View>
       </Modal>
 
+      {/* Comment Modal removed - now using dedicated CommentScreen */}
+
       <View style={styles.footerContainer}>
-        <View style={styles.footerItem}>
-          <Ionicons name="heart-outline" size={17} color={Colors.GRAY} />
+        <TouchableOpacity
+          style={styles.footerItem}
+          onPress={(e) => {
+            e.stopPropagation();
+            // TODO: Add like functionality
+          }}
+        >
+          <Ionicons name="heart-outline" size={20} color={Colors.GRAY} />
           <Text style={styles.footerText}>{post.likes || 0}</Text>
-        </View>
-        <View style={styles.footerItem}>
-          <Ionicons name="chatbubble-outline" size={17} color={Colors.GRAY} />
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.footerItem}
+          onPress={(e) => {
+            e.stopPropagation();
+            if (onCommentPress) {
+              onCommentPress();
+            } else {
+              navigation.navigate("CommentScreen", { post });
+            }
+          }}
+        >
+          <Ionicons name="chatbubble-outline" size={20} color={Colors.GRAY} />
           <Text style={styles.footerText}>{post.comments || 0}</Text>
-        </View>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.footerItem}
+          onPress={(e) => {
+            e.stopPropagation();
+            // TODO: Add repost functionality
+          }}
+        >
+          <Ionicons name="repeat-outline" size={20} color={Colors.GRAY} />
+          <Text style={styles.footerText}>{post.reposts || 0}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={styles.footerItem}
+          onPress={(e) => {
+            e.stopPropagation();
+            // TODO: Add bookmark functionality
+          }}
+        >
+          <Ionicons name="bookmark-outline" size={20} color={Colors.GRAY} />
+        </TouchableOpacity>
       </View>
-    </View>
+    </Pressable>
   );
 };
 
@@ -256,6 +367,24 @@ const styles = StyleSheet.create({
     marginBottom: 5,
     borderColor: Colors.GRAY,
     alignSelf: "center",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  pressedContainer: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
+    backgroundColor: "#f8f8f8",
+    borderColor: Colors.PRIMARY,
+    borderWidth: 0.5,
+  },
+  postBody: {
+    flex: 1,
   },
   content: {
     fontSize: 18,
@@ -333,15 +462,18 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(255, 255, 255, 0.5)",
   },
   footerContainer: {
-    marginTop: 10,
+    marginTop: 15,
     flexDirection: "row",
     alignItems: "center",
-    gap: 20,
+    justifyContent: "space-between",
+    paddingHorizontal: 10,
   },
   footerItem: {
     flexDirection: "row",
     alignItems: "center",
-    marginRight: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 20,
   },
   footerText: {
     fontSize: 17,
@@ -354,16 +486,90 @@ const styles = StyleSheet.create({
     gap: 6,
     marginTop: 10,
   },
+  fullWidthMediaContainer: {
+    width: "100%",
+  },
 
   mediaItem: {
     width: (SCREEN_WIDTH - 60) / 2,
     height: 150,
     borderRadius: 8,
-    backgroundColor: "#000",
+    backgroundColor: "transparent",
+  },
+
+  singleMediaItem: {
+    width: SCREEN_WIDTH - 46,
+    height: 250,
+    borderRadius: 8,
+    backgroundColor: "transparent",
   },
 
   videoThumb: {
+    position: "relative",
+  },
+  mediaThumbnail: {
+    width: (SCREEN_WIDTH - 60) / 2,
+    height: 150,
+    borderRadius: 8,
+  },
+  singleMediaThumbnail: {
+    width: SCREEN_WIDTH - 46,
+    height: 250,
+    borderRadius: 8,
+  },
+  videoOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.3)",
     justifyContent: "center",
     alignItems: "center",
+    borderRadius: 8,
+    zIndex: 1,
   },
+  videoLabel: {
+    color: "white",
+    fontSize: 14,
+    marginTop: 5,
+    fontWeight: "600",
+  },
+
+  videoTouchContainer: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+
+  videoTopTouch: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 80,
+    backgroundColor: "transparent",
+  },
+
+  videoLeftTouch: {
+    position: "absolute",
+    top: 80,
+    left: 0,
+    width: 60,
+    bottom: 80,
+    backgroundColor: "transparent",
+  },
+
+  videoRightTouch: {
+    position: "absolute",
+    top: 80,
+    right: 0,
+    width: 60,
+    bottom: 80,
+    backgroundColor: "transparent",
+  },
+
+  // Comment Modal Styles removed - now using dedicated CommentScreen
 });

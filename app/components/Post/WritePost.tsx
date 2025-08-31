@@ -40,7 +40,7 @@ import {
   heightPercentageToDP as hp,
 } from "react-native-responsive-screen";
 
-// Video component 
+// Video component
 const VideoComponent = ({
   uri,
   shouldPlay,
@@ -179,13 +179,7 @@ export default function WritePost() {
   }, [modalVisible]);
 
   const onPostBtnClick = async () => {
-    if (!content) {
-      Toast.show({
-        text1: "Please enter some content",
-        type: "error",
-      });
-      return;
-    }
+    // Allow posting without content
 
     setLoading(true);
 
@@ -252,14 +246,7 @@ export default function WritePost() {
       }));
 
       const combinedMedia = [...selectedMediaRef.current, ...pickedMedia];
-      const videoCount = combinedMedia.filter((m) => m.type === "video").length;
-      if (videoCount > 1) {
-        Toast.show({
-          type: "error",
-          text1: "Only 1 video allowed per post",
-        });
-        return;
-      }
+      // Allow any amount of videos, but maintain 4-item total limit
 
       const unique = combinedMedia.filter(
         (media, index, self) =>
@@ -346,12 +333,18 @@ export default function WritePost() {
                   <Image source={{ uri: item.uri }} style={styles.thumbnail} />
                 ) : (
                   <View style={styles.videoThumb}>
-                    <Ionicons
-                      name="play-circle-outline"
-                      size={40}
-                      color="white"
-                      style={styles.playIcon}
+                    <Image
+                      source={{ uri: item.uri }}
+                      style={styles.thumbnail}
                     />
+                    <View style={styles.videoOverlay}>
+                      <Ionicons
+                        name="play-circle-outline"
+                        size={40}
+                        color="white"
+                        style={styles.playIcon}
+                      />
+                    </View>
                   </View>
                 )}
                 <TouchableOpacity
@@ -466,9 +459,18 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 10,
-    backgroundColor: "#000",
+    position: "relative",
+  },
+  videoOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.3)",
     justifyContent: "center",
     alignItems: "center",
+    borderRadius: 10,
   },
   playIcon: {
     position: "absolute",
