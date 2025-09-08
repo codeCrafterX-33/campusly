@@ -11,10 +11,35 @@ import {
 import React, { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "react-native-paper";
+import { VideoView, useVideoPlayer } from "expo-video";
 import Colors from "../../constants/Colors";
 import UserAvatar from "./Useravatar";
 
-const { width: SCREEN_WIDTH } = Dimensions.get("window");
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+
+// Video component using new expo-video API
+const VideoComponent = ({
+  uri,
+  shouldPlay,
+}: {
+  uri: string;
+  shouldPlay: boolean;
+}) => {
+  const player = useVideoPlayer(uri, (player) => {
+    player.loop = false;
+    player.muted = false;
+  });
+
+  React.useEffect(() => {
+    if (shouldPlay) {
+      player.play();
+    } else {
+      player.pause();
+    }
+  }, [shouldPlay, player]);
+
+  return <VideoView style={styles.fullscreenImage} player={player} />;
+};
 
 // Function to format date: day and month if same year, full date if different year
 const formatDate = (dateString: string) => {
@@ -76,6 +101,8 @@ const CommentCard = ({
 }: CommentCardProps) => {
   const { colors } = useTheme();
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
+  const [mediaModalVisible, setMediaModalVisible] = useState(false);
+  const [previewIndex, setPreviewIndex] = useState(0);
 
   // Debug logging
   console.log(
@@ -197,7 +224,14 @@ const CommentCard = ({
 
               const type = item.type.trim().toLowerCase();
               return (
-                <View key={index} style={styles.mediaItem}>
+                <Pressable
+                  key={index}
+                  style={styles.mediaItem}
+                  onPress={() => {
+                    setPreviewIndex(index);
+                    setMediaModalVisible(true);
+                  }}
+                >
                   {type === "image" ? (
                     <Image
                       source={{ uri: item.url }}
@@ -225,7 +259,7 @@ const CommentCard = ({
                       </View>
                     </View>
                   ) : null}
-                </View>
+                </Pressable>
               );
             })}
           </View>
@@ -328,7 +362,7 @@ const CommentCard = ({
               <Text style={styles.modalTitle}>Comment Options</Text>
               <TouchableOpacity
                 onPress={() => setOptionsModalVisible(false)}
-                style={styles.closeButton}
+                style={styles.modalCloseButton}
               >
                 <Ionicons name="close" size={24} color={Colors.GRAY} />
               </TouchableOpacity>
@@ -377,6 +411,54 @@ const CommentCard = ({
               </TouchableOpacity>
             </View>
           </View>
+        </View>
+      </Modal>
+
+      {/* Media Preview Modal */}
+      <Modal visible={mediaModalVisible} transparent={true}>
+        <View style={styles.fullscreenContainer}>
+          {/* Close button */}
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setMediaModalVisible(false)}
+          >
+            <Ionicons name="close" size={30} color="white" />
+          </TouchableOpacity>
+
+          {/* Media Display */}
+          {media && media.length > 0 && (
+            <View style={styles.fullscreenMediaContainer}>
+              {media[previewIndex]?.type?.trim().toLowerCase() === "image" ? (
+                <Image
+                  source={{ uri: media[previewIndex].url }}
+                  style={styles.fullscreenImage}
+                  resizeMode="contain"
+                />
+              ) : media[previewIndex]?.type?.trim().toLowerCase() ===
+                "video" ? (
+                <VideoComponent
+                  uri={media[previewIndex].url}
+                  shouldPlay={true}
+                />
+              ) : null}
+            </View>
+          )}
+
+          {/* Navigation dots for multiple media */}
+          {media && media.length > 1 && (
+            <View style={styles.dotsContainer}>
+              {media.map((_: any, index: number) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.dot,
+                    index === previewIndex && styles.activeDot,
+                  ]}
+                  onPress={() => setPreviewIndex(index)}
+                />
+              ))}
+            </View>
+          )}
         </View>
       </Modal>
     </View>
@@ -559,7 +641,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
-  closeButton: {
+  modalCloseButton: {
     padding: 4,
   },
   modalOptions: {
@@ -574,5 +656,48 @@ const styles = StyleSheet.create({
   modalOptionText: {
     fontSize: 16,
     marginLeft: 15,
+  },
+  // Media preview modal styles
+  fullscreenContainer: {
+    flex: 1,
+    backgroundColor: "black",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  fullscreenMediaContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    width: "100%",
+  },
+  fullscreenImage: {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+  },
+  closeButton: {
+    position: "absolute",
+    top: 50,
+    right: 20,
+    zIndex: 1000,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    borderRadius: 20,
+    padding: 10,
+  },
+  dotsContainer: {
+    position: "absolute",
+    bottom: 50,
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    marginHorizontal: 4,
+  },
+  activeDot: {
+    backgroundColor: "white",
   },
 });
