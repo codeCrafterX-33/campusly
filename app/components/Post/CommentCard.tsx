@@ -12,6 +12,9 @@ import React, { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "react-native-paper";
 import { VideoView, useVideoPlayer } from "expo-video";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../navigation/StackNavigator";
 import Colors from "../../constants/Colors";
 import UserAvatar from "./Useravatar";
 
@@ -74,7 +77,9 @@ interface Comment {
   user_image: string;
   studentstatusverified: boolean;
   like_count: number;
+  comment_count?: number;
   comment_depth: number;
+  parent_post_id: number;
   replies?: Comment[];
 }
 
@@ -100,19 +105,12 @@ const CommentCard = ({
   parentComment,
 }: CommentCardProps) => {
   const { colors } = useTheme();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
 
-  // Debug logging
-  console.log(
-    "CommentCard - isOwner:",
-    isOwner,
-    "comment.user_id:",
-    comment.user_id,
-    "comment.id:",
-    comment.id
-  );
   const [showReplies, setShowReplies] = useState(false);
   const maxDepth = 2;
 
@@ -131,14 +129,6 @@ const CommentCard = ({
   const isReply = depth > 0;
   const canReply = depth < maxDepth - 1;
 
-  // Debug logging for CommentCard
-  console.log("CommentCard data:", {
-    studentstatusverified: comment.studentstatusverified,
-    firstname: comment.firstname,
-    lastname: comment.lastname,
-    username: comment.username,
-  });
-
   // Parse media from JSONB
   let media: any[] = [];
   if (
@@ -150,7 +140,31 @@ const CommentCard = ({
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <TouchableOpacity
+      style={[styles.container, { backgroundColor: colors.background }]}
+      onPress={() => {
+        // Navigate to post screen to view comment as a post
+        navigation.navigate("PostScreen", {
+          post: {
+            id: comment.id,
+            content: comment.content,
+            media: comment.media,
+            createdon: comment.createdon,
+            createdby: comment.createdby,
+            user_id: comment.user_id,
+            firstname: comment.firstname,
+            lastname: comment.lastname,
+            username: comment.username,
+            user_image: comment.user_image,
+            studentstatusverified: comment.studentstatusverified,
+            like_count: comment.like_count,
+            comment_count: comment.comment_count || 0,
+            parent_post_id: comment.parent_post_id,
+          },
+        });
+      }}
+      activeOpacity={0.7}
+    >
       {/* Comment Content */}
       <View style={[styles.commentContent, { marginLeft: depth * 16 }]}>
         {/* User Info Row */}
@@ -185,7 +199,10 @@ const CommentCard = ({
           </View>
           <TouchableOpacity
             style={styles.ellipsisButton}
-            onPress={() => setOptionsModalVisible(true)}
+            onPress={(e) => {
+              e.stopPropagation();
+              setOptionsModalVisible(true);
+            }}
           >
             <Ionicons
               name="ellipsis-horizontal"
@@ -227,7 +244,8 @@ const CommentCard = ({
                 <Pressable
                   key={index}
                   style={styles.mediaItem}
-                  onPress={() => {
+                  onPress={(e) => {
+                    e.stopPropagation();
                     setPreviewIndex(index);
                     setMediaModalVisible(true);
                   }}
@@ -269,7 +287,10 @@ const CommentCard = ({
         <View style={styles.footerContainer}>
           <TouchableOpacity
             style={styles.footerItem}
-            onPress={() => onLike(comment.id)}
+            onPress={(e) => {
+              e.stopPropagation();
+              onLike(comment.id);
+            }}
           >
             <Ionicons
               name={isLiked ? "heart" : "heart-outline"}
@@ -282,7 +303,10 @@ const CommentCard = ({
           {canReply && (
             <TouchableOpacity
               style={styles.footerItem}
-              onPress={() => onReply(comment)}
+              onPress={(e) => {
+                e.stopPropagation();
+                onReply(comment);
+              }}
             >
               <Ionicons
                 name="chatbubble-outline"
@@ -295,7 +319,23 @@ const CommentCard = ({
 
           <TouchableOpacity
             style={styles.footerItem}
-            onPress={() => {
+            onPress={(e) => {
+              e.stopPropagation();
+              // TODO: Add view replies functionality
+            }}
+          >
+            <Ionicons
+              name="chatbubbles-outline"
+              size={20}
+              color={Colors.GRAY}
+            />
+            <Text style={styles.footerText}>{comment.comment_count || 0}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.footerItem}
+            onPress={(e) => {
+              e.stopPropagation();
               // TODO: Add repost functionality
             }}
           >
@@ -305,7 +345,8 @@ const CommentCard = ({
 
           <TouchableOpacity
             style={styles.footerItem}
-            onPress={() => {
+            onPress={(e) => {
+              e.stopPropagation();
               // TODO: Add bookmark functionality
             }}
           >
@@ -461,7 +502,7 @@ const CommentCard = ({
           )}
         </View>
       </Modal>
-    </View>
+    </TouchableOpacity>
   );
 };
 

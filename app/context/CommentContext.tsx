@@ -16,6 +16,7 @@ interface Comment {
   studentstatusverified: boolean;
   like_count: number;
   comment_depth: number;
+  parent_post_id: number;
   replies?: Comment[];
 }
 
@@ -220,7 +221,7 @@ export const CommentProvider: React.FC<CommentProviderProps> = ({
         setError(null);
 
         await axios.post(
-            `${process.env.EXPO_PUBLIC_SERVER_URL}/comment/${commentId}/like`,
+          `${process.env.EXPO_PUBLIC_SERVER_URL}/comment/${commentId}/like`,
           { user_id }
         );
 

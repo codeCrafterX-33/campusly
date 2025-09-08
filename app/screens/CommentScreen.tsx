@@ -72,10 +72,14 @@ const CommentScreen = () => {
   const { colors } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
-  const { post } = route.params as { post: any };
+  const { post, parentComment } = route.params as {
+    post: any;
+    parentComment?: any;
+  };
 
   // Debug logging
   console.log("CommentScreen rendered with post:", post?.id);
+  console.log("CommentScreen parentComment:", parentComment);
 
   const [commentContent, setCommentContent] = useState("");
   const [selectedMedia, setSelectedMedia] = useState<
@@ -201,8 +205,10 @@ const CommentScreen = () => {
         media: postMedia,
         user_id: userData?.id || 0,
         createdby: userData?.email || "",
-        parentCommentId: undefined, // For direct comments
+        parentCommentId: parentComment ? parentComment : undefined, // Use parent comment ID if replying
       };
+
+      console.log("CommentScreen posting comment data:", commentData);
 
       const newComment = await addComment(commentData);
 

@@ -8,7 +8,7 @@ export const createComment = async (req, res) => {
     media,
     user_id,
     createdby,
-    parentCommentId = null,
+    parentCommentId,
   } = req.body;
 
   // Convert postId to integer
@@ -64,7 +64,7 @@ export const createComment = async (req, res) => {
         });
       }
 
-      parentPostId = parentComment.rows[0].parent_post_id || parentCommentId;
+     
     }
 
     // Create the comment
@@ -145,7 +145,7 @@ export const getComments = async (req, res) => {
       FROM posts p
       JOIN users u ON p.createdby = u.email
       WHERE p.parent_post_id = $1 
-        AND p.comment_depth = 1
+        AND p.comment_depth IN (1, 2)
       ORDER BY p.createdon ASC
       LIMIT $2 OFFSET $3
     `;
@@ -192,7 +192,7 @@ export const getComments = async (req, res) => {
 
     // Get total count for pagination
     const countResult = await pool.query(
-      `SELECT COUNT(*) FROM posts WHERE parent_post_id = $1 AND comment_depth = 1`,
+      `SELECT COUNT(*) FROM posts WHERE parent_post_id = $1 AND comment_depth IN (1, 2)`,
       [postIdInt]
     );
 

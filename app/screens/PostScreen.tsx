@@ -190,10 +190,14 @@ const PostScreen = () => {
                     console.log("Comment pressed:", comment);
                   }}
                   onReplyPress={(comment) => {
-                    // Navigate to CommentScreen with parent comment
+                    // Navigate to CommentScreen with the comment as the post
+                    console.log(
+                      "Navigating to CommentScreen with :",
+                      comment.id
+                    );
                     navigation.navigate("CommentScreen", {
-                      post,
-                      parentComment: comment,
+                      post: comment,
+                      parentComment: comment.parent_post_id,
                     });
                   }}
                   currentUserId={userData?.id}

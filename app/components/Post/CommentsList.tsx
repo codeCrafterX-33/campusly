@@ -26,7 +26,9 @@ interface Comment {
   user_image: string;
   studentstatusverified: boolean;
   like_count: number;
+  comment_count?: number;
   comment_depth: number;
+  parent_post_id: number;
   replies?: Comment[];
 }
 
@@ -75,13 +77,6 @@ const CommentsList = ({
           setRefreshing(true);
         }
 
-        console.log(
-          "Loading comments for postId:",
-          postId,
-          "type:",
-          typeof postId
-        );
-
         // Use context method to load comments (this will use cache if available)
         await contextGetComments(postId);
 
@@ -114,7 +109,6 @@ const CommentsList = ({
   // Refresh comments when refreshTrigger changes
   useEffect(() => {
     if (refreshTrigger && refreshTrigger > 0) {
-      console.log("Refreshing comments due to trigger:", refreshTrigger);
       refreshComments();
     }
   }, [refreshTrigger, refreshComments]);
@@ -149,18 +143,6 @@ const CommentsList = ({
     const isOwner = Boolean(
       item.user_id && currentUserId && item.user_id === currentUserId
     );
-    console.log(
-      "CommentsList - currentUserId:",
-      currentUserId,
-      "type:",
-      typeof currentUserId,
-      "item.user_id:",
-      item.user_id,
-      "type:",
-      typeof item.user_id,
-      "isOwner:",
-      isOwner
-    );
 
     return (
       <View key={item.id}>
@@ -172,6 +154,7 @@ const CommentsList = ({
           onDelete={handleDelete}
           isOwner={isOwner}
           isLiked={false} // TODO: Implement liked state
+          
         />
         {/* Render replies if they exist */}
         {item.replies && item.replies.length > 0 && (
@@ -193,18 +176,6 @@ const CommentsList = ({
                   currentUserId &&
                   reply.user_id === currentUserId
               );
-              console.log(
-                "CommentsList Reply - currentUserId:",
-                currentUserId,
-                "type:",
-                typeof currentUserId,
-                "reply.user_id:",
-                reply.user_id,
-                "type:",
-                typeof reply.user_id,
-                "replyIsOwner:",
-                replyIsOwner
-              );
 
               return (
                 <CommentCard
@@ -216,7 +187,7 @@ const CommentsList = ({
                   onDelete={handleDelete}
                   isOwner={replyIsOwner}
                   isLiked={false}
-                  parentComment={item} // Pass the parent comment for "replying to" display
+            
                 />
               );
             })}
