@@ -13,6 +13,7 @@ import {
 } from "./navigation/StackNavigator";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PostProvider } from "./context/PostContext";
+import { CommentProvider } from "./context/CommentContext";
 import { ThemeProvider, ThemeContext } from "./context/ThemeContext";
 import { User } from "firebase/auth";
 import { Provider as PaperProvider } from "react-native-paper";
@@ -78,13 +79,15 @@ export default function App() {
                   <ClubProvider>
                     <EventProvider>
                       <PostProvider>
-                        {isTryingLogin ? (
-                          <LoadingScreen />
-                        ) : user ? (
-                          <AuthenticatedStack />
-                        ) : (
-                          <StackNavigator />
-                        )}
+                        <CommentProvider>
+                          {isTryingLogin ? (
+                            <LoadingScreen />
+                          ) : user ? (
+                            <AuthenticatedStack />
+                          ) : (
+                            <StackNavigator />
+                          )}
+                        </CommentProvider>
                       </PostProvider>
                     </EventProvider>
                   </ClubProvider>

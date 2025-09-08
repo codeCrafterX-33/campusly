@@ -60,9 +60,11 @@ const VideoComponent = ({
 const PostCard = ({
   post,
   onCommentPress,
+  clickable = true,
 }: {
   post: any;
   onCommentPress?: () => void;
+  clickable?: boolean;
 }) => {
   const { colors } = useTheme();
   const navigation =
@@ -79,6 +81,10 @@ const PostCard = ({
   if (!post) return null;
 
   const name = post.username || "Anonymous";
+  const fullname =
+    post.firstname && post.lastname
+      ? `${post.firstname} ${post.lastname}`
+      : name;
   const content = post.content;
   const image = post.image || "https://via.placeholder.com/50";
   const createdon = post.createdon || new Date().toISOString();
@@ -94,17 +100,24 @@ const PostCard = ({
 
   return (
     <Pressable
-      onPress={() => navigation.navigate("PostScreen", { post })}
+      onPress={
+        clickable
+          ? () => navigation.navigate("PostScreen", { post })
+          : undefined
+      }
       style={({ pressed }) => [
         styles.container,
         { backgroundColor: colors.background },
-        pressed && styles.pressedContainer,
+        clickable && pressed && styles.pressedContainer,
       ]}
     >
       <UserAvatar
         name={name}
+        fullname={fullname}
+        username={post.username}
         image={image}
         date={createdon}
+        studentstatusverified={post.studentstatusverified}
         style={{ backgroundColor: colors.background }}
       />
 
@@ -321,8 +334,13 @@ const PostCard = ({
           onPress={(e) => {
             e.stopPropagation();
             if (onCommentPress) {
+              console.log("PostCard: Calling onCommentPress");
               onCommentPress();
             } else {
+              console.log(
+                "PostCard: Navigating to CommentScreen with post:",
+                post.id
+              );
               navigation.navigate("CommentScreen", { post });
             }
           }}

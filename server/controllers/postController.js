@@ -27,10 +27,11 @@ export const getPosts = async (req, res) => {
 
   if (userEmail) {
     const result = await pool.query(
-      `SELECT * FROM posts 
-      INNER JOIN users ON posts.createdby = users.email
-      WHERE createdby = $1
-      ORDER BY ${orderField} DESC`,
+      `SELECT posts.*, users.firstname, users.lastname, users.username, users.email, users.image, users.studentstatusverified
+       FROM posts 
+       INNER JOIN users ON posts.createdby = users.email
+       WHERE createdby = $1 AND (comment_depth = 0 OR comment_depth IS NULL)
+       ORDER BY ${orderField} DESC`,
       [userEmail]
     );
     return res.status(200).json({
@@ -42,10 +43,32 @@ export const getPosts = async (req, res) => {
   if (club) {
     try {
       const result = await pool.query(
-        `SELECT * FROM posts
-   INNER JOIN users ON posts.createdby = users.email
-   WHERE club in (${club})
-   ORDER BY ${orderField} DESC`
+        `SELECT posts.*, users.firstname, users.lastname, users.username, users.email, users.image, users.studentstatusverified 
+         FROM posts
+         INNER JOIN users ON posts.createdby = users.email
+         WHERE club in (${club}) AND (comment_depth = 0 OR comment_depth IS NULL)
+         ORDER BY ${orderField} DESC`
+      );
+
+      res.status(200).json({
+        message: "Posts fetched successfully",
+        data: result.rows,
+      });
+    } catch (error) {
+      res.status(500).json({
+        message: "Posts fetching failed",
+        error: error.message,
+      });
+    }
+  } else {
+    // Default case - get all main posts
+    try {
+      const result = await pool.query(
+        `SELECT posts.*, users.firstname, users.lastname, users.username, users.email, users.image, users.studentstatusverified 
+         FROM posts
+         INNER JOIN users ON posts.createdby = users.email
+         WHERE (comment_depth = 0 OR comment_depth IS NULL)
+         ORDER BY ${orderField} DESC`
       );
 
       res.status(200).json({

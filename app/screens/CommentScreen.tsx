@@ -16,6 +16,7 @@ import {
   Pressable,
   FlatList,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useState, useRef, useContext, useEffect } from "react";
 import { useTheme } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
@@ -26,6 +27,7 @@ import axios from "axios";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { AuthContext } from "../context/AuthContext";
 import { PostContext } from "../context/PostContext";
+import { useCommentContext } from "../context/CommentContext";
 import uploadImageToCloudinary from "../util/uploadToCloudinary";
 import { postOptions } from "../configs/CloudinaryConfig";
 import Colors from "../constants/Colors";
@@ -72,6 +74,9 @@ const CommentScreen = () => {
   const route = useRoute();
   const { post } = route.params as { post: any };
 
+  // Debug logging
+  console.log("CommentScreen rendered with post:", post?.id);
+
   const [commentContent, setCommentContent] = useState("");
   const [selectedMedia, setSelectedMedia] = useState<
     { uri: string; type: "image" | "video" }[]
@@ -82,6 +87,7 @@ const CommentScreen = () => {
 
   const { userData } = useContext(AuthContext);
   const { getPosts } = useContext(PostContext);
+  const { addComment } = useCommentContext();
   const commentInputRef = useRef<TextInput>(null);
 
   // Handle back button behavior
@@ -181,32 +187,47 @@ const CommentScreen = () => {
         }
       }
 
-      // TODO: Update this to use comments API endpoint when ready
-      const result = await axios.post(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/post`,
-        {
-          content: commentContent,
-          media: postMedia,
-          visibleIn: 0, // Public post
-          email: userData?.email,
-          user_id: userData?.id,
-          // parentPostId: post.id, // Will be used for comments API
-        }
+      // Use CommentContext to add comment
+      console.log(
+        "Sending comment with postId:",
+        post.id,
+        "type:",
+        typeof post.id
       );
 
-      if (result.status === 201) {
+      const commentData = {
+        postId: parseInt(post.id), // Convert to integer
+        content: commentContent,
+        media: postMedia,
+        user_id: userData?.id || 0,
+        createdby: userData?.email || "",
+        parentCommentId: undefined, // For direct comments
+      };
+
+      const newComment = await addComment(commentData);
+
+      if (newComment) {
+        console.log(
+          "CommentScreen: Comment posted successfully, preparing to close"
+        );
+
         Toast.show({
           text1: "Your comment was posted",
           type: "success",
         });
 
-        // Reset form and go back
+        // Reset form
         setCommentContent("");
         setSelectedMedia([]);
-        navigation.goBack();
 
         // Refresh posts
         getPosts();
+
+        // Close the screen immediately after successful post
+        console.log(
+          "CommentScreen: Closing screen after successful comment post"
+        );
+        navigation.goBack();
       }
     } catch (error) {
       Toast.show({
@@ -219,225 +240,230 @@ const CommentScreen = () => {
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      edges={["top"]}
     >
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.background }]}>
-        <TouchableOpacity
-          onPress={() => navigation.goBack()}
-          style={styles.headerButton}
-        >
-          <Ionicons name="close" size={24} color={colors.onBackground} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.onBackground }]}>
-          Reply
-        </Text>
-        <TouchableOpacity
-          onPress={onCommentPost}
-          disabled={
-            loading || (!commentContent.trim() && selectedMedia.length === 0)
-          }
-          style={[
-            styles.postBtn,
-            (loading ||
-              (!commentContent.trim() && selectedMedia.length === 0)) &&
-              styles.disabledBtn,
-          ]}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="white" />
-          ) : (
-            <Text style={styles.postBtnText}>Reply</Text>
-          )}
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        style={styles.content}
-        keyboardShouldPersistTaps="always"
-        showsVerticalScrollIndicator={false}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1 }}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
       >
-        {/* mini Post Card */}
-        <View style={styles.postCardContainer}>
-          <MiniPostCard post={post} />
-        </View>
-
-        {/* Replying to text */}
-        <View style={styles.replyingToContainer}>
-          <View style={styles.emptyBox}></View>
-          <Text style={[styles.replyingToText, { color: Colors.GRAY }]}>
-            Replying to <Text style={{ color: Colors.PRIMARY }}>@{name}</Text>
-          </Text>
-        </View>
-
-        {/* Comment Input with User Image */}
-        <View style={styles.inputContainer}>
-          <Image
-            source={{
-              uri: userData?.image || "https://via.placeholder.com/50",
-            }}
-            style={styles.userImage}
-          />
-          <TextInput
-            ref={commentInputRef}
-            placeholder="Post your reply"
-            placeholderTextColor={Colors.GRAY}
-            style={[
-              styles.commentInput,
-              {
-                backgroundColor: colors.background,
-                color: colors.onBackground,
-              },
-            ]}
-            multiline
-            numberOfLines={8}
-            maxLength={1000}
-            value={commentContent}
-            onChangeText={setCommentContent}
-          />
-        </View>
-
-        {/* Selected Media */}
-        {selectedMedia.length > 0 && (
-          <ScrollView
-            horizontal
-            style={styles.selectedImagesContainer}
-            keyboardShouldPersistTaps="always"
-            showsHorizontalScrollIndicator={false}
-          >
-            {selectedMedia.map((media, index) => (
-              <View key={index} style={styles.selectedImageWrapper}>
-                <Pressable
-                  onPress={() => {
-                    setPreviewIndex(index);
-                    setModalVisible(true);
-                  }}
-                >
-                  <Image
-                    source={{ uri: media.uri }}
-                    style={styles.selectedImage}
-                  />
-                  {media.type === "video" && (
-                    <View style={styles.selectedVideoOverlay}>
-                      <Ionicons
-                        name="play-circle-outline"
-                        size={30}
-                        color="white"
-                      />
-                    </View>
-                  )}
-                </Pressable>
-                <TouchableOpacity
-                  style={styles.removeImageBtn}
-                  onPress={() => removeImage(media.uri)}
-                >
-                  <Ionicons name="close" size={16} color="white" />
-                </TouchableOpacity>
-              </View>
-            ))}
-          </ScrollView>
-        )}
-      </ScrollView>
-
-      {/* Media Preview Modal */}
-      <Modal visible={modalVisible} transparent={true}>
-        <View style={styles.fullscreenContainer}>
-          {/* Close button */}
+        {/* Header */}
+        <View style={[styles.header, { backgroundColor: colors.background }]}>
           <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => setModalVisible(false)}
+            onPress={() => navigation.goBack()}
+            style={styles.headerButton}
           >
-            <Ionicons name="close" size={30} color="white" />
+            <Ionicons name="close" size={24} color={colors.onBackground} />
           </TouchableOpacity>
-
-          {/* Media counter */}
-          {selectedMedia.length > 1 && (
-            <View style={styles.mediaCounter}>
-              <Text style={styles.mediaCounterText}>
-                {previewIndex + 1} / {selectedMedia.length}
-              </Text>
-            </View>
-          )}
-
-          {/* Carousel */}
-          <FlatList
-            data={selectedMedia}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            initialScrollIndex={previewIndex}
-            getItemLayout={(data, index) => ({
-              length: SCREEN_WIDTH,
-              offset: SCREEN_WIDTH * index,
-              index,
-            })}
-            onMomentumScrollEnd={(event) => {
-              const newIndex = Math.round(
-                event.nativeEvent.contentOffset.x / SCREEN_WIDTH
-              );
-              setPreviewIndex(newIndex);
-            }}
-            keyExtractor={(item, index) => index.toString()}
-            renderItem={({ item, index }) => {
-              console.log(
-                `Rendering item ${index}: ${item.uri}, isVideo: ${
-                  item.type === "video"
-                }`
-              );
-              return (
-                <View style={styles.mediaSlide}>
-                  {item.type === "video" ? (
-                    <VideoComponent
-                      uri={item.uri}
-                      shouldPlay={index === previewIndex}
-                    />
-                  ) : (
-                    <Image
-                      source={{ uri: item.uri }}
-                      style={styles.fullscreenImage}
-                      resizeMode="contain"
-                    />
-                  )}
-                </View>
-              );
-            }}
-          />
-
-          {/* Navigation dots for multiple media */}
-          {selectedMedia.length > 1 && (
-            <View style={styles.dotsContainer}>
-              {selectedMedia.map((_: any, index: number) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.dot,
-                    index === previewIndex
-                      ? styles.activeDot
-                      : styles.inactiveDot,
-                  ]}
-                  onPress={() => {
-                    setPreviewIndex(index);
-                  }}
-                />
-              ))}
-            </View>
-          )}
-        </View>
-      </Modal>
-
-      {/* Add Media Button - Following WritePost pattern */}
-      <View style={styles.addMediaContainer}>
-        <TouchableOpacity style={styles.addImagesBtn} onPress={pickImages}>
-          <Ionicons name="image" size={24} color={Colors.PRIMARY} />
-          <Text style={[styles.addImagesBtnText, { color: Colors.PRIMARY }]}>
-            Add Media ({selectedMedia.length}/4)
+          <Text style={[styles.headerTitle, { color: colors.onBackground }]}>
+            Reply
           </Text>
-        </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+          <TouchableOpacity
+            onPress={onCommentPost}
+            disabled={
+              loading || (!commentContent.trim() && selectedMedia.length === 0)
+            }
+            style={[
+              styles.postBtn,
+              (loading ||
+                (!commentContent.trim() && selectedMedia.length === 0)) &&
+                styles.disabledBtn,
+            ]}
+          >
+            {loading ? (
+              <ActivityIndicator size="small" color="white" />
+            ) : (
+              <Text style={styles.postBtnText}>Reply</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          style={styles.content}
+          keyboardShouldPersistTaps="always"
+          showsVerticalScrollIndicator={false}
+        >
+          {/* mini Post Card */}
+          <View style={styles.postCardContainer}>
+            <MiniPostCard post={post} />
+          </View>
+
+          {/* Replying to text */}
+          <View style={styles.replyingToContainer}>
+            <View style={styles.emptyBox}></View>
+            <Text style={[styles.replyingToText, { color: Colors.GRAY }]}>
+              Replying to <Text style={{ color: Colors.PRIMARY }}>@{name}</Text>
+            </Text>
+          </View>
+
+          {/* Comment Input with User Image */}
+          <View style={styles.inputContainer}>
+            <Image
+              source={{
+                uri: userData?.image || "https://via.placeholder.com/50",
+              }}
+              style={styles.userImage}
+            />
+            <TextInput
+              ref={commentInputRef}
+              placeholder="Post your reply"
+              placeholderTextColor={Colors.GRAY}
+              style={[
+                styles.commentInput,
+                {
+                  backgroundColor: colors.background,
+                  color: colors.onBackground,
+                },
+              ]}
+              multiline
+              numberOfLines={8}
+              maxLength={1000}
+              value={commentContent}
+              onChangeText={setCommentContent}
+            />
+          </View>
+
+          {/* Selected Media */}
+          {selectedMedia.length > 0 && (
+            <ScrollView
+              horizontal
+              style={styles.selectedImagesContainer}
+              keyboardShouldPersistTaps="always"
+              showsHorizontalScrollIndicator={false}
+            >
+              {selectedMedia.map((media, index) => (
+                <View key={index} style={styles.selectedImageWrapper}>
+                  <Pressable
+                    onPress={() => {
+                      setPreviewIndex(index);
+                      setModalVisible(true);
+                    }}
+                  >
+                    <Image
+                      source={{ uri: media.uri }}
+                      style={styles.selectedImage}
+                    />
+                    {media.type === "video" && (
+                      <View style={styles.selectedVideoOverlay}>
+                        <Ionicons
+                          name="play-circle-outline"
+                          size={30}
+                          color="white"
+                        />
+                      </View>
+                    )}
+                  </Pressable>
+                  <TouchableOpacity
+                    style={styles.removeImageBtn}
+                    onPress={() => removeImage(media.uri)}
+                  >
+                    <Ionicons name="close" size={16} color="white" />
+                  </TouchableOpacity>
+                </View>
+              ))}
+            </ScrollView>
+          )}
+        </ScrollView>
+
+        {/* Media Preview Modal */}
+        <Modal visible={modalVisible} transparent={true}>
+          <View style={styles.fullscreenContainer}>
+            {/* Close button */}
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => setModalVisible(false)}
+            >
+              <Ionicons name="close" size={30} color="white" />
+            </TouchableOpacity>
+
+            {/* Media counter */}
+            {selectedMedia.length > 1 && (
+              <View style={styles.mediaCounter}>
+                <Text style={styles.mediaCounterText}>
+                  {previewIndex + 1} / {selectedMedia.length}
+                </Text>
+              </View>
+            )}
+
+            {/* Carousel */}
+            <FlatList
+              data={selectedMedia}
+              horizontal
+              pagingEnabled
+              showsHorizontalScrollIndicator={false}
+              initialScrollIndex={previewIndex}
+              getItemLayout={(data, index) => ({
+                length: SCREEN_WIDTH,
+                offset: SCREEN_WIDTH * index,
+                index,
+              })}
+              onMomentumScrollEnd={(event) => {
+                const newIndex = Math.round(
+                  event.nativeEvent.contentOffset.x / SCREEN_WIDTH
+                );
+                setPreviewIndex(newIndex);
+              }}
+              keyExtractor={(item, index) => index.toString()}
+              renderItem={({ item, index }) => {
+                console.log(
+                  `Rendering item ${index}: ${item.uri}, isVideo: ${
+                    item.type === "video"
+                  }`
+                );
+                return (
+                  <View style={styles.mediaSlide}>
+                    {item.type === "video" ? (
+                      <VideoComponent
+                        uri={item.uri}
+                        shouldPlay={index === previewIndex}
+                      />
+                    ) : (
+                      <Image
+                        source={{ uri: item.uri }}
+                        style={styles.fullscreenImage}
+                        resizeMode="contain"
+                      />
+                    )}
+                  </View>
+                );
+              }}
+            />
+
+            {/* Navigation dots for multiple media */}
+            {selectedMedia.length > 1 && (
+              <View style={styles.dotsContainer}>
+                {selectedMedia.map((_: any, index: number) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={[
+                      styles.dot,
+                      index === previewIndex
+                        ? styles.activeDot
+                        : styles.inactiveDot,
+                    ]}
+                    onPress={() => {
+                      setPreviewIndex(index);
+                    }}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
+        </Modal>
+
+        {/* Add Media Button - Following WritePost pattern */}
+        <View style={styles.addMediaContainer}>
+          <TouchableOpacity style={styles.addImagesBtn} onPress={pickImages}>
+            <Ionicons name="image" size={24} color={Colors.PRIMARY} />
+            <Text style={[styles.addImagesBtnText, { color: Colors.PRIMARY }]}>
+              Add Media ({selectedMedia.length}/4)
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 };
 
@@ -488,9 +514,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
   },
-  postCardContainer: {
-    
-  },
+  postCardContainer: {},
   replyingToContainer: {
     flexDirection: "row",
     paddingHorizontal: 16,

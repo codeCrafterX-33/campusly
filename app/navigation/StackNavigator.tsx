@@ -57,7 +57,7 @@ export type RootStackParamList = {
   EditClub: { club: any };
   ClubScreen: { club: any };
   PostScreen: { post: any };
-  CommentScreen: { post: any };
+  CommentScreen: { post: any; parentComment?: any };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -339,8 +339,8 @@ export const AuthenticatedStack = () => {
         component={CommentScreen}
         options={{
           headerShown: false,
-          ...TransitionPresets.ModalSlideFromBottomIOS,
-          cardStyleInterpolator: CardStyleInterpolators.forModalPresentationIOS,
+          ...TransitionPresets.SlideFromRightIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
         }}
       />
     </Stack.Navigator>

@@ -10,17 +10,23 @@ import {
   FlatList,
   Pressable,
   BackHandler,
+  RefreshControl,
 } from "react-native";
 import React, { useState, useRef, useContext, useEffect } from "react";
 import { useTheme } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
-import { useRoute, useNavigation } from "@react-navigation/native";
+import {
+  useRoute,
+  useNavigation,
+  useFocusEffect,
+} from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../navigation/StackNavigator";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { AuthContext } from "../context/AuthContext";
 import { PostContext } from "../context/PostContext";
 import PostCard from "../components/Post/PostCard";
+import CommentsList from "../components/Post/CommentsList";
 import Colors from "../constants/Colors";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -68,10 +74,37 @@ const PostScreen = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   const { userData } = useContext(AuthContext);
   const { getPosts } = useContext(PostContext);
   const carouselRef = useRef<FlatList>(null);
+
+  // Function to refresh comments when a new comment is posted
+  const handleCommentPosted = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
+  // Handle pull-to-refresh
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await getPosts();
+      handleCommentPosted(); // Also refresh comments
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Refresh comments when screen comes into focus (returning from CommentScreen)
+  useFocusEffect(
+    React.useCallback(() => {
+      // This will run when the screen comes into focus
+      // We'll refresh comments to show any new ones
+      handleCommentPosted();
+    }, [])
+  );
 
   // Handle back button behavior
   useEffect(() => {
@@ -118,31 +151,69 @@ const PostScreen = () => {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView style={styles.scrollContainer}>
-        {/* Use the PostCard component */}
-        <PostCard
-          post={post}
-          onCommentPress={() => {
-            navigation.navigate("CommentScreen", { post });
-          }}
-        />
-
-        {/* Comments Section */}
-        <View
-          style={[
-            styles.commentsSection,
-            { backgroundColor: colors.background },
-          ]}
-        >
-          <Text style={[styles.commentsTitle, { color: colors.onBackground }]}>
-            Comments
-          </Text>
-          {/* TODO: Add comments list here when API is ready */}
-          <Text style={[styles.noCommentsText, { color: Colors.GRAY }]}>
-            No comments yet. Be the first to comment!
-          </Text>
-        </View>
-      </ScrollView>
+      <FlatList
+        style={styles.scrollContainer}
+        data={[{ type: "post" }, { type: "comments" }]}
+        keyExtractor={(item, index) => `${item.type}-${index}`}
+        renderItem={({ item }) => {
+          if (item.type === "post") {
+            return (
+              <PostCard
+                post={post}
+                clickable={false}
+                onCommentPress={() => {
+                  console.log(
+                    "Navigating to CommentScreen with post:",
+                    post.id
+                  );
+                  navigation.navigate("CommentScreen", { post });
+                }}
+              />
+            );
+          } else if (item.type === "comments") {
+            return (
+              <View
+                style={[
+                  styles.commentsSection,
+                  { backgroundColor: colors.background },
+                ]}
+              >
+                <Text
+                  style={[styles.commentsTitle, { color: colors.onBackground }]}
+                >
+                  Comments
+                </Text>
+                <CommentsList
+                  postId={post.id}
+                  onCommentPress={(comment) => {
+                    // Handle comment press if needed
+                    console.log("Comment pressed:", comment);
+                  }}
+                  onReplyPress={(comment) => {
+                    // Navigate to CommentScreen with parent comment
+                    navigation.navigate("CommentScreen", {
+                      post,
+                      parentComment: comment,
+                    });
+                  }}
+                  currentUserId={userData?.id}
+                  refreshTrigger={refreshTrigger}
+                />
+              </View>
+            );
+          }
+          return null;
+        }}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.PRIMARY]}
+            tintColor={Colors.PRIMARY}
+          />
+        }
+      />
 
       {/* Media Preview Modal */}
       <Modal visible={modalVisible} transparent={true}>
