@@ -321,7 +321,7 @@ const CommentCard = ({
             style={styles.footerItem}
             onPress={(e) => {
               e.stopPropagation();
-              // TODO: Add view replies functionality
+              onReply(comment);
             }}
           >
             <Ionicons

@@ -154,45 +154,7 @@ const CommentsList = ({
           onDelete={handleDelete}
           isOwner={isOwner}
           isLiked={false} // TODO: Implement liked state
-          
         />
-        {/* Render replies if they exist */}
-        {item.replies && item.replies.length > 0 && (
-          <View style={styles.repliesContainer}>
-            {item.replies.map((reply) => {
-              // Don't render reply if essential data is missing
-              if (
-                !reply ||
-                !reply.firstname ||
-                !reply.lastname ||
-                !reply.username
-              ) {
-                return null;
-              }
-
-              // Handle case where user_id might be null for existing comments
-              const replyIsOwner = Boolean(
-                reply.user_id &&
-                  currentUserId &&
-                  reply.user_id === currentUserId
-              );
-
-              return (
-                <CommentCard
-                  key={reply.id}
-                  comment={reply}
-                  depth={1}
-                  onLike={handleLike}
-                  onReply={onReplyPress}
-                  onDelete={handleDelete}
-                  isOwner={replyIsOwner}
-                  isLiked={false}
-            
-                />
-              );
-            })}
-          </View>
-        )}
       </View>
     );
   };
@@ -282,12 +244,6 @@ const styles = StyleSheet.create({
   },
   listContainer: {
     flexGrow: 1,
-  },
-  repliesContainer: {
-    marginLeft: 16,
-    borderLeftWidth: 2,
-    borderLeftColor: Colors.GRAY + "30",
-    paddingLeft: 8,
   },
   footerLoader: {
     flexDirection: "row",
