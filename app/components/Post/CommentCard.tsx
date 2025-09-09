@@ -89,6 +89,7 @@ interface CommentCardProps {
   onLike: (commentId: number) => void;
   onReply: (comment: Comment) => void;
   onDelete?: (commentId: number) => void;
+  onCommentPress?: (comment: Comment) => void;
   isOwner?: boolean;
   isLiked?: boolean;
   parentComment?: Comment;
@@ -100,6 +101,7 @@ const CommentCard = ({
   onLike,
   onReply,
   onDelete,
+  onCommentPress,
   isOwner = false,
   isLiked = false,
   parentComment,
@@ -143,25 +145,30 @@ const CommentCard = ({
     <TouchableOpacity
       style={[styles.container, { backgroundColor: colors.background }]}
       onPress={() => {
-        // Navigate to post screen to view comment as a post
-        navigation.navigate("PostScreen", {
-          post: {
-            id: comment.id,
-            content: comment.content,
-            media: comment.media,
-            createdon: comment.createdon,
-            createdby: comment.createdby,
-            user_id: comment.user_id,
-            firstname: comment.firstname,
-            lastname: comment.lastname,
-            username: comment.username,
-            user_image: comment.user_image,
-            studentstatusverified: comment.studentstatusverified,
-            like_count: comment.like_count,
-            comment_count: comment.comment_count || 0,
-            parent_post_id: comment.parent_post_id,
-          },
-        });
+        if (onCommentPress) {
+          // Use the callback if provided (from PostScreen)
+          onCommentPress(comment);
+        } else {
+          // Fallback to direct navigation (from other screens)
+          navigation.navigate("PostScreen", {
+            post: {
+              id: comment.id,
+              content: comment.content,
+              media: comment.media,
+              createdon: comment.createdon,
+              createdby: comment.createdby,
+              user_id: comment.user_id,
+              firstname: comment.firstname,
+              lastname: comment.lastname,
+              username: comment.username,
+              user_image: comment.user_image,
+              studentstatusverified: comment.studentstatusverified,
+              like_count: comment.like_count,
+              comment_count: comment.comment_count || 0,
+              parent_post_id: comment.parent_post_id,
+            },
+          });
+        }
       }}
       activeOpacity={0.7}
     >
@@ -299,7 +306,7 @@ const CommentCard = ({
             />
             <Text style={styles.footerText}>{comment.like_count || 0}</Text>
           </TouchableOpacity>
-
+          {/* 
           {canReply && (
             <TouchableOpacity
               style={styles.footerItem}
@@ -315,7 +322,7 @@ const CommentCard = ({
               />
               <Text style={styles.footerText}>Reply</Text>
             </TouchableOpacity>
-          )}
+          )} */}
 
           <TouchableOpacity
             style={styles.footerItem}
@@ -383,6 +390,7 @@ const CommentCard = ({
               onLike={onLike}
               onReply={onReply}
               onDelete={onDelete}
+              onCommentPress={onCommentPress}
               isOwner={reply.user_id === comment.user_id}
               isLiked={false} // TODO: Implement liked state
             />

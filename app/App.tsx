@@ -14,6 +14,7 @@ import {
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { PostProvider } from "./context/PostContext";
 import { CommentProvider } from "./context/CommentContext";
+import { PostHistoryProvider } from "./context/PostHistoryContext";
 import { ThemeProvider, ThemeContext } from "./context/ThemeContext";
 import { User } from "firebase/auth";
 import { Provider as PaperProvider } from "react-native-paper";
@@ -80,13 +81,15 @@ export default function App() {
                     <EventProvider>
                       <PostProvider>
                         <CommentProvider>
-                          {isTryingLogin ? (
-                            <LoadingScreen />
-                          ) : user ? (
-                            <AuthenticatedStack />
-                          ) : (
-                            <StackNavigator />
-                          )}
+                          <PostHistoryProvider>
+                            {isTryingLogin ? (
+                              <LoadingScreen />
+                            ) : user ? (
+                              <AuthenticatedStack />
+                            ) : (
+                              <StackNavigator />
+                            )}
+                          </PostHistoryProvider>
                         </CommentProvider>
                       </PostProvider>
                     </EventProvider>

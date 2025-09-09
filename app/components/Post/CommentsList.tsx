@@ -4,6 +4,7 @@ import {
   StyleSheet,
   ActivityIndicator,
   TouchableOpacity,
+  Animated,
 } from "react-native";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useTheme } from "react-native-paper";
@@ -65,6 +66,7 @@ const CommentsList = ({
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const loadingRef = useRef(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const loadComments = useCallback(
     async (pageNum: number = 1, refresh: boolean = false) => {
@@ -105,6 +107,17 @@ const CommentsList = ({
   useEffect(() => {
     loadComments(1);
   }, [postId]);
+
+  // Animate comments when they load
+  useEffect(() => {
+    if (cachedComments.length > 0) {
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
+  }, [cachedComments.length, fadeAnim]);
 
   // Refresh comments when refreshTrigger changes
   useEffect(() => {
@@ -154,6 +167,7 @@ const CommentsList = ({
           onDelete={handleDelete}
           isOwner={isOwner}
           isLiked={false} // TODO: Implement liked state
+          onCommentPress={onCommentPress}
         />
       </View>
     );
@@ -215,7 +229,15 @@ const CommentsList = ({
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          backgroundColor: colors.background,
+          opacity: fadeAnim,
+        },
+      ]}
+    >
       {cachedComments.length === 0 ? (
         renderEmpty()
       ) : (
@@ -226,7 +248,7 @@ const CommentsList = ({
           {renderFooter()}
         </>
       )}
-    </View>
+    </Animated.View>
   );
 };
 
