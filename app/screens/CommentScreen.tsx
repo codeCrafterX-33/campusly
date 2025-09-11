@@ -28,7 +28,7 @@ import { VideoView, useVideoPlayer } from "expo-video";
 import { AuthContext } from "../context/AuthContext";
 import { PostContext } from "../context/PostContext";
 import { useCommentContext } from "../context/CommentContext";
-import uploadImageToCloudinary from "../util/uploadToCloudinary";
+import { uploadMultipleMedia } from "../util/uploadToCloudinary";
 import { postOptions } from "../configs/CloudinaryConfig";
 import Colors from "../constants/Colors";
 import MiniPostCard from "../components/Post/MiniPostCard";
@@ -72,9 +72,10 @@ const CommentScreen = () => {
   const { colors } = useTheme();
   const navigation = useNavigation();
   const route = useRoute();
-  const { post, parentComment } = route.params as {
+  const { post, parentComment, onCommentPosted } = route.params as {
     post: any;
     parentComment?: any;
+    onCommentPosted?: (updatedComment: any) => void;
   };
 
   // Debug logging
@@ -130,11 +131,22 @@ const CommentScreen = () => {
   const pickImages = async () => {
     const MAX_MEDIA = 4;
 
+    // Request permissions for accessing all photos
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted === false) {
+      alert("Permission to access camera roll is required!");
+      return;
+    }
+
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images", "videos"],
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: false,
       allowsMultipleSelection: true,
       quality: 0.7,
+      exif: false,
+      base64: false,
+      presentationStyle: ImagePicker.UIImagePickerPresentationStyle.AUTOMATIC,
     });
 
     if (!result.canceled) {
@@ -173,32 +185,34 @@ const CommentScreen = () => {
     setLoading(true);
 
     try {
-      let postMedia = [];
+      let postMedia: Array<{ url: string; type: string }> = [];
 
-      // Upload media to Cloudinary
+      // Upload media to Cloudinary in parallel
       if (selectedMedia.length > 0) {
-        for (const media of selectedMedia) {
-          const uploadResponse = await uploadImageToCloudinary(
-            media.uri,
-            postOptions.folder,
-            postOptions.upload_preset,
-            media.type
-          );
-          postMedia.push({
-            url: uploadResponse,
-            type: media.type,
-          });
-        }
+        console.log(
+          `Uploading ${selectedMedia.length} media files in parallel...`
+        );
+
+        // Prepare files for parallel upload
+        const filesToUpload = selectedMedia.map((media) => ({
+          uri: media.uri,
+          type: media.type,
+        }));
+
+        // Upload all files in parallel
+        const uploadResults = await uploadMultipleMedia(filesToUpload);
+
+        // Map upload results back to media objects
+        postMedia = uploadResults.map((result, index) => ({
+          url: result.url,
+          type: result.type,
+          thumbnailUrl: result.thumbnailUrl, // Include thumbnail for videos
+        }));
+
+        console.log(`Successfully uploaded ${postMedia.length} media files`);
       }
 
-      // Use CommentContext to add comment
-      console.log(
-        "Sending comment with postId:",
-        post.id,
-        "type:",
-        typeof post.id
-      );
-
+      // Create comment data
       const commentData = {
         postId: parseInt(post.id), // Convert to integer
         content: commentContent,
@@ -210,6 +224,7 @@ const CommentScreen = () => {
 
       console.log("CommentScreen posting comment data:", commentData);
 
+      // Create comment on server
       const newComment = await addComment(commentData);
 
       if (newComment) {
@@ -229,6 +244,11 @@ const CommentScreen = () => {
         // Refresh posts
         getPosts();
 
+        // Call the callback to update thread comment if provided
+        if (onCommentPosted) {
+          onCommentPosted(newComment);
+        }
+
         // Close the screen immediately after successful post
         console.log(
           "CommentScreen: Closing screen after successful comment post"
@@ -236,6 +256,8 @@ const CommentScreen = () => {
         navigation.goBack();
       }
     } catch (error) {
+      console.error("Error posting comment:", error);
+
       Toast.show({
         text1: "Error posting comment",
         type: "error",

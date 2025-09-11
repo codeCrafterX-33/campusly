@@ -62,7 +62,6 @@ const UserAvatar = ({
           {date && <Text style={styles.date}>{Moment(date || "")}</Text>}
         </View>
       </View>
-      <Ionicons name="ellipsis-vertical" size={24} color="gray" />
     </View>
   );
 };
@@ -72,7 +71,6 @@ export default UserAvatar;
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
   },
   avatarContainer: {

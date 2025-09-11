@@ -57,7 +57,11 @@ export type RootStackParamList = {
   EditClub: { club: any };
   ClubScreen: { club: any };
   PostScreen: { post: any };
-  CommentScreen: { post: any; parentComment?: any };
+  CommentScreen: {
+    post: any;
+    parentComment?: any;
+    onCommentPosted?: (updatedComment: any) => void;
+  };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();

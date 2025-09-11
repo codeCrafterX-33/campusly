@@ -18,11 +18,14 @@ import { RFValue } from "react-native-responsive-fontsize";
 import Colors from "../constants/Colors";
 import { AuthContext } from "../context/AuthContext";
 import { ClubContext } from "../context/ClubContext";
+import { PostContext } from "../context/PostContext";
 import Button from "../components/ui/Button";
 import { useThemeContext } from "../context/ThemeContext";
 import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 import axios, { AxiosError } from "axios";
 import Toast from "react-native-toast-message";
+import PostCard from "../components/Post/PostCard";
+import CampuslyAlert from "../components/CampuslyAlert";
 
 const { width, height } = Dimensions.get("window");
 const HEADER_HEIGHT = 60;
@@ -37,6 +40,7 @@ export default function ClubScreen() {
   const navigation = useNavigation();
   const { userData } = useContext(AuthContext);
   const { getFollowedClubs, followedClubs } = useContext(ClubContext);
+  const { getPosts } = useContext(PostContext);
 
   const { club } = route.params as { club: any };
 
@@ -46,6 +50,10 @@ export default function ClubScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   const [isTabsSticky, setIsTabsSticky] = useState(false);
+  const [clubPosts, setClubPosts] = useState<any[]>([]);
+  const [isLoadingPosts, setIsLoadingPosts] = useState(false);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const mainTabsOpacity = new Animated.Value(1); // Start fully visible
   const mainTabsAnimation = new Animated.Value(0); // Start at normal position
   const stickyTabsAnimation = new Animated.Value(-100); // Start above the screen
@@ -59,13 +67,34 @@ export default function ClubScreen() {
       );
       setIsFollowed(followed);
 
-      // Check if user is admin of this club
-      const admin = userData?.email === club.createdby;
-      setIsAdmin(admin);
+      // Check if user is owner of this club
+      const isOwner = userData?.id === club.user_id;
+      setIsAdmin(isOwner);
     };
 
     checkUserStatus();
-  }, [followedClubs, club.id, userData?.email, club.createdby]);
+  }, [followedClubs, club.id, userData?.id, club.user_id]);
+
+  // Fetch club posts when component mounts
+  useEffect(() => {
+    const fetchClubPosts = async () => {
+      if (!club?.id) return;
+
+      setIsLoadingPosts(true);
+      try {
+        await getPosts({
+          id: [club.id],
+          setClubPosts: setClubPosts,
+        });
+      } catch (error) {
+        console.error("Error fetching club posts:", error);
+      } finally {
+        setIsLoadingPosts(false);
+      }
+    };
+
+    fetchClubPosts();
+  }, [club?.id, getPosts]);
 
   // Animate sticky tabs when they appear/disappear
   useEffect(() => {
@@ -170,6 +199,42 @@ export default function ClubScreen() {
     }
   };
 
+  const handleDeleteClub = async () => {
+    if (!userData?.id || !club?.id) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await axios.delete(
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/club/deleteclub/${club.id}`,
+        {
+          data: { user_id: userData.id },
+        }
+      );
+
+      if (response.status === 200) {
+        Toast.show({
+          text1: "Club deleted successfully",
+          text2: "The club has been permanently deleted",
+          type: "success",
+        });
+        // Navigate back to clubs list or home
+        navigation.goBack();
+      }
+    } catch (error) {
+      if (error instanceof AxiosError) {
+        Toast.show({
+          text1: "Failed to delete club",
+          text2: error.response?.data?.message || "Please try again",
+          type: "error",
+        });
+      }
+      console.error("Error deleting club:", error);
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteAlert(false);
+    }
+  };
+
   const renderTabButton = (tab: TabType, label: string) => (
     <TouchableOpacity
       style={styles.tabButton}
@@ -192,68 +257,202 @@ export default function ClubScreen() {
     </TouchableOpacity>
   );
 
-  const renderPost = (post: any, index: number) => (
-    <View key={index} style={styles.postContainer}>
-      <View style={styles.postHeader}>
-        <Image
-          source={{ uri: post.avatar || "https://via.placeholder.com/40" }}
-          style={styles.postAvatar}
-        />
-        <View style={styles.postInfo}>
-          <Text style={[styles.postAuthor, { color: colors.onBackground }]}>
-            {post.author}
-          </Text>
-          <Text style={[styles.postHandle, { color: colors.onSurfaceVariant }]}>
-            @{post.handle}
-          </Text>
-          <Text style={[styles.postTime, { color: colors.onSurfaceVariant }]}>
-            {post.time}
-          </Text>
-        </View>
-        {post.isPinned && <Icon name="pin" size={16} color={Colors.PRIMARY} />}
-      </View>
-
-      <Text style={[styles.postContent, { color: colors.onBackground }]}>
-        {post.content}
+  const renderTrendingHashtags = () => (
+    <View style={styles.hashtagsSection}>
+      <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>
+        Trending Hashtags
       </Text>
+      <View style={styles.hashtagsContainer}>
+        {trendingHashtags.map(renderHashtag)}
+      </View>
+    </View>
+  );
 
-      <View style={styles.postStats}>
-        <View style={styles.statItem}>
-          <Icon
-            name="comment-outline"
-            size={16}
-            color={colors.onSurfaceVariant}
-          />
-          <Text style={[styles.statText, { color: colors.onSurfaceVariant }]}>
-            {post.replies}
+  const renderPostsTab = () => (
+    <View style={styles.tabContent}>
+      {renderTrendingHashtags()}
+      <View style={styles.postsSection}>
+        {isLoadingPosts ? (
+          <View style={styles.loadingContainer}>
+            <Text style={[styles.loadingText, { color: colors.onBackground }]}>
+              Loading posts...
+            </Text>
+          </View>
+        ) : clubPosts.length > 0 ? (
+          clubPosts.map((post, index) => (
+            <PostCard
+              key={post.id || index}
+              post={post}
+              onCommentPress={() => {
+                (navigation as any).navigate("CommentScreen", { post });
+              }}
+            />
+          ))
+        ) : (
+          <View style={styles.emptyStateContainer}>
+            <Icon
+              name="post-outline"
+              size={48}
+              color={colors.onSurfaceVariant}
+            />
+            <Text
+              style={[
+                styles.emptyStateText,
+                { color: colors.onSurfaceVariant },
+              ]}
+            >
+              No posts yet
+            </Text>
+            <Text
+              style={[
+                styles.emptyStateSubtext,
+                { color: colors.onSurfaceVariant },
+              ]}
+            >
+              Be the first to share something in this club!
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  const renderMediaTab = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.mediaSection}>
+        {isLoadingPosts ? (
+          <View style={styles.loadingContainer}>
+            <Text style={[styles.loadingText, { color: colors.onBackground }]}>
+              Loading media...
+            </Text>
+          </View>
+        ) : clubPosts.length > 0 ? (
+          <View style={styles.mediaGrid}>
+            {clubPosts
+              .filter(
+                (post) =>
+                  post.media &&
+                  Array.isArray(post.media.media) &&
+                  post.media.media.length > 0
+              )
+              .map((post, index) =>
+                post.media.media.map((mediaItem: any, mediaIndex: number) => (
+                  <TouchableOpacity
+                    key={`${post.id}-${mediaIndex}`}
+                    style={styles.mediaItem}
+                    onPress={() => {
+                      // Navigate to post screen to view media
+                      (navigation as any).navigate("PostScreen", { post });
+                    }}
+                  >
+                    <Image
+                      source={{
+                        uri:
+                          mediaItem.type === "image"
+                            ? mediaItem.url
+                            : mediaItem.url.replace(
+                                "/upload/",
+                                "/upload/w_500,h_500,c_fill,q_auto,f_jpg/"
+                              ),
+                      }}
+                      style={styles.mediaThumbnail}
+                    />
+                    {mediaItem.type === "video" && (
+                      <View style={styles.videoOverlay}>
+                        <Icon
+                          name="play-circle-outline"
+                          size={32}
+                          color="white"
+                        />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))
+              )}
+          </View>
+        ) : (
+          <View style={styles.emptyStateContainer}>
+            <Icon
+              name="image-outline"
+              size={48}
+              color={colors.onSurfaceVariant}
+            />
+            <Text
+              style={[
+                styles.emptyStateText,
+                { color: colors.onSurfaceVariant },
+              ]}
+            >
+              No media yet
+            </Text>
+            <Text
+              style={[
+                styles.emptyStateSubtext,
+                { color: colors.onSurfaceVariant },
+              ]}
+            >
+              Share some photos or videos to see them here!
+            </Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+
+  const renderAboutTab = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.aboutSection}>
+        <View style={styles.aboutCard}>
+          <Text style={[styles.aboutTitle, { color: colors.onBackground }]}>
+            About {club.name}
+          </Text>
+          <Text
+            style={[
+              styles.aboutDescription,
+              { color: colors.onSurfaceVariant },
+            ]}
+          >
+            {club.about}
           </Text>
         </View>
-        <View style={styles.statItem}>
-          <Icon name="repeat" size={16} color={colors.onSurfaceVariant} />
-          <Text style={[styles.statText, { color: colors.onSurfaceVariant }]}>
-            {post.reposts}
+
+        <View style={styles.aboutCard}>
+          <Text style={[styles.aboutTitle, { color: colors.onBackground }]}>
+            Club Details
           </Text>
+          <View style={styles.detailRow}>
+            <Icon name="account-group" size={20} color={colors.primary} />
+            <Text style={[styles.detailText, { color: colors.onBackground }]}>
+              {club.member_count || 0} members
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Icon name="calendar" size={20} color={colors.primary} />
+            <Text style={[styles.detailText, { color: colors.onBackground }]}>
+              Created {new Date(club.created_at).toLocaleDateString()}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Icon name="account" size={20} color={colors.primary} />
+            <Text style={[styles.detailText, { color: colors.onBackground }]}>
+              Created by {club.createdby}
+            </Text>
+          </View>
         </View>
-        <View style={styles.statItem}>
-          <Icon
-            name="heart-outline"
-            size={16}
-            color={colors.onSurfaceVariant}
-          />
-          <Text style={[styles.statText, { color: colors.onSurfaceVariant }]}>
-            {post.likes}
-          </Text>
-        </View>
-        <View style={styles.statItem}>
-          <Icon
-            name="share-variant-outline"
-            size={16}
-            color={colors.onSurfaceVariant}
-          />
-          <Text style={[styles.statText, { color: colors.onSurfaceVariant }]}>
-            {post.impressions}
-          </Text>
-        </View>
+
+        {isAdmin && (
+          <View style={styles.adminCard}>
+            <Text style={[styles.adminTitle, { color: colors.primary }]}>
+              Admin Actions
+            </Text>
+            <Button
+              onPress={() => (navigation as any).navigate("EditClub", { club })}
+              viewStyle={styles.adminButton}
+            >
+              Edit Club
+            </Button>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -265,45 +464,6 @@ export default function ClubScreen() {
     "nigerians",
     "ng",
     "ngr",
-  ];
-
-  const mockPosts = [
-    {
-      author: "Naija",
-      handle: "Naija_PR",
-      time: "23 Mar 24",
-      content: "Join the Naija community",
-      replies: 78,
-      reposts: 31,
-      likes: 403,
-      impressions: "116K",
-      isPinned: true,
-      avatar: "https://via.placeholder.com/40",
-    },
-    {
-      author: "Goke",
-      handle: "gokehqs",
-      time: "5h ago",
-      content: "Overthinking postponed, nepa don bring light",
-      replies: 39,
-      reposts: 91,
-      likes: 132,
-      impressions: "3K",
-      isPinned: false,
-      avatar: "https://via.placeholder.com/40",
-    },
-    {
-      author: "Goke",
-      handle: "gokehqs",
-      time: "17h ago",
-      content: "'Calm and reserved' but you schooled in a polytechnic",
-      replies: 34,
-      reposts: 76,
-      likes: 132,
-      impressions: "6.5K",
-      isPinned: false,
-      avatar: "https://via.placeholder.com/40",
-    },
   ];
 
   return (
@@ -395,15 +555,25 @@ export default function ClubScreen() {
               </TouchableOpacity>
 
               {isAdmin ? (
-                <Button
-                  onPress={() =>
-                    (navigation as any).navigate("EditClub", { club })
-                  }
-                  viewStyle={styles.joinButton}
-                  smallText={true}
-                >
-                  Edit Club
-                </Button>
+                <View style={styles.adminActions}>
+                  <Button
+                    onPress={() =>
+                      (navigation as any).navigate("EditClub", { club })
+                    }
+                    viewStyle={[styles.adminButton, styles.editButton]}
+                    smallText={true}
+                  >
+                    Edit
+                  </Button>
+                  <Button
+                    onPress={() => setShowDeleteAlert(true)}
+                    viewStyle={[styles.adminButton, styles.deleteButton]}
+                    smallText={true}
+                    outline={true}
+                  >
+                    Delete
+                  </Button>
+                </View>
               ) : (
                 <Button
                   onPress={handleFollowToggle}
@@ -445,21 +615,41 @@ export default function ClubScreen() {
           {renderTabButton("about", "About")}
         </Animated.View>
 
-        {/* Trending Hashtags */}
-        <View style={styles.hashtagsSection}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {trendingHashtags.map(renderHashtag)}
-          </ScrollView>
-        </View>
-
-        {/* Posts Feed */}
-        <View style={styles.postsSection}>
-          {mockPosts.map((post, index) => renderPost(post, index))}
-        </View>
+        {/* Tab Content */}
+        {activeTab === "posts" && renderPostsTab()}
+        {activeTab === "media" && renderMediaTab()}
+        {activeTab === "about" && renderAboutTab()}
 
         {/* Bottom spacing */}
         <View style={{ height: 300 }} />
       </ScrollView>
+
+      {/* Delete Confirmation Alert */}
+      <CampuslyAlert
+        isVisible={showDeleteAlert}
+        type="error"
+        onClose={() => setShowDeleteAlert(false)}
+        messages={{
+          success: {
+            title: "Club Deleted! 🗑️",
+            message: "The club has been successfully deleted.",
+            icon: "🎉",
+          },
+          error: {
+            title: "Delete Club? 🗑️",
+            message:
+              "This action cannot be undone. The club and all its content will be permanently deleted! 😱",
+            icon: "⚠️",
+          },
+        }}
+        onPress={handleDeleteClub}
+        onPress2={() => setShowDeleteAlert(false)}
+        buttonText="Yes, delete it"
+        buttonText2="Cancel"
+        overrideDefault={true}
+        isLoading={isDeleting}
+        loadingText="Deleting... 🗑️"
+      />
     </View>
   );
 }
@@ -627,10 +817,84 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     backgroundColor: "white",
   },
-  postContainer: {
+  // New styles for tab content
+  tabContent: {
+    flex: 1,
+  },
+  sectionTitle: {
+    fontSize: RFValue(18),
+    fontWeight: "600",
+    marginBottom: 15,
+  },
+  hashtagsContainer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  loadingContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  loadingText: {
+    fontSize: RFValue(16),
+    marginTop: 10,
+  },
+  emptyStateContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  emptyStateText: {
+    fontSize: RFValue(18),
+    fontWeight: "600",
+    marginTop: 15,
+    textAlign: "center",
+  },
+  emptyStateSubtext: {
+    fontSize: RFValue(14),
+    marginTop: 8,
+    textAlign: "center",
+    lineHeight: RFValue(20),
+  },
+  mediaSection: {
+    paddingHorizontal: 20,
+    backgroundColor: "white",
+  },
+  mediaGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingVertical: 10,
+  },
+  mediaItem: {
+    width: (width - 56) / 3,
+    height: (width - 56) / 3,
+    borderRadius: 8,
+    overflow: "hidden",
+    position: "relative",
+  },
+  mediaThumbnail: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 8,
+  },
+  videoOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  aboutSection: {
+    paddingHorizontal: 20,
+    backgroundColor: "white",
+  },
+  aboutCard: {
     backgroundColor: "white",
     borderRadius: 12,
-    padding: 15,
+    padding: 20,
     marginBottom: 15,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
@@ -638,45 +902,56 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  postHeader: {
+  aboutTitle: {
+    fontSize: RFValue(20),
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+  aboutDescription: {
+    fontSize: RFValue(16),
+    lineHeight: RFValue(24),
+  },
+  detailRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 10,
+    marginBottom: 12,
   },
-  postAvatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  postInfo: {
-    flex: 1,
-  },
-  postAuthor: {
-    fontSize: RFValue(14),
-    fontWeight: "600",
-  },
-  postHandle: {
-    fontSize: RFValue(12),
-  },
-  postTime: {
-    fontSize: RFValue(12),
-  },
-  postContent: {
+  detailText: {
     fontSize: RFValue(16),
-    lineHeight: RFValue(22),
+    marginLeft: 12,
+  },
+  adminCard: {
+    backgroundColor: "white",
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 15,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: Colors.PRIMARY,
+  },
+  adminTitle: {
+    fontSize: RFValue(18),
+    fontWeight: "600",
     marginBottom: 15,
   },
-  postStats: {
-    flexDirection: "row",
-    justifyContent: "space-around",
+  adminButton: {
+    width: "100%",
   },
-  statItem: {
+  adminActions: {
     flexDirection: "row",
-    alignItems: "center",
+    gap: 8,
   },
-  statText: {
-    fontSize: RFValue(12),
-    marginLeft: 4,
+  editButton: {
+    width: RFValue(80),
+    height: RFValue(36),
+  },
+  deleteButton: {
+    width: RFValue(80),
+    height: RFValue(36),
+    borderColor: "#FF6B6B",
   },
 });

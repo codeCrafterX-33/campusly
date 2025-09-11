@@ -9,6 +9,7 @@ const PostContext = createContext<any>({
   postMedia: [],
   setPosts: () => {},
   getPosts: () => {},
+  deletePost: () => {},
   refreshing: false,
   onRefresh: () => {},
   getUserPosts: () => {},
@@ -101,10 +102,46 @@ function PostProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const deletePost = async (postId: number, userId: number) => {
+    try {
+      const response = await axios.delete(
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/post/${postId}`,
+        {
+          data: { user_id: userId },
+        }
+      );
+
+      if (response.status === 200) {
+        // Remove the post from local state
+        setPosts((prevPosts: any[]) =>
+          prevPosts.filter((post) => post.id !== postId)
+        );
+        setUserPosts((prevPosts: any[]) =>
+          prevPosts.filter((post) => post.id !== postId)
+        );
+
+        Toast.show({
+          type: "success",
+          text1: "Post deleted successfully",
+        });
+        return true;
+      }
+    } catch (error) {
+      console.error("Error deleting post:", error);
+      Toast.show({
+        type: "error",
+        text1: "Failed to delete post",
+        text2: "Please try again",
+      });
+      return false;
+    }
+  };
+
   const value = {
     posts: posts,
     setPosts: setPosts,
     getPosts: GetPosts,
+    deletePost: deletePost,
     refreshing: refreshing,
     onRefresh: onRefresh,
     getUserPosts: GetUserPosts,

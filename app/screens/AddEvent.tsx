@@ -7,6 +7,9 @@ import {
   Image,
   TextInput,
   Keyboard,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from "react-native";
 import React, { useLayoutEffect, useState, useEffect } from "react";
 import moment from "moment";
@@ -30,8 +33,6 @@ import { DrawerNavigationProp } from "@react-navigation/drawer";
 import { useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
 import DateTimePicker from "@react-native-community/datetimepicker";
-
-import { Platform } from "react-native";
 import Button from "../components/ui/Button";
 
 interface UploadResponse {
@@ -348,7 +349,7 @@ export default function AddEvent() {
 
   const pickImage = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: "images",
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 4],
       quality: 0.5,
@@ -440,151 +441,167 @@ export default function AddEvent() {
   }, [navigation, colors, onPostBtnClick, loading, isEditing]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Editing Indicator */}
-      {isEditing && (
-        <View style={styles.editingIndicator}>
-          <Ionicons name="create-outline" size={16} color={Colors.PRIMARY} />
-          <Text style={styles.editingText}>Editing Event</Text>
-        </View>
-      )}
+    <KeyboardAvoidingView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Editing Indicator */}
+        {isEditing && (
+          <View style={styles.editingIndicator}>
+            <Ionicons name="create-outline" size={16} color={Colors.PRIMARY} />
+            <Text style={styles.editingText}>Editing Event</Text>
+          </View>
+        )}
 
-      <TouchableOpacity onPress={pickImage}>
-        {eventImage ? (
-          <Image source={{ uri: eventImage }} style={styles.image} />
-        ) : (
-          <Image
-            source={require("../assets/images/image.png")}
-            style={[
-              styles.image,
+        <TouchableOpacity onPress={pickImage}>
+          {eventImage ? (
+            <Image source={{ uri: eventImage }} style={styles.image} />
+          ) : (
+            <Image
+              source={require("../assets/images/image.png")}
+              style={[
+                styles.image,
+                {
+                  borderColor: imageError ? "red" : Colors.PRIMARY,
+                  borderWidth: 2,
+                },
+              ]}
+            />
+          )}
+        </TouchableOpacity>
+        {imageError && <Text style={styles.errorText}>{imageError}</Text>}
+        <Text style={styles.helperText}>
+          {isEditing
+            ? "Tap to change banner image"
+            : "Recommended: Square image, max 5MB"}
+        </Text>
+
+        <TextInput
+          placeholder="Event Name"
+          placeholderTextColor={Colors.GRAY}
+          style={[
+            styles.eventInput,
+            {
+              backgroundColor: colors.background,
+              color: colors.onBackground,
+              borderColor: nameError ? "red" : "transparent",
+              borderWidth: nameError ? 1 : 0,
+            },
+          ]}
+          value={eventName}
+          onChangeText={handleNameChange}
+          maxLength={30}
+          autoCapitalize="words"
+          autoFocus={!isEditing}
+        />
+        {nameError && <Text style={styles.errorText}>{nameError}</Text>}
+
+        <TextInput
+          placeholder="Location"
+          placeholderTextColor={Colors.GRAY}
+          style={[
+            styles.eventInput,
+            {
+              backgroundColor: colors.background,
+              color: colors.onBackground,
+              borderColor: locationError ? "red" : "transparent",
+              borderWidth: locationError ? 1 : 0,
+            },
+          ]}
+          value={eventLocation}
+          onChangeText={handleLocationChange}
+          maxLength={30}
+        />
+        {locationError && <Text style={styles.errorText}>{locationError}</Text>}
+
+        <TextInput
+          placeholder="Event Link"
+          placeholderTextColor={Colors.GRAY}
+          style={[
+            styles.eventInput,
+            {
+              backgroundColor: colors.background,
+              color: colors.onBackground,
+              borderColor: linkError ? "red" : "transparent",
+              borderWidth: linkError ? 1 : 0,
+            },
+          ]}
+          value={eventLink}
+          onChangeText={handleLinkChange}
+          maxLength={30}
+        />
+        {linkError && <Text style={styles.errorText}>{linkError}</Text>}
+
+        <View style={styles.dateTimeRow}>
+          <Button
+            viewStyle={[
+              styles.dateTimeButton,
               {
-                borderColor: imageError ? "red" : Colors.PRIMARY,
-                borderWidth: 2,
+                borderColor: eventDateError ? "red" : Colors.PRIMARY,
               },
             ]}
+            textStyle={{ color: eventDateError ? "red" : Colors.PRIMARY }}
+            outline
+            onPress={() => showDatePicker()}
+          >
+            <Text>
+              {eventDate
+                ? eventDate.toLocaleDateString([], {
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
+                  })
+                : "Select Date"}
+            </Text>
+          </Button>
+
+          <Button
+            viewStyle={[
+              styles.dateTimeButton,
+              {
+                borderColor: eventTimeError ? "red" : Colors.PRIMARY,
+              },
+            ]}
+            textStyle={{ color: eventTimeError ? "red" : Colors.PRIMARY }}
+            outline
+            onPress={() => showTimePicker()}
+          >
+            <Text>
+              {eventTime
+                ? eventTime.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })
+                : "Select Time"}
+            </Text>
+          </Button>
+        </View>
+
+        {openDatePicker && (
+          <DateTimePicker
+            value={eventDate || new Date()}
+            mode={"date"}
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            is24Hour={true}
+            onChange={onDateChange}
           />
         )}
-      </TouchableOpacity>
-      {imageError && <Text style={styles.errorText}>{imageError}</Text>}
-      <Text style={styles.helperText}>
-        {isEditing
-          ? "Tap to change banner image"
-          : "Recommended: Square image, max 5MB"}
-      </Text>
-
-      <TextInput
-        placeholder="Event Name"
-        placeholderTextColor={Colors.GRAY}
-        style={[
-          styles.eventInput,
-          {
-            backgroundColor: colors.background,
-            color: colors.onBackground,
-            borderColor: nameError ? "red" : "transparent",
-            borderWidth: nameError ? 1 : 0,
-          },
-        ]}
-        value={eventName}
-        onChangeText={handleNameChange}
-        maxLength={30}
-        autoCapitalize="words"
-        autoFocus={!isEditing}
-      />
-      {nameError && <Text style={styles.errorText}>{nameError}</Text>}
-
-      <TextInput
-        placeholder="Location"
-        placeholderTextColor={Colors.GRAY}
-        style={[
-          styles.eventInput,
-          {
-            backgroundColor: colors.background,
-            color: colors.onBackground,
-            borderColor: locationError ? "red" : "transparent",
-            borderWidth: locationError ? 1 : 0,
-          },
-        ]}
-        value={eventLocation}
-        onChangeText={handleLocationChange}
-        maxLength={30}
-      />
-      {locationError && <Text style={styles.errorText}>{locationError}</Text>}
-
-      <TextInput
-        placeholder="Event Link"
-        placeholderTextColor={Colors.GRAY}
-        style={[
-          styles.eventInput,
-          {
-            backgroundColor: colors.background,
-            color: colors.onBackground,
-            borderColor: linkError ? "red" : "transparent",
-            borderWidth: linkError ? 1 : 0,
-          },
-        ]}
-        value={eventLink}
-        onChangeText={handleLinkChange}
-        maxLength={30}
-      />
-      {linkError && <Text style={styles.errorText}>{linkError}</Text>}
-
-      <Button
-        viewStyle={{
-          width: "100%",
-          borderColor: eventDateError ? "red" : Colors.PRIMARY,
-        }}
-        textStyle={{ color: eventDateError ? "red" : Colors.PRIMARY }}
-        outline
-        onPress={() => showDatePicker()}
-      >
-        <Text>
-          {eventDate
-            ? eventDate.toLocaleDateString([], {
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })
-            : "Select Date"}
-        </Text>
-      </Button>
-
-      <Button
-        viewStyle={{
-          width: "100%",
-          borderColor: eventTimeError ? "red" : Colors.PRIMARY,
-        }}
-        textStyle={{ color: eventTimeError ? "red" : Colors.PRIMARY }}
-        outline
-        onPress={() => showTimePicker()}
-      >
-        <Text>
-          {eventTime
-            ? eventTime.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "Select Time"}
-        </Text>
-      </Button>
-
-      {openDatePicker && (
-        <DateTimePicker
-          value={eventDate || new Date()}
-          mode={"date"}
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          is24Hour={true}
-          onChange={onDateChange}
-        />
-      )}
-      {openTimePicker && (
-        <DateTimePicker
-          value={eventTime || new Date()}
-          mode={"time"}
-          display={Platform.OS === "ios" ? "spinner" : "default"}
-          onChange={onTimeChange}
-        />
-      )}
-    </View>
+        {openTimePicker && (
+          <DateTimePicker
+            value={eventTime || new Date()}
+            mode={"time"}
+            display={Platform.OS === "ios" ? "spinner" : "default"}
+            onChange={onTimeChange}
+          />
+        )}
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -592,7 +609,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     width: "100%",
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: RFValue(15),
+    paddingBottom: RFValue(100), // Extra padding to ensure buttons are visible above keyboard
   },
   editingIndicator: {
     flexDirection: "row",
@@ -658,5 +679,14 @@ const styles = StyleSheet.create({
     fontSize: RFValue(12),
     marginTop: 5,
     marginLeft: 5,
+  },
+  dateTimeRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: RFValue(10),
+    gap: RFValue(10),
+  },
+  dateTimeButton: {
+    flex: 1,
   },
 });

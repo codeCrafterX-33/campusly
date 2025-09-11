@@ -7,6 +7,7 @@ import {
   Pressable,
   Dimensions,
   Modal,
+  ActivityIndicator,
 } from "react-native";
 import React, { useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
@@ -17,6 +18,7 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/StackNavigator";
 import Colors from "../../constants/Colors";
 import UserAvatar from "./Useravatar";
+import CampuslyAlert from "../CampuslyAlert";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -74,7 +76,7 @@ interface Comment {
   firstname: string;
   lastname: string;
   username: string;
-  user_image: string;
+  image: string;
   studentstatusverified: boolean;
   like_count: number;
   comment_count?: number;
@@ -112,9 +114,23 @@ const CommentCard = ({
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const [showReplies, setShowReplies] = useState(false);
-  const maxDepth = 2;
+  // No depth restrictions - allow infinite nesting like Twitter
+
+  const confirmDeleteComment = async () => {
+    setLoading(true);
+    try {
+      onDelete?.(comment.id);
+      setShowDeleteAlert(false);
+    } catch (err) {
+      console.error("Error deleting comment:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!comment) return null;
 
@@ -126,10 +142,10 @@ const CommentCard = ({
   const fullName = `${comment.firstname} ${comment.lastname}`;
   const userName = comment.username;
   const content = comment.content || "";
-  const image = comment.user_image || "https://via.placeholder.com/50";
+  const image = comment.image || "https://via.placeholder.com/50";
   const createdon = comment.createdon || new Date().toISOString();
   const isReply = depth > 0;
-  const canReply = depth < maxDepth - 1;
+  const canReply = true; // Allow infinite nesting like Twitter
 
   // Parse media from JSONB
   let media: any[] = [];
@@ -161,7 +177,7 @@ const CommentCard = ({
               firstname: comment.firstname,
               lastname: comment.lastname,
               username: comment.username,
-              user_image: comment.user_image,
+              image: comment.image,
               studentstatusverified: comment.studentstatusverified,
               like_count: comment.like_count,
               comment_count: comment.comment_count || 0,
@@ -173,7 +189,12 @@ const CommentCard = ({
       activeOpacity={0.7}
     >
       {/* Comment Content */}
-      <View style={[styles.commentContent, { marginLeft: depth * 16 }]}>
+      <View
+        style={[
+          styles.commentContent,
+          { marginLeft: Math.min(depth * 16, 80) },
+        ]}
+      >
         {/* User Info Row */}
         <View style={styles.userInfoRow}>
           <Image source={{ uri: image }} style={styles.profilePicture} />
@@ -253,16 +274,34 @@ const CommentCard = ({
                   style={styles.mediaItem}
                   onPress={(e) => {
                     e.stopPropagation();
-                    setPreviewIndex(index);
-                    setMediaModalVisible(true);
+                    if (!item.isUploading) {
+                      setPreviewIndex(index);
+                      setMediaModalVisible(true);
+                    }
                   }}
                 >
                   {type === "image" ? (
-                    <Image
-                      source={{ uri: item.url }}
-                      style={styles.mediaImage}
-                      resizeMode="cover"
-                    />
+                    <View style={{ position: "relative" }}>
+                      <Image
+                        source={{ uri: item.url }}
+                        style={[
+                          styles.mediaImage,
+                          item.isUploading && { opacity: 0.7 },
+                        ]}
+                        resizeMode="cover"
+                      />
+                      {item.isUploading && (
+                        <View
+                          style={[styles.uploadingOverlay, styles.mediaImage]}
+                        >
+                          <ActivityIndicator
+                            size="small"
+                            color={Colors.PRIMARY}
+                          />
+                          <Text style={styles.uploadingText}>Uploading...</Text>
+                        </View>
+                      )}
+                    </View>
                   ) : type === "video" ? (
                     <View style={styles.videoContainer}>
                       <Image
@@ -272,7 +311,10 @@ const CommentCard = ({
                             "/upload/w_200,h_200,c_fill,q_auto,f_jpg/"
                           ),
                         }}
-                        style={styles.mediaImage}
+                        style={[
+                          styles.mediaImage,
+                          item.isUploading && { opacity: 0.7 },
+                        ]}
                         resizeMode="cover"
                       />
                       <View style={styles.videoOverlay}>
@@ -282,6 +324,17 @@ const CommentCard = ({
                           color="white"
                         />
                       </View>
+                      {item.isUploading && (
+                        <View
+                          style={[styles.uploadingOverlay, styles.mediaImage]}
+                        >
+                          <ActivityIndicator
+                            size="small"
+                            color={Colors.PRIMARY}
+                          />
+                          <Text style={styles.uploadingText}>Uploading...</Text>
+                        </View>
+                      )}
                     </View>
                   ) : null}
                 </Pressable>
@@ -362,41 +415,7 @@ const CommentCard = ({
         </View>
 
         {/* Replies Toggle */}
-        {comment.replies && comment.replies.length > 0 && (
-          <TouchableOpacity
-            style={styles.repliesToggle}
-            onPress={() => setShowReplies(!showReplies)}
-          >
-            <Ionicons
-              name={showReplies ? "chevron-up" : "chevron-down"}
-              size={16}
-              color={Colors.GRAY}
-            />
-            <Text style={[styles.repliesText, { color: Colors.GRAY }]}>
-              {showReplies ? "Hide" : "Show"} {comment.replies.length} replies
-            </Text>
-          </TouchableOpacity>
-        )}
       </View>
-
-      {/* Nested Replies */}
-      {showReplies && comment.replies && comment.replies.length > 0 && (
-        <View style={styles.repliesContainer}>
-          {comment.replies.map((reply) => (
-            <CommentCard
-              key={reply.id}
-              comment={reply}
-              depth={depth + 1}
-              onLike={onLike}
-              onReply={onReply}
-              onDelete={onDelete}
-              onCommentPress={onCommentPress}
-              isOwner={reply.user_id === comment.user_id}
-              isLiked={false} // TODO: Implement liked state
-            />
-          ))}
-        </View>
-      )}
 
       {/* Options Modal */}
       <Modal
@@ -423,7 +442,7 @@ const CommentCard = ({
                   style={styles.modalOption}
                   onPress={() => {
                     setOptionsModalVisible(false);
-                    onDelete?.(comment.id);
+                    setShowDeleteAlert(true);
                   }}
                 >
                   <Ionicons name="trash-outline" size={24} color="#FF6B6B" />
@@ -510,6 +529,33 @@ const CommentCard = ({
           )}
         </View>
       </Modal>
+
+      {/* Delete Confirmation Alert */}
+      <CampuslyAlert
+        isVisible={showDeleteAlert}
+        type="error"
+        onClose={() => setShowDeleteAlert(false)}
+        messages={{
+          success: {
+            title: "Comment Deleted! 🗑️",
+            message: "Your comment has been successfully deleted.",
+            icon: "🎉",
+          },
+          error: {
+            title: "Delete Comment? 🗑️",
+            message:
+              "This action cannot be undone. Your comment will be permanently deleted! 😱",
+            icon: "⚠️",
+          },
+        }}
+        onPress={confirmDeleteComment}
+        onPress2={() => setShowDeleteAlert(false)}
+        buttonText="Yes, delete it"
+        buttonText2="Cancel"
+        overrideDefault={true}
+        isLoading={loading}
+        loadingText="Deleting... 🗑️"
+      />
     </TouchableOpacity>
   );
 };
@@ -665,6 +711,9 @@ const styles = StyleSheet.create({
   repliesContainer: {
     marginTop: 8,
     paddingLeft: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.PRIMARY,
+    marginLeft: 8,
   },
   // Modal styles
   modalOverlay: {
@@ -748,5 +797,24 @@ const styles = StyleSheet.create({
   },
   activeDot: {
     backgroundColor: "white",
+  },
+
+  uploadingOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 8,
+  },
+
+  uploadingText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "600",
+    marginTop: 4,
   },
 });

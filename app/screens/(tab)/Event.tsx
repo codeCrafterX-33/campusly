@@ -237,7 +237,7 @@ export default function EventView({ navigation }: EventViewProps) {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Modern Header with Gradient */}
       <LinearGradient
-        colors={[Colors.PRIMARY, Colors.PRIMARY + "CC"]}
+        colors={[Colors.PRIMARY, Colors.GRAY]}
         style={styles.headerGradient}
       >
         <View style={styles.header}>
@@ -515,8 +515,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerGradient: {
-    paddingTop: 50,
-    paddingBottom: 20,
+    paddingTop: 10,
+    paddingBottom: 15,
     borderBottomLeftRadius: 25,
     borderBottomRightRadius: 25,
     elevation: 8,

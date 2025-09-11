@@ -37,13 +37,12 @@ export default function AddPost() {
     return () => backHandler.remove();
   }, [navigation]);
 
-   
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <UserAvatar
         name={userData?.name}
         image={userData?.image}
-        date="Now"
+        date={new Date().toISOString()}
         style={{ backgroundColor: colors.background }}
       />
       <WritePost />

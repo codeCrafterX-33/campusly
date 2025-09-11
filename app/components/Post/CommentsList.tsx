@@ -24,7 +24,8 @@ interface Comment {
   firstname: string;
   lastname: string;
   username: string;
-  user_image: string;
+  image: string;
+
   studentstatusverified: boolean;
   like_count: number;
   comment_count?: number;
@@ -39,6 +40,7 @@ interface CommentsListProps {
   onReplyPress: (comment: Comment) => void;
   currentUserId?: number;
   refreshTrigger?: number; // Add this to trigger refresh from parent
+  onCommentDeleted?: (commentId: number) => void; // Callback to refresh posts when comment is deleted
 }
 
 const CommentsList = ({
@@ -47,6 +49,7 @@ const CommentsList = ({
   onReplyPress,
   currentUserId,
   refreshTrigger,
+  onCommentDeleted,
 }: CommentsListProps) => {
   const { colors } = useTheme();
   const {
@@ -140,7 +143,10 @@ const CommentsList = ({
     if (!currentUserId) return;
 
     try {
-      await contextDeleteComment(commentId, currentUserId);
+      const success = await contextDeleteComment(commentId, currentUserId);
+      if (success && onCommentDeleted) {
+        onCommentDeleted(commentId); // Pass the deleted comment ID
+      }
     } catch (err) {
       console.error("Error deleting comment:", err);
     }

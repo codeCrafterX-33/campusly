@@ -1,6 +1,14 @@
 export function Moment(date: string) {
+  if (!date) return "just now";
+
   const now = new Date();
   const past = new Date(date);
+
+  // Check if the date is valid
+  if (isNaN(past.getTime())) {
+    return "just now";
+  }
+
   const diffInSeconds = (now.getTime() - past.getTime()) / 1000;
   const diffInMinutes = Math.floor(diffInSeconds / 60);
   const diffInHours = Math.floor(diffInSeconds / 3600);
@@ -25,8 +33,16 @@ export function Moment(date: string) {
     : past.toLocaleDateString("en-US", optionsPastYear);
 }
 export function MomentWithTime(date: string) {
+  if (!date) return "just now";
+
   const now = new Date();
   const past = new Date(date);
+
+  // Check if the date is valid
+  if (isNaN(past.getTime())) {
+    return "just now";
+  }
+
   const diffInSeconds = (now.getTime() - past.getTime()) / 1000;
   const diffInMinutes = Math.floor(diffInSeconds / 60);
   const diffInHours = Math.floor(diffInSeconds / 3600);

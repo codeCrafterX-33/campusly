@@ -9,6 +9,7 @@ import {
   FlatList,
   TouchableOpacity,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import React, { useState, useRef, useContext } from "react";
 import UserAvatar from "./Useravatar";
@@ -18,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { AuthContext } from "../../context/AuthContext";
 import { PostContext } from "../../context/PostContext";
+import CampuslyAlert from "../CampuslyAlert";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/StackNavigator";
@@ -60,10 +62,12 @@ const VideoComponent = ({
 const PostCard = ({
   post,
   onCommentPress,
+  onDelete,
   clickable = true,
 }: {
   post: any;
   onCommentPress?: () => void;
+  onDelete?: (postId: number) => void;
   clickable?: boolean;
 }) => {
   const { colors } = useTheme();
@@ -71,11 +75,36 @@ const PostCard = ({
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [modalVisible, setModalVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
+  const [optionsModalVisible, setOptionsModalVisible] = useState(false);
+  const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const { userData } = useContext(AuthContext);
-  const { getPosts } = useContext(PostContext);
+  const { getPosts, deletePost } = useContext(PostContext);
   const carouselRef = useRef<FlatList>(null);
+
+  const handleDelete = (postId: number) => {
+    if (!userData?.id) return;
+    setShowDeleteAlert(true);
+  };
+
+  const confirmDeletePost = async () => {
+    if (!userData?.id || !post) return;
+
+    setLoading(true);
+    try {
+      const success = await deletePost(post.id, userData.id);
+      if (success) {
+        setShowDeleteAlert(false);
+        // Post will be automatically removed from state by the deletePost function
+        console.log("Post deleted successfully");
+      }
+    } catch (err) {
+      console.error("Error deleting post:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Comment functionality moved to dedicated CommentScreen
   if (!post) return null;
@@ -111,15 +140,26 @@ const PostCard = ({
         clickable && pressed && styles.pressedContainer,
       ]}
     >
-      <UserAvatar
-        name={name}
-        fullname={fullname}
-        username={post.username}
-        image={image}
-        date={createdon}
-        studentstatusverified={post.studentstatusverified}
-        style={{ backgroundColor: colors.background }}
-      />
+      <View style={styles.headerContainer}>
+        <UserAvatar
+          name={name}
+          fullname={fullname}
+          username={post.username}
+          image={image}
+          date={createdon}
+          studentstatusverified={post.studentstatusverified}
+          style={{ backgroundColor: colors.background }}
+        />
+        <TouchableOpacity
+          style={styles.ellipsisButton}
+          onPress={(e) => {
+            e.stopPropagation();
+            setOptionsModalVisible(true);
+          }}
+        >
+          <Ionicons name="ellipsis-vertical" size={20} color={Colors.GRAY} />
+        </TouchableOpacity>
+      </View>
 
       <View style={styles.postBody}>
         {content && (
@@ -172,12 +212,16 @@ const PostCard = ({
                   }}
                 >
                   {type === "image" ? (
-                    <Image
-                      source={{ uri: item.url }}
-                      style={
-                        useFullWidth ? styles.singleMediaItem : styles.mediaItem
-                      }
-                    />
+                    <View style={{ position: "relative" }}>
+                      <Image
+                        source={{ uri: item.url }}
+                        style={[
+                          useFullWidth
+                            ? styles.singleMediaItem
+                            : styles.mediaItem,
+                        ]}
+                      />
+                    </View>
                   ) : type === "video" ? (
                     <View style={styles.videoThumb}>
                       <Image
@@ -187,11 +231,11 @@ const PostCard = ({
                             "/upload/w_500,h_500,c_fill,q_auto,f_jpg/"
                           ),
                         }}
-                        style={
+                        style={[
                           useFullWidth
                             ? styles.singleMediaThumbnail
-                            : styles.mediaThumbnail
-                        }
+                            : styles.mediaThumbnail,
+                        ]}
                       />
                       <View style={styles.videoOverlay}>
                         <Ionicons
@@ -316,7 +360,98 @@ const PostCard = ({
         </View>
       </Modal>
 
-      {/* Comment Modal removed - now using dedicated CommentScreen */}
+      {/* Options Modal */}
+      <Modal
+        visible={optionsModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setOptionsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: colors.background },
+            ]}
+          >
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.onBackground }]}>
+                Post Options
+              </Text>
+              <TouchableOpacity
+                onPress={() => setOptionsModalVisible(false)}
+                style={styles.modalCloseButton}
+              >
+                <Ionicons name="close" size={24} color={colors.onBackground} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.modalOptions}>
+              {/* Only show delete option if user owns the post */}
+              {userData && post.user_id === userData.id && (
+                <TouchableOpacity
+                  style={styles.modalOption}
+                  onPress={() => {
+                    setOptionsModalVisible(false);
+                    handleDelete(post.id);
+                  }}
+                >
+                  <Ionicons name="trash-outline" size={24} color="#FF6B6B" />
+                  <Text style={[styles.modalOptionText, { color: "#FF6B6B" }]}>
+                    Delete Post
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              <TouchableOpacity
+                style={styles.modalOption}
+                onPress={() => {
+                  setOptionsModalVisible(false);
+                  // TODO: Add copy functionality
+                }}
+              >
+                <Ionicons
+                  name="copy-outline"
+                  size={24}
+                  color={colors.onBackground}
+                />
+                <Text
+                  style={[
+                    styles.modalOptionText,
+                    { color: colors.onBackground },
+                  ]}
+                >
+                  Copy Text
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.modalOption}
+                onPress={() => {
+                  setOptionsModalVisible(false);
+                  // TODO: Add report functionality
+                }}
+              >
+                <Ionicons
+                  name="flag-outline"
+                  size={24}
+                  color={colors.onBackground}
+                />
+                <Text
+                  style={[
+                    styles.modalOptionText,
+                    { color: colors.onBackground },
+                  ]}
+                >
+                  Report Post
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* dedicated CommentScreen */}
 
       <View style={styles.footerContainer}>
         <TouchableOpacity
@@ -346,7 +481,7 @@ const PostCard = ({
           }}
         >
           <Ionicons name="chatbubble-outline" size={20} color={Colors.GRAY} />
-          <Text style={styles.footerText}>{post.comments || 0}</Text>
+          <Text style={styles.footerText}>{post.comment_count || 0}</Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.footerItem}
@@ -368,6 +503,33 @@ const PostCard = ({
           <Ionicons name="bookmark-outline" size={20} color={Colors.GRAY} />
         </TouchableOpacity>
       </View>
+
+      {/* Delete Confirmation Alert */}
+      <CampuslyAlert
+        isVisible={showDeleteAlert}
+        type="error"
+        onClose={() => setShowDeleteAlert(false)}
+        messages={{
+          success: {
+            title: "Post Deleted! 🗑️",
+            message: "Your post has been successfully deleted.",
+            icon: "🎉",
+          },
+          error: {
+            title: "Delete Post? 🗑️",
+            message:
+              "This action cannot be undone. Your post will be permanently deleted! 😱",
+            icon: "⚠️",
+          },
+        }}
+        onPress={confirmDeletePost}
+        onPress2={() => setShowDeleteAlert(false)}
+        buttonText="Yes, delete it"
+        buttonText2="Cancel"
+        overrideDefault={true}
+        isLoading={loading}
+        loadingText="Deleting... 🗑️"
+      />
     </Pressable>
   );
 };
@@ -587,6 +749,57 @@ const styles = StyleSheet.create({
     width: 60,
     bottom: 80,
     backgroundColor: "transparent",
+  },
+
+  // Header and Options Modal Styles
+  headerContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 8,
+  },
+  ellipsisButton: {
+    padding: 8,
+    borderRadius: 20,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "flex-end",
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 34, // Safe area padding
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#E5E5E5",
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalOptions: {
+    paddingVertical: 10,
+  },
+  modalOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  modalOptionText: {
+    fontSize: 16,
+    marginLeft: 15,
+    color: "#000",
   },
 
   // Comment Modal Styles removed - now using dedicated CommentScreen

@@ -1,15 +1,37 @@
 import pool from "../db.js";
 
+// Recursive function to get all nested replies
+const getNestedReplies = async (parentId) => {
+  const repliesQuery = `
+    SELECT 
+      p.*,
+      u.firstname,
+      u.lastname,
+      u.username,
+      u.image,
+      u.studentstatusverified
+    FROM posts p
+    JOIN users u ON p.createdby = u.email
+    WHERE p.parent_post_id = $1 
+      AND p.comment_depth > 0
+    ORDER BY p.createdon ASC
+  `;
+
+  const repliesResult = await pool.query(repliesQuery, [parentId]);
+  let replies = repliesResult.rows;
+
+  // Recursively get replies for each reply
+  for (let reply of replies) {
+    reply.replies = await getNestedReplies(reply.id);
+  }
+
+  return replies;
+};
+
 // Create a new comment
 export const createComment = async (req, res) => {
-  const {
-    postId,
-    content,
-    media,
-    user_id,
-    createdby,
-    parentCommentId,
-  } = req.body;
+  const { postId, content, media, user_id, createdby, parentCommentId } =
+    req.body;
 
   // Convert postId to integer
   const postIdInt = parseInt(postId);
@@ -57,14 +79,7 @@ export const createComment = async (req, res) => {
       const parentDepth = parentComment.rows[0].comment_depth;
       commentDepth = parentDepth + 1;
 
-      // Ensure we don't exceed 2 levels
-      if (commentDepth > 2) {
-        return res.status(400).json({
-          message: "Maximum comment depth exceeded (2 levels max)",
-        });
-      }
-
-     
+      // No depth restrictions - allow infinite nesting like Twitter
     }
 
     // Create the comment
@@ -133,19 +148,19 @@ export const getComments = async (req, res) => {
     const structureResult = await pool.query(structureQuery);
     console.log("Available columns:", structureResult.rows);
 
-    // Get direct comments (depth = 1) with user info
+    // Get all comments (no depth restrictions) with user info
     const commentsQuery = `
       SELECT 
         p.*,
         u.firstname,
         u.lastname,
         u.username,
-        u.image as user_image,
+        u.image,
         u.studentstatusverified
       FROM posts p
       JOIN users u ON p.createdby = u.email
       WHERE p.parent_post_id = $1 
-        AND p.comment_depth IN (1, 2)
+        AND p.comment_depth > 0
       ORDER BY p.createdon ASC
       LIMIT $2 OFFSET $3
     `;
@@ -167,32 +182,16 @@ export const getComments = async (req, res) => {
 
     let comments = commentsResult.rows;
 
-    // If includeReplies is true, get replies for each comment
+    // If includeReplies is true, get all nested replies for each comment
     if (includeReplies === "true") {
       for (let comment of comments) {
-        const repliesQuery = `
-          SELECT 
-            p.*,
-            u.firstname,
-            u.lastname,
-            u.username,
-            u.image as user_image,
-            u.studentstatusverified
-          FROM posts p
-          JOIN users u ON p.createdby = u.email
-          WHERE p.parent_post_id = $1 
-            AND p.comment_depth = 2
-          ORDER BY p.createdon ASC
-        `;
-
-        const repliesResult = await pool.query(repliesQuery, [comment.id]);
-        comment.replies = repliesResult.rows;
+        comment.replies = await getNestedReplies(comment.id);
       }
     }
 
     // Get total count for pagination
     const countResult = await pool.query(
-      `SELECT COUNT(*) FROM posts WHERE parent_post_id = $1 AND comment_depth IN (1, 2)`,
+      `SELECT COUNT(*) FROM posts WHERE parent_post_id = $1 AND comment_depth > 0`,
       [postIdInt]
     );
 
@@ -309,6 +308,23 @@ export const deleteComment = async (req, res) => {
         `UPDATE posts SET comment_count = comment_count - 1 WHERE id = $1`,
         [commentData.parent_post_id]
       );
+    }
+
+    // If this was a reply to a comment (not a main post), also update the parent comment's count
+    if (commentData.comment_depth > 1) {
+      // Find the parent comment (the comment this was replying to)
+      const parentCommentQuery = await pool.query(
+        `SELECT id FROM posts WHERE id = $1 AND comment_depth > 0`,
+        [commentData.parent_post_id]
+      );
+
+      if (parentCommentQuery.rows.length > 0) {
+        // This was replying to a comment, update that comment's count
+        await pool.query(
+          `UPDATE posts SET comment_count = comment_count - 1 WHERE id = $1`,
+          [commentData.parent_post_id]
+        );
+      }
     }
 
     res.status(200).json({

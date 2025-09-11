@@ -22,6 +22,7 @@ import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
 import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
+import { PostContext } from "../../context/PostContext";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { CompositeNavigationProp } from "@react-navigation/native";
@@ -30,9 +31,8 @@ import { RootStackParamList, RootTabParamList } from "../../App";
 import ModalDropdown from "./ModalDropdown";
 import { useTheme } from "react-native-paper";
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { PostContext } from "../../context/PostContext";
 import { ClubContext } from "../../context/ClubContext";
-import uploadImageToCloudinary from "../../util/uploadToCloudinary";
+import { uploadMultipleMedia } from "../../util/uploadToCloudinary";
 import { postOptions } from "../../configs/CloudinaryConfig";
 import { VideoView, useVideoPlayer } from "expo-video";
 import {
@@ -180,26 +180,37 @@ export default function WritePost() {
 
   const onPostBtnClick = async () => {
     // Allow posting without content
-
     setLoading(true);
 
-    let postMedia = [];
     try {
+      let postMedia: Array<{ url: string; type: string }> = [];
+
+      // Upload media to Cloudinary in parallel
       if (selectedMediaRef.current && selectedMediaRef.current.length > 0) {
-        for (const media of selectedMediaRef.current) {
-          const uploadResponse = await uploadImageToCloudinary(
-            media.uri,
-            postOptions.folder,
-            postOptions.upload_preset,
-            media.type
-          );
-          postMedia.push({
-            url: uploadResponse,
-            type: media.type,
-          });
-        }
+        console.log(
+          `Uploading ${selectedMediaRef.current.length} media files in parallel...`
+        );
+
+        // Prepare files for parallel upload
+        const filesToUpload = selectedMediaRef.current.map((media) => ({
+          uri: media.uri,
+          type: media.type,
+        }));
+
+        // Upload all files in parallel
+        const uploadResults = await uploadMultipleMedia(filesToUpload);
+
+        // Map upload results back to media objects
+        postMedia = uploadResults.map((result, index) => ({
+          url: result.url,
+          type: result.type,
+          thumbnailUrl: result.thumbnailUrl, // Include thumbnail for videos
+        }));
+
+        console.log(`Successfully uploaded ${postMedia.length} media files`);
       }
 
+      // Create post on server
       const result = await axios.post(
         `${process.env.EXPO_PUBLIC_SERVER_URL}/post`,
         {
@@ -232,11 +243,22 @@ export default function WritePost() {
   const pickMedia = async () => {
     const MAX_MEDIA = 4;
 
+    // Request permissions for accessing all photos
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permissionResult.granted === false) {
+      alert("Permission to access camera roll is required!");
+      return;
+    }
+
     let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images", "videos"],
+      mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
       allowsMultipleSelection: true,
       quality: 0.7,
+      exif: false,
+      base64: false,
+      presentationStyle: ImagePicker.UIImagePickerPresentationStyle.AUTOMATIC,
     });
 
     if (!result.canceled) {
@@ -268,19 +290,33 @@ export default function WritePost() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <TextInput
-        ref={inputRef}
-        placeholder="What's on your mind?"
-        placeholderTextColor={Colors.GRAY}
-        style={[
-          styles.input,
-          { backgroundColor: colors.background, color: colors.onBackground },
-        ]}
-        multiline
-        numberOfLines={4}
-        maxLength={1000}
-        onChangeText={(text) => setContent(text)}
-      />
+      <View style={styles.inputContainer}>
+        <TextInput
+          ref={inputRef}
+          placeholder="What's on your mind?"
+          placeholderTextColor={Colors.GRAY}
+          style={[
+            styles.input,
+            { backgroundColor: colors.background, color: colors.onBackground },
+          ]}
+          multiline
+          numberOfLines={4}
+          maxLength={1000}
+          onChangeText={(text) => setContent(text)}
+        />
+        <View style={styles.characterCounter}>
+          <Text
+            style={[
+              styles.characterCount,
+              {
+                color: content.length > 900 ? Colors.PRIMARY : Colors.GRAY,
+              },
+            ]}
+          >
+            {content.length}/1000
+          </Text>
+        </View>
+      </View>
       <Modal visible={!!previewMedia} animationType="fade" transparent>
         <View
           style={{
@@ -398,10 +434,14 @@ export default function WritePost() {
 }
 
 const styles = StyleSheet.create({
+  inputContainer: {
+    position: "relative",
+  },
   input: {
     backgroundColor: Colors.WHITE,
     borderRadius: 15,
     padding: 10,
+    paddingBottom: 30, // Add extra padding at bottom for counter
     marginTop: 10,
     height: 150,
     textAlignVertical: "top",
@@ -411,6 +451,21 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
+  },
+  characterCounter: {
+    position: "absolute",
+    bottom: 12,
+    right: 12,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(0, 0, 0, 0.1)",
+  },
+  characterCount: {
+    fontSize: 12,
+    fontWeight: "500",
   },
   image: {
     width: 100,

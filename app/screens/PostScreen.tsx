@@ -9,9 +9,9 @@ import {
   Modal,
   FlatList,
   Pressable,
-  BackHandler,
   RefreshControl,
   Animated,
+  BackHandler,
 } from "react-native";
 import React, { useState, useRef, useContext, useEffect } from "react";
 import { useTheme } from "react-native-paper";
@@ -82,6 +82,7 @@ const PostScreen = () => {
   const [threadHistory, setThreadHistory] = useState<any[]>([]); // Track full thread history
   const [isNavigatingToCommentScreen, setIsNavigatingToCommentScreen] =
     useState(false);
+  const isNavigatingRef = useRef(false);
 
   // Animation states
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -89,7 +90,7 @@ const PostScreen = () => {
   const [isAnimating, setIsAnimating] = useState(false);
 
   const { userData } = useContext(AuthContext);
-  const { getPosts } = useContext(PostContext);
+  const { getPosts, posts } = useContext(PostContext);
   const {
     postHistory,
     addPostToHistory,
@@ -99,6 +100,7 @@ const PostScreen = () => {
     clearPersistedCache,
   } = usePostHistory();
   const carouselRef = useRef<FlatList>(null);
+  const threadListRef = useRef<FlatList>(null);
 
   // Add current post to history when component mounts
   useEffect(() => {
@@ -107,14 +109,54 @@ const PostScreen = () => {
     }
   }, [currentPost, addPostToHistory]);
 
+  // Watch for changes in posts and refresh current post
+  useEffect(() => {
+    if (posts.length > 0 && currentPost) {
+      refreshCurrentPost();
+    }
+  }, [posts, currentPost]);
+
   // Trigger initial animation when component mounts
   useEffect(() => {
     animateInitialLoad();
   }, []);
 
+  // Disable back button on PostScreen
+  useEffect(() => {
+    const backAction = () => {
+      // Return true to prevent default back behavior
+      return true;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, []);
+
   // Function to refresh comments when a new comment is posted
   const handleCommentPosted = () => {
     setRefreshTrigger((prev) => prev + 1);
+  };
+
+  // Function to update a specific comment in thread history
+  const updateThreadComment = (commentId: number, updatedData: any) => {
+    setThreadHistory((prev) => {
+      return prev.map((item) => {
+        if (item.type === "threadComment" && item.data.id === commentId) {
+          return {
+            ...item,
+            data: {
+              ...item.data,
+              ...updatedData,
+            },
+          };
+        }
+        return item;
+      });
+    });
   };
 
   // Animation functions
@@ -179,11 +221,60 @@ const PostScreen = () => {
     addPostToHistory(newPost);
   };
 
-  // Handle comment click for infinite Twitter-style threading
+  // Refresh current post data from updated posts
+  const refreshCurrentPost = () => {
+    if (currentPost && posts.length > 0) {
+      const updatedPost = posts.find((p: any) => p.id === currentPost.id);
+      if (updatedPost) {
+        setCurrentPost(updatedPost);
+
+        // Also update thread history if it contains the current post
+        setThreadHistory((prev) => {
+          return prev.map((item) => {
+            if (item.type === "post" && item.data.id === currentPost.id) {
+              return { ...item, data: updatedPost };
+            }
+            return item;
+          });
+        });
+      }
+    }
+  };
+
+  // Handle comment click for infinite threading
   const handleCommentClick = (comment: any) => {
     console.log("PostScreen - Comment clicked for threading:", comment.id);
     animateThreadTransition(() => {
       setThreadHistory((prev) => [...prev, comment]);
+      // Scroll to the specific comment that was clicked
+      setTimeout(() => {
+        const threadData = buildThreadData();
+        const commentIndex = threadData.findIndex(
+          (item) => item.type === "threadComment" && item.data.id === comment.id
+        );
+        console.log("PostScreen - Comment index found:", commentIndex);
+        if (commentIndex !== -1) {
+          try {
+            threadListRef.current?.scrollToIndex({
+              index: commentIndex,
+              animated: true,
+              viewPosition: 0, // Position at top of screen
+            });
+          } catch (error) {
+            console.log(
+              "PostScreen - ScrollToIndex error, using scrollToOffset:",
+              error
+            );
+            // Fallback to scrollToOffset
+            const estimatedItemHeight = 250;
+            const offset = commentIndex * estimatedItemHeight;
+            threadListRef.current?.scrollToOffset({
+              offset: offset,
+              animated: true,
+            });
+          }
+        }
+      }, 200); // Increased timeout to ensure animation completes
     });
   };
 
@@ -192,6 +283,37 @@ const PostScreen = () => {
     console.log("PostScreen - Back to previous thread level");
     animateThreadTransition(() => {
       setThreadHistory((prev) => prev.slice(0, -1)); // Remove last item
+      // Scroll to the last remaining comment in thread
+      setTimeout(() => {
+        const threadData = buildThreadData();
+        const lastCommentIndex = threadData.findIndex(
+          (item) => item.type === "threadComment"
+        );
+        console.log("PostScreen - Last comment index found:", lastCommentIndex);
+        if (lastCommentIndex !== -1) {
+          try {
+            threadListRef.current?.scrollToIndex({
+              index: lastCommentIndex,
+              animated: true,
+              viewPosition: 0,
+            });
+          } catch (error) {
+            console.log(
+              "PostScreen - ScrollToIndex error, using scrollToOffset:",
+              error
+            );
+            const estimatedItemHeight = 250;
+            const offset = lastCommentIndex * estimatedItemHeight;
+            threadListRef.current?.scrollToOffset({
+              offset: offset,
+              animated: true,
+            });
+          }
+        } else {
+          // If no thread comments, scroll to top
+          threadListRef.current?.scrollToOffset({ offset: 0, animated: true });
+        }
+      }, 200);
     });
   };
 
@@ -214,6 +336,10 @@ const PostScreen = () => {
       console.log("PostScreen - previousPost:", previousPost?.id);
       if (previousPost) {
         setCurrentPost(previousPost);
+        // Scroll to top when navigating to previous post
+        setTimeout(() => {
+          threadListRef.current?.scrollToOffset({ offset: 0, animated: true });
+        }, 100);
       }
     } else {
       console.log(
@@ -224,7 +350,7 @@ const PostScreen = () => {
     }
   };
 
-  // Build thread data for infinite Twitter-style threading
+  // Build thread data for infinite threading
   const buildThreadData = () => {
     const threadData = [];
 
@@ -247,48 +373,130 @@ const PostScreen = () => {
     return threadData;
   };
 
-  // Render thread items
-  const renderThreadItem = (item: any) => {
+  // Render thread items with connecting lines
+  const renderThreadItem = (item: any, index: number) => {
+    const isLastItem = index === buildThreadData().length - 1;
+    const isFirstThreadComment =
+      item.type === "threadComment" && item.level === 1;
+
     if (item.type === "post") {
       return (
-        <PostCard
-          post={item.data}
-          clickable={false}
-          onCommentPress={() => {
-            console.log(
-              "PostScreen - Navigating to CommentScreen with post:",
-              item.data.id
-            );
-            setIsNavigatingToCommentScreen(true);
-            navigation.navigate("CommentScreen", { post: item.data });
-          }}
-        />
+        <View style={styles.threadItemContainer}>
+          <View
+            style={[
+              styles.mainPostVerticalLine,
+              { backgroundColor: Colors.PRIMARY },
+            ]}
+          />
+
+          <View style={styles.mainPostContainer}>
+            <PostCard
+              post={item.data}
+              clickable={false}
+              onDelete={(postId) => {
+                // If the main post is deleted, clear thread history and go back
+                setThreadHistory([]);
+                navigation.goBack();
+              }}
+              onCommentPress={() => {
+                console.log(
+                  "PostScreen - Navigating to CommentScreen with post:",
+                  item.data.id
+                );
+                setIsNavigatingToCommentScreen(true);
+                isNavigatingRef.current = true;
+                navigation.navigate("CommentScreen", {
+                  post: item.data,
+                  onCommentPosted: (updatedComment) => {
+                    // Update the main post when a comment is posted
+                    setCurrentPost((prev: any) => ({
+                      ...prev,
+                      comment_count: (prev.comment_count || 0) + 1,
+                    }));
+                  },
+                });
+              }}
+            />
+          </View>
+
+          {/* Horizontal connecting line to next item */}
+          {!isLastItem && (
+            <View style={styles.mainPostConnectingLineContainer}>
+              <View
+                style={[
+                  styles.connectingLine,
+                  { backgroundColor: Colors.PRIMARY },
+                ]}
+              />
+            </View>
+          )}
+        </View>
       );
     } else if (item.type === "threadComment") {
       return (
-        <View
-          style={[
-            styles.threadCommentContainer,
-            { backgroundColor: colors.background },
-          ]}
-        >
-          <Text
-            style={[styles.threadCommentLabel, { color: colors.onBackground }]}
-          >
-            Replying to
-          </Text>
-          <PostCard
-            post={item.data}
-            clickable={false}
-            onCommentPress={() => {
-              console.log(
-                "PostScreen - Navigating to CommentScreen with thread comment:",
-                item.data.id
-              );
-              setIsNavigatingToCommentScreen(true);
-              navigation.navigate("CommentScreen", { post: item.data });
-            }}
+        <View style={styles.threadItemContainer}>
+          {/* Vertical line on the left */}
+          <View
+            style={[styles.verticalLine, { backgroundColor: Colors.PRIMARY }]}
           />
+
+          <View style={styles.cardContainer}>
+            <View
+              style={[
+                styles.threadCommentContainer,
+                {
+                  backgroundColor: colors.background,
+                  borderBottomColor: colors.onBackground,
+                },
+              ]}
+            >
+              <Text style={[styles.threadCommentLabel, { color: Colors.GRAY }]}>
+                Replying to{" "}
+                <Text style={{ color: Colors.PRIMARY }}>
+                  @{item.data.username || "user"}
+                </Text>
+              </Text>
+              <PostCard
+                post={item.data}
+                clickable={false}
+                onDelete={(postId) => {
+                  // If a threaded comment is deleted, remove it from thread history
+                  setThreadHistory((prev) =>
+                    prev.filter((threadItem) => threadItem.data.id !== postId)
+                  );
+                }}
+                onCommentPress={() => {
+                  console.log(
+                    "PostScreen - Navigating to CommentScreen with thread comment:",
+                    item.data.id
+                  );
+                  setIsNavigatingToCommentScreen(true);
+                  isNavigatingRef.current = true;
+                  navigation.navigate("CommentScreen", {
+                    post: item.data,
+                    onCommentPosted: (updatedComment) => {
+                      // Update the thread comment when a reply is posted
+                      updateThreadComment(item.data.id, {
+                        comment_count: (item.data.comment_count || 0) + 1,
+                      });
+                    },
+                  });
+                }}
+              />
+            </View>
+          </View>
+
+          {/* Horizontal connecting line to next item */}
+          {!isLastItem && (
+            <View style={styles.connectingLineContainer}>
+              <View
+                style={[
+                  styles.connectingLine,
+                  { backgroundColor: Colors.PRIMARY },
+                ]}
+              />
+            </View>
+          )}
         </View>
       );
     } else if (item.type === "comments") {
@@ -311,8 +519,18 @@ const PostScreen = () => {
           <CommentsList
             postId={currentThreadPost.id}
             onCommentPress={(comment) => {
-              // For infinite Twitter-style threading, clicking a comment adds it to thread history
+              // For infinite threading, clicking a comment adds it to thread history
               handleCommentClick(comment);
+            }}
+            onCommentDeleted={(deletedCommentId) => {
+              // When a comment is deleted, check if it's in the thread history and remove it
+              setThreadHistory((prev) => {
+                const updatedHistory = prev.filter(
+                  (threadItem) => threadItem.data.id !== deletedCommentId
+                );
+                // If we removed an item, we might need to adjust the current view
+                return updatedHistory;
+              });
             }}
             onReplyPress={(comment) => {
               console.log(
@@ -320,9 +538,16 @@ const PostScreen = () => {
                 comment.id
               );
               setIsNavigatingToCommentScreen(true);
+              isNavigatingRef.current = true;
               navigation.navigate("CommentScreen", {
                 post: comment,
                 parentComment: comment.parent_post_id,
+                onCommentPosted: (updatedComment) => {
+                  // Update the thread comment when a reply is posted
+                  updateThreadComment(comment.id, {
+                    comment_count: (comment.comment_count || 0) + 1,
+                  });
+                },
               });
             }}
             currentUserId={userData?.id}
@@ -365,10 +590,10 @@ const PostScreen = () => {
       return () => {
         console.log(
           "PostScreen - useFocusEffect cleanup, isNavigatingToCommentScreen:",
-          isNavigatingToCommentScreen
+          isNavigatingRef.current
         );
         // Only clear history if we're not navigating to CommentScreen
-        if (!isNavigatingToCommentScreen) {
+        if (!isNavigatingRef.current) {
           console.log(
             "PostScreen - Clearing persisted post history and thread history"
           );
@@ -379,30 +604,20 @@ const PostScreen = () => {
             "PostScreen - Preserving history (navigating to CommentScreen)"
           );
         }
-        // Reset the flag
-        setIsNavigatingToCommentScreen(false);
       };
-    }, [clearPersistedCache, isNavigatingToCommentScreen])
+    }, [clearPersistedCache])
+  );
+
+  // Reset navigation flag when screen comes into focus (returning from CommentScreen)
+  useFocusEffect(
+    React.useCallback(() => {
+      // Reset the flag when returning to PostScreen
+      setIsNavigatingToCommentScreen(false);
+      isNavigatingRef.current = false;
+    }, [])
   );
 
   // Handle back button behavior
-  useEffect(() => {
-    const backAction = () => {
-      if (modalVisible) {
-        setModalVisible(false);
-        return true; // Prevent default behavior
-      }
-      handleBackNavigation();
-      return true; // Prevent default behavior
-    };
-
-    const backHandler = BackHandler.addEventListener(
-      "hardwareBackPress",
-      backAction
-    );
-
-    return () => backHandler.remove();
-  }, [navigation, modalVisible, canGoBack, goBackToPreviousPost]);
 
   if (!currentPost) return null;
 
@@ -443,9 +658,10 @@ const PostScreen = () => {
         ]}
       >
         <FlatList
+          ref={threadListRef}
           data={buildThreadData()}
           keyExtractor={(item, index) => `${item.type}-${item.id || index}`}
-          renderItem={({ item }) => renderThreadItem(item)}
+          renderItem={({ item, index }) => renderThreadItem(item, index)}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl
@@ -601,7 +817,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.GRAY + "20",
   },
   threadCommentLabel: {
     fontSize: 14,
@@ -611,6 +826,53 @@ const styles = StyleSheet.create({
   },
   animatedContainer: {
     flex: 1,
+  },
+  threadItemContainer: {
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "flex-start",
+  },
+  verticalLine: {
+    width: 2,
+    position: "absolute",
+    left: 20,
+    top: 0,
+    bottom: 0,
+    opacity: 0.3,
+  },
+  mainPostVerticalLine: {
+    width: 2,
+    position: "absolute",
+    left: 20,
+    top: -10,
+    bottom: 0,
+    opacity: 0.3,
+  },
+  mainPostContainer: {
+    flex: 1,
+    marginLeft: 20,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.PRIMARY,
+    paddingLeft: 12,
+  },
+  cardContainer: {
+    flex: 1,
+    marginLeft: 40,
+  },
+  mainPostConnectingLineContainer: {
+    alignItems: "center",
+    marginVertical: 4,
+    marginLeft: 20,
+  },
+  connectingLineContainer: {
+    alignItems: "center",
+    marginVertical: 4,
+    marginLeft: 40,
+  },
+  connectingLine: {
+    height: 1,
+    width: "60%",
+    opacity: 0.4,
   },
   noCommentsText: {
     fontSize: 16,

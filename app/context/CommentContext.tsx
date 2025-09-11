@@ -12,9 +12,10 @@ interface Comment {
   firstname: string;
   lastname: string;
   username: string;
-  user_image: string;
+  image: string;
   studentstatusverified: boolean;
   like_count: number;
+  comment_count?: number;
   comment_depth: number;
   parent_post_id: number;
   replies?: Comment[];
@@ -192,17 +193,38 @@ export const CommentProvider: React.FC<CommentProviderProps> = ({
           }
         );
 
-        // Remove the comment from state
+        // Remove the comment from state and update parent comment counts
         setComments((prev) => {
           const newComments = { ...prev };
           Object.keys(newComments).forEach((postId) => {
-            newComments[parseInt(postId)] = newComments[
-              parseInt(postId)
-            ].filter((comment) => comment.id !== commentId);
+            newComments[parseInt(postId)] = newComments[parseInt(postId)]
+              .map((comment) => {
+                // If this comment has replies, check if any were deleted
+                if (comment.replies && comment.replies.length > 0) {
+                  const updatedReplies = comment.replies.filter(
+                    (reply) => reply.id !== commentId
+                  );
+                  if (updatedReplies.length !== comment.replies.length) {
+                    // A reply was deleted, update the comment count
+                    return {
+                      ...comment,
+                      replies: updatedReplies,
+                      comment_count: Math.max(
+                        0,
+                        (comment.comment_count || 0) - 1
+                      ),
+                    };
+                  }
+                }
+                return comment;
+              })
+              .filter((comment) => comment.id !== commentId);
           });
           return newComments;
         });
 
+        // Trigger a refresh of posts to update comment counts
+        // This will be handled by the parent component that uses both contexts
         return true;
       } catch (err) {
         console.error("Error deleting comment:", err);
