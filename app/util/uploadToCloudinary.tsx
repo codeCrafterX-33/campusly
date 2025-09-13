@@ -31,7 +31,7 @@ const generateVideoThumbnail = async (
   }
 };
 
-// Compress video using Cloudinary's built-in compression
+// Process video for upload (generate thumbnail, no client-side compression)
 const compressVideo = async (
   fileUri: string
 ): Promise<{ videoUri: string; thumbnailUri?: string }> => {
@@ -43,9 +43,9 @@ const compressVideo = async (
     // Generate thumbnail for faster preview
     const thumbnailUri = await generateVideoThumbnail(fileUri);
 
-    // For now, we'll use the original video and let Cloudinary handle compression
-    // In the future, we could add client-side compression here
-    console.log("Video processing completed (using Cloudinary compression)");
+    // Note: Client-side video compression is complex and not easily achievable with current Expo setup
+    // We rely on Cloudinary's server-side compression for videos
+    console.log("Video processing completed (using server-side compression)");
     return { videoUri: fileUri, thumbnailUri };
   } catch (error) {
     console.error("Video processing failed:", error);
@@ -63,7 +63,7 @@ const uploadVideoWithThumbnail = async (fileUri: string) => {
     // Generate thumbnail first
     const thumbnailUri = await generateVideoThumbnail(fileUri);
 
-    // Upload thumbnail first (smaller, faster)
+    // Upload thumbnail first (smaller, faster) - compress it
     let thumbnailUrl = null;
     if (thumbnailUri) {
       console.log("Uploading video thumbnail...");
@@ -71,7 +71,7 @@ const uploadVideoWithThumbnail = async (fileUri: string) => {
       console.log("Video thumbnail uploaded successfully");
     }
 
-    // Upload video (larger, slower)
+    // Upload video (larger, slower) - this will apply compression
     console.log("Uploading video file...");
     const videoUrl = await uploadToCloudinary(fileUri, "video");
 
@@ -101,7 +101,7 @@ const uploadToCloudinary = async (
       const manipResult = await ImageManipulator.manipulateAsync(
         fileUri,
         [{ resize: { width: 1080 } }], // resize to max width
-        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+        { compress: 0.6, format: ImageManipulator.SaveFormat.JPEG } // More aggressive compression
       );
       uri = manipResult.uri;
       console.log("Image compressed successfully");
@@ -133,10 +133,10 @@ const uploadToCloudinary = async (
     // Add video compression parameters for Cloudinary
     if (type === "video") {
       formData.append("resource_type", "video");
-      formData.append("chunk_size", "6000000"); // 6MB chunks for better upload
-      formData.append("quality", "auto"); // Auto quality optimization
+      formData.append("chunk_size", "5000000"); // 5MB chunks for better upload
+      formData.append("quality", "auto:low"); // More aggressive quality optimization
       formData.append("fetch_format", "auto"); // Auto format optimization
-      // Note: Eager transformations not allowed with unsigned uploads
+      // Note: transformation parameter not allowed with unsigned uploads
       // Video compression will be handled by Cloudinary's auto-optimization
     }
 
@@ -222,17 +222,18 @@ export const uploadMultipleMedia = async (
             success: true,
             url: result.videoUrl,
             thumbnailUrl: result.thumbnailUrl,
+            type: file.type,
             index,
           };
         } else {
-          // Regular image upload
+          // Regular image upload with compression
           const url = await uploadToCloudinary(file.uri, file.type);
           console.log(`File ${index + 1} uploaded successfully`);
-          return { success: true, url, index };
+          return { success: true, url, type: file.type, index };
         }
       } catch (error) {
         console.error(`File ${index + 1} upload failed:`, error);
-        return { success: false, error, index };
+        return { success: false, error, type: file.type, index };
       }
     });
 

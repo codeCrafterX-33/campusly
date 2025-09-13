@@ -191,13 +191,19 @@ export default function WritePost() {
           `Uploading ${selectedMediaRef.current.length} media files in parallel...`
         );
 
+        // Show progress toast
+        Toast.show({
+          text1: `Uploading ${selectedMediaRef.current.length} media files...`,
+          type: "info",
+        });
+
         // Prepare files for parallel upload
         const filesToUpload = selectedMediaRef.current.map((media) => ({
           uri: media.uri,
           type: media.type,
         }));
 
-        // Upload all files in parallel
+        // Upload all files in parallel using Promise.all
         const uploadResults = await uploadMultipleMedia(filesToUpload);
 
         // Map upload results back to media objects
@@ -255,7 +261,7 @@ export default function WritePost() {
       mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
       allowsMultipleSelection: true,
-      quality: 0.7,
+      quality: 0.6, // Reduced quality for faster initial processing
       exif: false,
       base64: false,
       presentationStyle: ImagePicker.UIImagePickerPresentationStyle.AUTOMATIC,

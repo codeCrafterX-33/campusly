@@ -251,26 +251,8 @@ export default function ClubScreen() {
     </TouchableOpacity>
   );
 
-  const renderHashtag = (hashtag: string) => (
-    <TouchableOpacity key={hashtag} style={styles.hashtagContainer}>
-      <Text style={styles.hashtagText}>#{hashtag}</Text>
-    </TouchableOpacity>
-  );
-
-  const renderTrendingHashtags = () => (
-    <View style={styles.hashtagsSection}>
-      <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>
-        Trending Hashtags
-      </Text>
-      <View style={styles.hashtagsContainer}>
-        {trendingHashtags.map(renderHashtag)}
-      </View>
-    </View>
-  );
-
   const renderPostsTab = () => (
     <View style={styles.tabContent}>
-      {renderTrendingHashtags()}
       <View style={styles.postsSection}>
         {isLoadingPosts ? (
           <View style={styles.loadingContainer}>
@@ -457,15 +439,6 @@ export default function ClubScreen() {
     </View>
   );
 
-  const trendingHashtags = [
-    "nigeria",
-    "naija",
-    "Nigerian",
-    "nigerians",
-    "ng",
-    "ngr",
-  ];
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar
@@ -517,6 +490,8 @@ export default function ClubScreen() {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        scrollEventThrottle={16}
         onScroll={(event) => {
           const scrollY = event.nativeEvent.contentOffset.y;
           const tabsThreshold = 450; // Threshold when main tabs are completely out of view
@@ -536,7 +511,6 @@ export default function ClubScreen() {
             setIsTabsSticky(false);
           }
         }}
-        scrollEventThrottle={32}
       >
         {/* Community Title Section */}
         <View style={styles.communitySection}>

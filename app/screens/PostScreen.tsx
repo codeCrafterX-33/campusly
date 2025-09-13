@@ -663,6 +663,11 @@ const PostScreen = () => {
           keyExtractor={(item, index) => `${item.type}-${item.id || index}`}
           renderItem={({ item, index }) => renderThreadItem(item, index)}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          scrollEventThrottle={16}
+          removeClippedSubviews={false}
+          maxToRenderPerBatch={10}
+          windowSize={10}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

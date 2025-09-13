@@ -158,42 +158,39 @@ const CommentCard = ({
   }
 
   return (
-    <TouchableOpacity
-      style={[styles.container, { backgroundColor: colors.background }]}
-      onPress={() => {
-        if (onCommentPress) {
-          // Use the callback if provided (from PostScreen)
-          onCommentPress(comment);
-        } else {
-          // Fallback to direct navigation (from other screens)
-          navigation.navigate("PostScreen", {
-            post: {
-              id: comment.id,
-              content: comment.content,
-              media: comment.media,
-              createdon: comment.createdon,
-              createdby: comment.createdby,
-              user_id: comment.user_id,
-              firstname: comment.firstname,
-              lastname: comment.lastname,
-              username: comment.username,
-              image: comment.image,
-              studentstatusverified: comment.studentstatusverified,
-              like_count: comment.like_count,
-              comment_count: comment.comment_count || 0,
-              parent_post_id: comment.parent_post_id,
-            },
-          });
-        }
-      }}
-      activeOpacity={0.7}
-    >
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Comment Content */}
-      <View
+      <Pressable
         style={[
           styles.commentContent,
           { marginLeft: Math.min(depth * 16, 80) },
         ]}
+        onPress={() => {
+          if (onCommentPress) {
+            // Use the callback if provided (from PostScreen)
+            onCommentPress(comment);
+          } else {
+            // Fallback to direct navigation (from other screens)
+            navigation.navigate("PostScreen", {
+              post: {
+                id: comment.id,
+                content: comment.content,
+                media: comment.media,
+                createdon: comment.createdon,
+                createdby: comment.createdby,
+                user_id: comment.user_id,
+                firstname: comment.firstname,
+                lastname: comment.lastname,
+                username: comment.username,
+                image: comment.image,
+                studentstatusverified: comment.studentstatusverified,
+                like_count: comment.like_count,
+                comment_count: comment.comment_count || 0,
+                parent_post_id: comment.parent_post_id,
+              },
+            });
+          }
+        }}
       >
         {/* User Info Row */}
         <View style={styles.userInfoRow}>
@@ -415,7 +412,7 @@ const CommentCard = ({
         </View>
 
         {/* Replies Toggle */}
-      </View>
+      </Pressable>
 
       {/* Options Modal */}
       <Modal
@@ -556,7 +553,7 @@ const CommentCard = ({
         isLoading={loading}
         loadingText="Deleting... 🗑️"
       />
-    </TouchableOpacity>
+    </View>
   );
 };
 
