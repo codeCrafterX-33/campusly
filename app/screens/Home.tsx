@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import HomeTopNavigator from "../navigation/HomeTopNavigator";
 import AddPostBtn from "../components/Post/AddPostBtn";
+import BackgroundPostIndicator from "../components/BackgroundPostIndicator";
 import { DrawerNavigationProp } from "@react-navigation/drawer";
 import { useNavigation } from "@react-navigation/native";
 import { useLayoutEffect } from "react";
@@ -25,6 +26,7 @@ function Home() {
 
   return (
     <View style={styles.container}>
+      <BackgroundPostIndicator />
       <HomeTopNavigator />
       <AddPostBtn style={styles.addPostBtn} />
     </View>

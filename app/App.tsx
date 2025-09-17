@@ -16,6 +16,7 @@ import { PostProvider } from "./context/PostContext";
 import { CommentProvider } from "./context/CommentContext";
 import { PostHistoryProvider } from "./context/PostHistoryContext";
 import { ThemeProvider, ThemeContext } from "./context/ThemeContext";
+import { BackgroundPostProvider } from "./context/BackgroundPostContext";
 import { User } from "firebase/auth";
 import { Provider as PaperProvider } from "react-native-paper";
 import ThemedStatusBar from "./components/ThemedStatusBar";
@@ -77,23 +78,25 @@ export default function App() {
                 <ThemedStatusBar />
 
                 <NavigationContainer theme={DefaultTheme}>
-                  <ClubProvider>
-                    <EventProvider>
-                      <PostProvider>
-                        <CommentProvider>
-                          <PostHistoryProvider>
-                            {isTryingLogin ? (
-                              <LoadingScreen />
-                            ) : user ? (
-                              <AuthenticatedStack />
-                            ) : (
-                              <StackNavigator />
-                            )}
-                          </PostHistoryProvider>
-                        </CommentProvider>
-                      </PostProvider>
-                    </EventProvider>
-                  </ClubProvider>
+                  <BackgroundPostProvider>
+                    <ClubProvider>
+                      <EventProvider>
+                        <PostProvider>
+                          <CommentProvider>
+                            <PostHistoryProvider>
+                              {isTryingLogin ? (
+                                <LoadingScreen />
+                              ) : user ? (
+                                <AuthenticatedStack />
+                              ) : (
+                                <StackNavigator />
+                              )}
+                            </PostHistoryProvider>
+                          </CommentProvider>
+                        </PostProvider>
+                      </EventProvider>
+                    </ClubProvider>
+                  </BackgroundPostProvider>
                 </NavigationContainer>
               </PaperProvider>
             )}

@@ -159,7 +159,7 @@ function EventProvider({ children }: { children: React.ReactNode }) {
 
   const eventIsRegistered = (eventId: number) => {
     const event = registeredEvents.find(
-      (event: any) => event.event_id === eventId
+      (event: any) => event.event_registration_event_id === eventId
     );
     return event ? true : false;
   };

@@ -17,6 +17,9 @@ const ClubContext = createContext<any>({
   setUserCreatedClubs: () => {},
   updateClub: () => {},
   deleteClub: () => {},
+  getClubMembers: () => {},
+  addClubAdmin: () => {},
+  removeClubAdmin: () => {},
   refreshing: false,
   onRefresh: () => {},
   isClubFollowed: () => {},
@@ -40,6 +43,7 @@ function ClubProvider({ children }: { children: React.ReactNode }) {
       const response = await axios.get(
         `${process.env.EXPO_PUBLIC_SERVER_URL}/club`
       );
+      console.log("Clubs fetched successfully", response.data.data);
 
       if (userData?.email) {
         await getFollowedClubs();
@@ -216,6 +220,115 @@ function ClubProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const getClubMembers = async (clubId: number) => {
+    try {
+      console.log("Fetching club members for club ID:", clubId);
+      const response = await axios.get(
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/club/members/${clubId}`
+      );
+      console.log("Club members response:", response.data);
+
+      if (response.status === 200) {
+        console.log("Club members fetched successfully:", response.data.data);
+        return response.data.data;
+      }
+    } catch (error) {
+      console.error("Error fetching club members:", error);
+      if (error instanceof AxiosError) {
+        Toast.show({
+          text1: "Couldn't load club members",
+          text2: error.response?.data?.message || "Please try again later.",
+          type: "error",
+        });
+      }
+      throw error;
+    }
+  };
+
+  const addClubAdmin = async (clubId: number, adminUserId: number) => {
+    try {
+      if (!userData || !userData.id) {
+        Toast.show({
+          text1: "Cannot add admin",
+          text2: "Please log in to manage club admins.",
+          type: "error",
+        });
+        return;
+      }
+
+      console.log("Adding admin to club:", clubId, "User:", adminUserId);
+      const response = await axios.post(
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/club/add-admin/${clubId}`,
+        {
+          user_id: userData.id,
+          admin_user_id: adminUserId,
+        }
+      );
+
+      if (response.status === 200) {
+        Toast.show({
+          text1: "Admin added successfully",
+          type: "success",
+        });
+        console.log("Admin added successfully:", response.data);
+        return response.data;
+      }
+    } catch (error) {
+      console.error("Error adding club admin:", error);
+      if (error instanceof AxiosError) {
+        Toast.show({
+          text1: "Failed to add admin",
+          text2: error.response?.data?.message || "Please try again later.",
+          type: "error",
+        });
+      }
+      throw error;
+    }
+  };
+
+  const removeClubAdmin = async (clubId: number, adminUserId: number) => {
+    try {
+      if (!userData || !userData.id) {
+        Toast.show({
+          text1: "Cannot remove admin",
+          text2: "Please log in to manage club admins.",
+          type: "error",
+        });
+        return;
+      }
+
+      console.log("Removing admin from club:", clubId, "User:", adminUserId);
+      const response = await axios.delete(
+        `${process.env.EXPO_PUBLIC_SERVER_URL}/club/remove-admin/${clubId}`,
+        {
+          data: {
+            user_id: userData.id,
+            admin_user_id: adminUserId,
+          },
+        }
+      );
+
+      if (response.status === 200) {
+        Toast.show({
+          text1: "Admin removed successfully",
+          type: "success",
+        });
+        console.log("Admin removed successfully:", response.data);
+        return response.data;
+      }
+    } catch (error) {
+      console.error("Error removing club admin:", error);
+      if (error instanceof AxiosError) {
+        Toast.show({
+          text1: "Failed to remove admin",
+          text2: error.response?.data?.message || "Please try again later.",
+          type: "error",
+        });
+      }
+      throw error;
+    }
+  };
+
   const isClubFollowed = (clubId: number) => {
     const club = followedClubs.find((club: any) => club.club_id === clubId);
     return club ? true : false;
@@ -235,6 +348,9 @@ function ClubProvider({ children }: { children: React.ReactNode }) {
     setUserCreatedClubs: setUserCreatedClubs,
     updateClub: updateClub,
     deleteClub: deleteClub,
+    getClubMembers: getClubMembers,
+    addClubAdmin: addClubAdmin,
+    removeClubAdmin: removeClubAdmin,
     isClubFollowed: isClubFollowed,
   };
 

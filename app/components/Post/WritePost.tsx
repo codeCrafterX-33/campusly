@@ -35,6 +35,7 @@ import { ClubContext } from "../../context/ClubContext";
 import { uploadMultipleMedia } from "../../util/uploadToCloudinary";
 import { postOptions } from "../../configs/CloudinaryConfig";
 import { VideoView, useVideoPlayer } from "expo-video";
+import { useBackgroundPost } from "../../context/BackgroundPostContext";
 import {
   widthPercentageToDP as wp,
   heightPercentageToDP as hp,
@@ -79,6 +80,7 @@ interface UploadResponse {
 
 export default function WritePost() {
   const { colors } = useTheme();
+  const { startPosting, updateProgress, completePosting } = useBackgroundPost();
   const [selectedMedia, setSelectedMedia] = useState<
     { uri: string; type: "image" | "video" }[]
   >([]);
@@ -179,71 +181,89 @@ export default function WritePost() {
   }, [modalVisible]);
 
   const onPostBtnClick = async () => {
-    // Allow posting without content
-    setLoading(true);
+    // Navigate to home immediately
+    navigation.navigate("DrawerNavigator");
 
-    try {
-      let postMedia: Array<{ url: string; type: string }> = [];
+    // Start background posting process
+    const totalFiles = selectedMediaRef.current?.length || 0;
+    if (totalFiles > 0) {
+      startPosting(totalFiles);
+    }
 
-      // Upload media to Cloudinary in parallel
-      if (selectedMediaRef.current && selectedMediaRef.current.length > 0) {
-        console.log(
-          `Uploading ${selectedMediaRef.current.length} media files in parallel...`
+    // Handle posting in background
+    const postInBackground = async () => {
+      try {
+        let postMedia: Array<{ url: string; type: string }> = [];
+
+        // Upload media to Cloudinary in parallel
+        if (selectedMediaRef.current && selectedMediaRef.current.length > 0) {
+          console.log(
+            `Uploading ${selectedMediaRef.current.length} media files in parallel...`
+          );
+
+          // Prepare files for parallel upload
+          const filesToUpload = selectedMediaRef.current.map((media) => ({
+            uri: media.uri,
+            type: media.type,
+          }));
+
+          // Upload all files in parallel using Promise.all with progress tracking
+          const uploadResults = await uploadMultipleMedia(
+            filesToUpload,
+            (completed, total, message) => {
+              updateProgress(completed, message);
+            }
+          );
+
+          // Map upload results back to media objects
+          postMedia = uploadResults.map((result, index) => ({
+            url: result.url,
+            type: result.type,
+            thumbnailUrl: result.thumbnailUrl, // Include thumbnail for videos
+          }));
+
+          console.log(`Successfully uploaded ${postMedia.length} media files`);
+        }
+
+        // Create post on server
+        const result = await axios.post(
+          `${process.env.EXPO_PUBLIC_SERVER_URL}/post`,
+          {
+            content: content,
+            media: postMedia,
+            visibleIn: followedClubValue.club_id,
+            email: userData?.email,
+            user_id: userData?.id,
+          }
         );
 
-        // Show progress toast
-        Toast.show({
-          text1: `Uploading ${selectedMediaRef.current.length} media files...`,
-          type: "info",
-        });
-
-        // Prepare files for parallel upload
-        const filesToUpload = selectedMediaRef.current.map((media) => ({
-          uri: media.uri,
-          type: media.type,
-        }));
-
-        // Upload all files in parallel using Promise.all
-        const uploadResults = await uploadMultipleMedia(filesToUpload);
-
-        // Map upload results back to media objects
-        postMedia = uploadResults.map((result, index) => ({
-          url: result.url,
-          type: result.type,
-          thumbnailUrl: result.thumbnailUrl, // Include thumbnail for videos
-        }));
-
-        console.log(`Successfully uploaded ${postMedia.length} media files`);
-      }
-
-      // Create post on server
-      const result = await axios.post(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/post`,
-        {
-          content: content,
-          media: postMedia,
-          visibleIn: followedClubValue.club_id,
-          email: userData?.email,
-          user_id: userData?.id,
+        if (result.status === 201) {
+          completePosting();
+          // Refresh posts in the background
+          getPosts();
         }
-      );
+      } catch (error) {
+        console.error("Background posting failed:", error);
 
-      if (result.status === 201) {
+        // Show specific error messages based on error type
+        let errorMessage = "Error creating post";
+        if (error.message.includes("timeout")) {
+          errorMessage = "Video upload timed out. Please try a smaller video.";
+        } else if (error.message.includes("too large")) {
+          errorMessage = "File too large. Please select a smaller file.";
+        } else if (error.message.includes("network")) {
+          errorMessage = "Network error. Please check your connection.";
+        }
+
         Toast.show({
-          text1: "Your post was sent",
-          type: "success",
+          text1: errorMessage,
+          type: "error",
         });
-
-        navigation.navigate("DrawerNavigator");
       }
-    } catch (error) {
-      Toast.show({
-        text1: "Error creating post",
-        type: "error",
-      });
-    } finally {
-      setLoading(false);
-    }
+    };
+
+    // Start background posting
+    postInBackground();
   };
 
   const pickMedia = async () => {
@@ -261,19 +281,59 @@ export default function WritePost() {
       mediaTypes: ImagePicker.MediaTypeOptions.All,
       allowsEditing: true,
       allowsMultipleSelection: true,
-      quality: 0.6, // Reduced quality for faster initial processing
+      quality: 0.5, // More aggressive quality reduction for videos
       exif: false,
       base64: false,
       presentationStyle: ImagePicker.UIImagePickerPresentationStyle.AUTOMATIC,
     });
 
     if (!result.canceled) {
-      let pickedMedia = result.assets.map((asset) => ({
-        uri: asset.uri,
-        type: asset.type as "image" | "video",
-      }));
+      // Check file sizes before adding to selection
+      const validMedia = [];
+      for (const asset of result.assets) {
+        try {
+          // Get file size
+          const response = await fetch(asset.uri);
+          const blob = await response.blob();
+          const fileSizeInMB = blob.size / (1024 * 1024);
 
-      const combinedMedia = [...selectedMediaRef.current, ...pickedMedia];
+          // Check if it's a video and if it's too large
+          if (asset.type === "video" && fileSizeInMB > 80) {
+            Toast.show({
+              type: "error",
+              text1: `Video too large (${fileSizeInMB.toFixed(
+                1
+              )}MB). Max size: 80MB`,
+            });
+            continue;
+          }
+
+          // Check if it's an image and if it's too large
+          if (asset.type === "image" && fileSizeInMB > 10) {
+            Toast.show({
+              type: "error",
+              text1: `Image too large (${fileSizeInMB.toFixed(
+                1
+              )}MB). Max size: 10MB`,
+            });
+            continue;
+          }
+
+          validMedia.push({
+            uri: asset.uri,
+            type: asset.type as "image" | "video",
+          });
+        } catch (error) {
+          console.error("Error checking file size:", error);
+          // If we can't check size, allow it but warn
+          validMedia.push({
+            uri: asset.uri,
+            type: asset.type as "image" | "video",
+          });
+        }
+      }
+
+      const combinedMedia = [...selectedMediaRef.current, ...validMedia];
       // Allow any amount of videos, but maintain 4-item total limit
 
       const unique = combinedMedia.filter(

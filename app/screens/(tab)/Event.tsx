@@ -453,7 +453,7 @@ export default function EventView({ navigation }: EventViewProps) {
           </View>
         </View>
       )}
-
+      
       {/* Events List */}
       <FlatList
         data={
@@ -465,19 +465,25 @@ export default function EventView({ navigation }: EventViewProps) {
         }
         renderItem={({ item, index }) => {
           // Determine if this event is created by the current user
-          const isCreatedByUser = item.user_id === userData?.id;
+          const isCreatedByUser =
+            parseInt(item.user_id) === parseInt(userData?.id);
+          console.log(
+            "isCreatedByUser",
+            isCreatedByUser,
+            "item.name",
+            item.name,
+            "item.user_id",
+            item.user_id,
+            "userData?.id",
+            userData?.id
+          );
 
           return (
             <EventCard
               {...item}
               filter={filter}
-              isRegistered={
-                filter === "upcoming"
-                  ? eventIsRegistered(item.id)
-                  : filter === "registered"
-                  ? true // Always registered in registered tab
-                  : false // Never registered in my events tab
-              }
+              isRegistered={eventIsRegistered(item.id)}
+              isCreatedByUser={isCreatedByUser}
               refreshData={
                 filter === "upcoming"
                   ? getEvents

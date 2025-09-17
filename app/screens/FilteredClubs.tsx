@@ -117,6 +117,7 @@ function JoinedClubsTab() {
         renderItem={({ item }) => (
           <ClubCard
             {...item}
+            username={item.username}
             isFollowed={isClubFollowed(item.id)}
             refreshData={getFollowedClubs}
             isAdmin={false}
@@ -168,6 +169,7 @@ function MyClubsTab() {
         renderItem={({ item }) => (
           <ClubCard
             {...item}
+            username={item.username}
             isFollowed={false}
             refreshData={getUserCreatedClubs}
             isAdmin={true}

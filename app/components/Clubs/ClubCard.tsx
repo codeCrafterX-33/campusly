@@ -26,6 +26,7 @@ export interface CLUB {
   showEditDelete?: boolean;
   user_id?: number;
   club_id?: number;
+  username?: string;
 }
 
 export default function ClubCard(club: CLUB) {
@@ -106,12 +107,13 @@ export default function ClubCard(club: CLUB) {
       name: club.name,
       about: club.about,
       club_logo: club.club_logo,
-      createdby: club.createdby,
       createdon: club.createdon,
+      rules: (club as any).rules,
       isAdmin: club.isAdmin,
       isFollowed: club.isFollowed,
-      user_id: club.user_id,
+      username: club.username,
       club_id: club.club_id,
+      user_id: club.user_id,
     };
     navigation.navigate("ClubScreen", { club: clubData });
   };
@@ -125,9 +127,10 @@ export default function ClubCard(club: CLUB) {
       club_logo: club.club_logo,
       createdby: club.createdby,
       createdon: club.createdon,
+      rules: (club as any).rules,
       isAdmin: club.isAdmin,
       isFollowed: club.isFollowed,
-      user_id: club.user_id,
+      username: club.username,
       club_id: club.club_id,
     };
     navigation.navigate("EditClub", { club: clubData });

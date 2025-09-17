@@ -35,6 +35,8 @@ import EditClub from "../screens/EditClub";
 import ClubScreen from "../screens/ClubScreen";
 import PostScreen from "../screens/PostScreen";
 import CommentScreen from "../screens/CommentScreen";
+import ClubMembers from "../screens/ClubMembers";
+import ClubRules from "../screens/ClubRules";
 
 export type RootStackParamList = {
   Landing: undefined;
@@ -62,6 +64,8 @@ export type RootStackParamList = {
     parentComment?: any;
     onCommentPosted?: (updatedComment: any) => void;
   };
+  ClubMembers: { club: any };
+  ClubRules: { club: any };
 };
 
 const Stack = createStackNavigator<RootStackParamList>();
@@ -341,6 +345,24 @@ export const AuthenticatedStack = () => {
       <Stack.Screen
         name="CommentScreen"
         component={CommentScreen}
+        options={{
+          headerShown: false,
+          ...TransitionPresets.SlideFromRightIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+        }}
+      />
+      <Stack.Screen
+        name="ClubMembers"
+        component={ClubMembers}
+        options={{
+          headerShown: false,
+          ...TransitionPresets.SlideFromRightIOS,
+          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
+        }}
+      />
+      <Stack.Screen
+        name="ClubRules"
+        component={ClubRules}
         options={{
           headerShown: false,
           ...TransitionPresets.SlideFromRightIOS,

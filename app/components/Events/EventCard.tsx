@@ -30,6 +30,8 @@ type EVENT = {
   filter?: string;
   event_id?: number;
   user_id?: number;
+  isCreatedByUser?: boolean;
+  event_registration_event_id?: number;
 };
 
 export default function EventCard(event: EVENT) {
@@ -45,9 +47,8 @@ export default function EventCard(event: EVENT) {
   // Check if current user is the creator of this event
   const isEventCreator = userData?.id === event.user_id;
 
-  // Determine if we should show creator actions based on the filter and creator status
-  const shouldShowCreatorActions =
-    isEventCreator && event.filter !== "registered";
+  // Only show creator actions if user is the creator AND it's not a registered event
+  // For registered events, we should never show edit/delete options
 
   const onRegisterBtnClick = async () => {
     if (event.isRegistered) {
@@ -75,7 +76,9 @@ export default function EventCard(event: EVENT) {
     try {
       // Use event_id for registered events, id for upcoming events
       const eventIdToUnregister =
-        event.filter === "registered" ? event.event_id : event.id;
+        event.filter === "registered"
+          ? event.event_registration_event_id
+          : event.id;
       const unregister = await unregisterEvent(eventIdToUnregister);
       if (unregister?.status === 200) {
         showEventToast("unregister");
@@ -163,7 +166,7 @@ https://campusly.vercel.app/events/${event.id}
       </View>
 
       {/* Creator Actions */}
-      {shouldShowCreatorActions && (
+      {event.isCreatedByUser && (
         <View style={styles.creatorActions}>
           <View style={styles.creatorButton}>
             <Button outline onPress={handleEditEvent}>

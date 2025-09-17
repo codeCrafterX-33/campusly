@@ -128,7 +128,14 @@ const PostCard = ({
   // Comment functionality moved to dedicated CommentScreen
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <Pressable
+      style={[styles.container, { backgroundColor: colors.background }]}
+      onPress={() => {
+        if (clickable) {
+          navigation.navigate("PostScreen", { post });
+        }
+      }}
+    >
       <View style={styles.headerContainer}>
         <UserAvatar
           name={name}
@@ -150,14 +157,7 @@ const PostCard = ({
         </TouchableOpacity>
       </View>
 
-      <Pressable
-        style={styles.postBody}
-        onPress={() => {
-          if (clickable) {
-            navigation.navigate("PostScreen", { post });
-          }
-        }}
-      >
+      <View style={styles.postBody}>
         {content && (
           <Text style={[styles.content, { color: colors.onBackground }]}>
             {content}
@@ -252,7 +252,7 @@ const PostCard = ({
             })}
           </View>
         )}
-      </Pressable>
+      </View>
 
       <Modal visible={modalVisible} transparent={true}>
         <View style={styles.fullscreenContainer}>
@@ -526,7 +526,7 @@ const PostCard = ({
         isLoading={loading}
         loadingText="Deleting... 🗑️"
       />
-    </View>
+    </Pressable>
   );
 };
 

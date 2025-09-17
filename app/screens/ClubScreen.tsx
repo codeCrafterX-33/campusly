@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, {
+  useState,
+  useEffect,
+  useContext,
+  useMemo,
+  useCallback,
+  useRef,
+} from "react";
 import {
   View,
   Text,
@@ -10,6 +17,11 @@ import {
   StatusBar,
   TouchableOpacity,
   FlatList,
+  TextInput,
+  RefreshControl,
+  ActivityIndicator,
+  Share,
+  Easing,
 } from "react-native";
 import { useTheme } from "react-native-paper";
 import { useRoute, useNavigation } from "@react-navigation/native";
@@ -39,10 +51,12 @@ export default function ClubScreen() {
   const route = useRoute();
   const navigation = useNavigation();
   const { userData } = useContext(AuthContext);
-  const { getFollowedClubs, followedClubs } = useContext(ClubContext);
+  const { getFollowedClubs, followedClubs, getClubMembers } =
+    useContext(ClubContext);
   const { getPosts } = useContext(PostContext);
 
   const { club } = route.params as { club: any };
+  console.log("Club fetched successfully", club);
 
   const [activeTab, setActiveTab] = useState<TabType>("posts");
   const [isFollowed, setIsFollowed] = useState(false);
@@ -54,9 +68,18 @@ export default function ClubScreen() {
   const [isLoadingPosts, setIsLoadingPosts] = useState(false);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(10);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [actualMemberCount, setActualMemberCount] = useState(
+    club.member_count || 0
+  );
   const mainTabsOpacity = new Animated.Value(1); // Start fully visible
   const mainTabsAnimation = new Animated.Value(0); // Start at normal position
   const stickyTabsAnimation = new Animated.Value(-100); // Start above the screen
+  const refreshRotate = useRef(new Animated.Value(0)).current;
+  const refreshAnimRef = useRef<Animated.CompositeAnimation | null>(null);
 
   // Check if user is following this club and if user is admin
   useEffect(() => {
@@ -95,6 +118,80 @@ export default function ClubScreen() {
 
     fetchClubPosts();
   }, [club?.id, getPosts]);
+
+  const fetchMemberCount = useCallback(async () => {
+    if (!club?.id) return;
+    try {
+      const members = await getClubMembers(club.id);
+      setActualMemberCount(members.length);
+    } catch (error) {
+      console.log("Failed to fetch member count", error);
+    }
+  }, [club?.id, getClubMembers]);
+
+  // Fetch member count when component mounts
+  useEffect(() => {
+    fetchMemberCount();
+  }, [fetchMemberCount]);
+
+  // Listen for navigation focus to refresh member count when returning from ClubMembers
+  useEffect(() => {
+    const unsubscribe = navigation.addListener("focus", () => {
+      fetchMemberCount();
+    });
+
+    return unsubscribe;
+  }, [navigation, fetchMemberCount]);
+
+  const onRefresh = useCallback(async () => {
+    if (!club?.id) return;
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        getPosts({ id: [club.id], setClubPosts: setClubPosts }),
+        fetchMemberCount(),
+      ]);
+      setVisibleCount(10);
+    } catch (error) {
+      console.log("Refresh failed", error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [club?.id, getPosts, fetchMemberCount]);
+
+  // Animate refresh icon while refreshing
+  useEffect(() => {
+    if (refreshing) {
+      refreshRotate.setValue(0);
+      refreshAnimRef.current = Animated.loop(
+        Animated.timing(refreshRotate, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.linear,
+          useNativeDriver: true,
+        })
+      );
+      refreshAnimRef.current.start();
+    } else {
+      if (refreshAnimRef.current) {
+        refreshAnimRef.current.stop();
+      }
+      refreshRotate.setValue(0);
+    }
+  }, [refreshing, refreshRotate]);
+
+  const filteredPosts = useMemo(() => {
+    if (!searchQuery.trim()) return clubPosts;
+    const q = searchQuery.toLowerCase();
+    return clubPosts.filter((p: any) => {
+      const text = `${p?.title || ""} ${
+        p?.content || p?.caption || ""
+      }`.toLowerCase();
+      return text.includes(q);
+    });
+  }, [clubPosts, searchQuery]);
+
+  // Use database field directly for creator
 
   // Animate sticky tabs when they appear/disappear
   useEffect(() => {
@@ -141,7 +238,10 @@ export default function ClubScreen() {
 
   const handleFollowToggle = async () => {
     setIsLoading(true);
-    if (isFollowed) {
+    // optimistic update
+    const prev = isFollowed;
+    setIsFollowed(!isFollowed);
+    if (prev) {
       try {
         const response = await axios.delete(
           `${process.env.EXPO_PUBLIC_SERVER_URL}/club/unfollowclub/${userData?.id}`,
@@ -151,10 +251,14 @@ export default function ClubScreen() {
         );
 
         if (response.status === 200) {
-          await getFollowedClubs();
+          await Promise.all([
+            getFollowedClubs(),
+            fetchMemberCount(), // Refresh member count when user leaves
+          ]);
           console.log("Club unfollowed");
         } else {
           console.log("Club unfollow failed");
+          setIsFollowed(prev);
         }
       } catch (error) {
         if (error instanceof AxiosError) {
@@ -165,6 +269,7 @@ export default function ClubScreen() {
           });
         }
         console.log(error);
+        setIsFollowed(prev);
       } finally {
         setIsLoading(false);
       }
@@ -179,10 +284,14 @@ export default function ClubScreen() {
         );
 
         if (response.status === 201) {
-          await getFollowedClubs();
+          await Promise.all([
+            getFollowedClubs(),
+            fetchMemberCount(), // Refresh member count when user joins
+          ]);
           console.log("Club followed");
         } else {
           console.log("Club follow failed");
+          setIsFollowed(prev);
         }
       } catch (error) {
         if (error instanceof AxiosError) {
@@ -193,6 +302,7 @@ export default function ClubScreen() {
             type: "error",
           });
         }
+        setIsFollowed(prev);
       } finally {
         setIsLoading(false);
       }
@@ -217,6 +327,10 @@ export default function ClubScreen() {
           text2: "The club has been permanently deleted",
           type: "success",
         });
+        // Refresh followed clubs/listing where applicable
+        try {
+          await getFollowedClubs();
+        } catch {}
         // Navigate back to clubs list or home
         navigation.goBack();
       }
@@ -237,7 +351,10 @@ export default function ClubScreen() {
 
   const renderTabButton = (tab: TabType, label: string) => (
     <TouchableOpacity
-      style={styles.tabButton}
+      style={[
+        styles.tabButton,
+        activeTab === tab ? styles.activeTabButton : undefined,
+      ]}
       onPress={() => setActiveTab(tab)}
     >
       <Text
@@ -251,140 +368,67 @@ export default function ClubScreen() {
     </TouchableOpacity>
   );
 
-  const renderPostsTab = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.postsSection}>
-        {isLoadingPosts ? (
-          <View style={styles.loadingContainer}>
-            <Text style={[styles.loadingText, { color: colors.onBackground }]}>
-              Loading posts...
-            </Text>
-          </View>
-        ) : clubPosts.length > 0 ? (
-          clubPosts.map((post, index) => (
-            <PostCard
-              key={post.id || index}
-              post={post}
-              onCommentPress={() => {
-                (navigation as any).navigate("CommentScreen", { post });
-              }}
-            />
-          ))
-        ) : (
-          <View style={styles.emptyStateContainer}>
-            <Icon
-              name="post-outline"
-              size={48}
-              color={colors.onSurfaceVariant}
-            />
-            <Text
-              style={[
-                styles.emptyStateText,
-                { color: colors.onSurfaceVariant },
-              ]}
-            >
-              No posts yet
-            </Text>
-            <Text
-              style={[
-                styles.emptyStateSubtext,
-                { color: colors.onSurfaceVariant },
-              ]}
-            >
-              Be the first to share something in this club!
-            </Text>
-          </View>
-        )}
-      </View>
+  const renderPostsEmpty = !isLoadingPosts ? (
+    <View style={styles.emptyStateContainer}>
+      <Icon name="post-outline" size={48} color={colors.onSurfaceVariant} />
+      <Text style={[styles.emptyStateText, { color: colors.onSurfaceVariant }]}>
+        No posts yet
+      </Text>
+      <Text
+        style={[styles.emptyStateSubtext, { color: colors.onSurfaceVariant }]}
+      >
+        Be the first to share something in this club!
+      </Text>
+      <Button viewStyle={{ marginTop: 12 }} onPress={onRefresh}>
+        Retry
+      </Button>
     </View>
-  );
+  ) : null;
 
-  const renderMediaTab = () => (
-    <View style={styles.tabContent}>
-      <View style={styles.mediaSection}>
-        {isLoadingPosts ? (
-          <View style={styles.loadingContainer}>
-            <Text style={[styles.loadingText, { color: colors.onBackground }]}>
-              Loading media...
-            </Text>
-          </View>
-        ) : clubPosts.length > 0 ? (
-          <View style={styles.mediaGrid}>
-            {clubPosts
-              .filter(
-                (post) =>
-                  post.media &&
-                  Array.isArray(post.media.media) &&
-                  post.media.media.length > 0
-              )
-              .map((post, index) =>
-                post.media.media.map((mediaItem: any, mediaIndex: number) => (
-                  <TouchableOpacity
-                    key={`${post.id}-${mediaIndex}`}
-                    style={styles.mediaItem}
-                    onPress={() => {
-                      // Navigate to post screen to view media
-                      (navigation as any).navigate("PostScreen", { post });
-                    }}
-                  >
-                    <Image
-                      source={{
-                        uri:
-                          mediaItem.type === "image"
-                            ? mediaItem.url
-                            : mediaItem.url.replace(
-                                "/upload/",
-                                "/upload/w_500,h_500,c_fill,q_auto,f_jpg/"
-                              ),
-                      }}
-                      style={styles.mediaThumbnail}
-                    />
-                    {mediaItem.type === "video" && (
-                      <View style={styles.videoOverlay}>
-                        <Icon
-                          name="play-circle-outline"
-                          size={32}
-                          color="white"
-                        />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                ))
-              )}
-          </View>
-        ) : (
-          <View style={styles.emptyStateContainer}>
-            <Icon
-              name="image-outline"
-              size={48}
-              color={colors.onSurfaceVariant}
-            />
-            <Text
-              style={[
-                styles.emptyStateText,
-                { color: colors.onSurfaceVariant },
-              ]}
-            >
-              No media yet
-            </Text>
-            <Text
-              style={[
-                styles.emptyStateSubtext,
-                { color: colors.onSurfaceVariant },
-              ]}
-            >
-              Share some photos or videos to see them here!
-            </Text>
-          </View>
-        )}
-      </View>
-    </View>
+  const mediaItems = useMemo(() => {
+    const posts = searchQuery.trim() ? filteredPosts : clubPosts;
+    const items: Array<{ post: any; media: any; key: string }> = [];
+    posts.forEach((post: any) => {
+      if (post?.media && Array.isArray(post.media.media)) {
+        post.media.media.forEach((m: any, idx: number) => {
+          items.push({ post, media: m, key: `${post.id}-${idx}` });
+        });
+      }
+    });
+    return items;
+  }, [clubPosts, filteredPosts, searchQuery]);
+
+  const renderMediaItem = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      style={styles.mediaItem}
+      onPress={() =>
+        (navigation as any).navigate("PostScreen", { post: item.post })
+      }
+    >
+      <Image
+        source={{
+          uri:
+            item.media.type === "image"
+              ? item.media.url
+              : item.media.url.replace(
+                  "/upload/",
+                  "/upload/w_500,h_500,c_fill,q_auto,f_jpg/"
+                ),
+        }}
+        style={styles.mediaThumbnail}
+      />
+      {item.media.type === "video" && (
+        <View style={styles.videoOverlay}>
+          <Icon name="play-circle-outline" size={32} color="white" />
+        </View>
+      )}
+    </TouchableOpacity>
   );
 
   const renderAboutTab = () => (
     <View style={styles.tabContent}>
-      <View style={styles.aboutSection}>
-        <View style={styles.aboutCard}>
+      <View style={[styles.aboutSection, { backgroundColor: colors.surface }]}>
+        <View style={[styles.aboutCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.aboutTitle, { color: colors.onBackground }]}>
             About {club.name}
           </Text>
@@ -398,33 +442,59 @@ export default function ClubScreen() {
           </Text>
         </View>
 
-        <View style={styles.aboutCard}>
+        <View style={[styles.aboutCard, { backgroundColor: colors.surface }]}>
           <Text style={[styles.aboutTitle, { color: colors.onBackground }]}>
             Club Details
           </Text>
           <View style={styles.detailRow}>
-            <Icon name="account-group" size={20} color={colors.primary} />
+            <Icon name="account-group" size={20} color={Colors.PRIMARY} />
             <Text style={[styles.detailText, { color: colors.onBackground }]}>
-              {club.member_count || 0} members
+              {actualMemberCount} members
             </Text>
           </View>
           <View style={styles.detailRow}>
-            <Icon name="calendar" size={20} color={colors.primary} />
+            <Icon name="calendar" size={20} color={Colors.PRIMARY} />
             <Text style={[styles.detailText, { color: colors.onBackground }]}>
-              Created {new Date(club.created_at).toLocaleDateString()}
+              Created{" "}
+              {new Date(club.createdon).toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
             </Text>
           </View>
           <View style={styles.detailRow}>
-            <Icon name="account" size={20} color={colors.primary} />
+            <Icon name="account" size={20} color={Colors.PRIMARY} />
             <Text style={[styles.detailText, { color: colors.onBackground }]}>
-              Created by {club.createdby}
+              Created by {club.username}
             </Text>
           </View>
         </View>
 
+        {/* Club Rules Section */}
+        <View style={[styles.aboutCard, { backgroundColor: colors.surface }]}>
+          <Text style={[styles.aboutTitle, { color: colors.onBackground }]}>
+            Club Rules
+          </Text>
+          {club.rules ? (
+            <Text
+              style={[styles.rulesText, { color: colors.onSurfaceVariant }]}
+            >
+              {club.rules}
+            </Text>
+          ) : (
+            <Text
+              style={[styles.noRulesText, { color: colors.onSurfaceVariant }]}
+            >
+              No rules set yet. Club admins can add rules to help maintain a
+              positive community.
+            </Text>
+          )}
+        </View>
+
         {isAdmin && (
-          <View style={styles.adminCard}>
-            <Text style={[styles.adminTitle, { color: colors.primary }]}>
+          <View style={[styles.adminCard, { backgroundColor: colors.surface }]}>
+            <Text style={[styles.adminTitle, { color: Colors.PRIMARY }]}>
               Admin Actions
             </Text>
             <Button
@@ -433,10 +503,121 @@ export default function ClubScreen() {
             >
               Edit Club
             </Button>
+            <Button
+              onPress={() =>
+                (navigation as any).navigate("ClubMembers", { club })
+              }
+              viewStyle={[styles.adminButton, styles.secondaryButton]}
+              outline={true}
+            >
+              View Members ({actualMemberCount})
+            </Button>
+            <Button
+              onPress={() =>
+                (navigation as any).navigate("ClubRules", { club })
+              }
+              viewStyle={[styles.adminButton, styles.secondaryButton]}
+              outline={true}
+            >
+              Club Rules
+            </Button>
           </View>
         )}
       </View>
     </View>
+  );
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `${club.name}\n${club.about || ""}`.trim(),
+        url: club?.share_url || club?.club_logo,
+        title: club.name,
+      });
+    } catch (e) {
+      Toast.show({ type: "error", text1: "Unable to share right now" });
+    }
+  };
+
+  const HeaderContent = (
+    <>
+      {/* Community Title Section */}
+      <View style={[styles.communitySection, { marginTop: 0 }]}>
+        <Text style={styles.communityTitle}>
+          {club.name.length > 30
+            ? `${club.name.substring(0, 30)}...`
+            : club.name}
+        </Text>
+
+        <View style={styles.communityHeader}>
+          <Text style={styles.membersCount}>{actualMemberCount} members</Text>
+
+          <View style={styles.communityRight}>
+            <TouchableOpacity style={styles.shareButton} onPress={handleShare}>
+              <Icon name="share-variant-outline" size={20} color="white" />
+            </TouchableOpacity>
+
+            {isAdmin ? (
+              <View style={styles.adminActions}>
+                <Button
+                  onPress={() =>
+                    (navigation as any).navigate("EditClub", { club })
+                  }
+                  viewStyle={[styles.adminButton, styles.editButton]}
+                  smallText={true}
+                >
+                  Edit
+                </Button>
+                <Button
+                  onPress={() => setShowDeleteAlert(true)}
+                  viewStyle={[styles.adminButton, styles.deleteButton]}
+                  smallText={true}
+                  outline={true}
+                >
+                  Delete
+                </Button>
+              </View>
+            ) : (
+              <Button
+                onPress={handleFollowToggle}
+                isLoading={isLoading}
+                outline={isFollowed}
+                viewStyle={styles.joinButton}
+                smallText={true}
+              >
+                {isFollowed ? "Joined" : "Join"}
+              </Button>
+            )}
+          </View>
+        </View>
+
+        <TouchableOpacity
+          onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+        >
+          <Text
+            style={styles.communityDescription}
+            numberOfLines={isDescriptionExpanded ? undefined : 2}
+          >
+            {club.about}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Navigation Tabs */}
+      <Animated.View
+        style={[
+          styles.tabsContainer,
+          {
+            opacity: mainTabsOpacity,
+            transform: [{ translateY: mainTabsAnimation }],
+          },
+        ]}
+      >
+        {renderTabButton("posts", "Posts")}
+        {renderTabButton("media", "Media")}
+        {renderTabButton("about", "About")}
+      </Animated.View>
+    </>
   );
 
   return (
@@ -447,8 +628,8 @@ export default function ClubScreen() {
         translucent
       />
 
-      {/* Club Logo Background */}
-      <View style={styles.logoBackground}>
+      {/* Club Logo Background (under content) */}
+      <View style={styles.logoBackground} pointerEvents="none">
         <Image source={{ uri: club.club_logo }} style={styles.logoImage} />
       </View>
 
@@ -462,10 +643,57 @@ export default function ClubScreen() {
           <View style={styles.headerStripe} />
         </View>
 
-        <TouchableOpacity>
-          <Icon name="magnify" size={24} color={Colors.PRIMARY} />
-        </TouchableOpacity>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+          <TouchableOpacity onPress={onRefresh} disabled={refreshing}>
+            <Animated.View
+              style={{
+                transform: [
+                  {
+                    rotate: refreshRotate.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ["0deg", "360deg"],
+                    }),
+                  },
+                ],
+                opacity: refreshing ? 1 : 0.9,
+              }}
+            >
+              <Icon name="refresh" size={22} color={Colors.PRIMARY} />
+            </Animated.View>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setIsSearchOpen((s) => !s)}>
+            <Icon name="magnify" size={24} color={Colors.PRIMARY} />
+          </TouchableOpacity>
+        </View>
       </View>
+
+      {isSearchOpen && (
+        <View
+          style={{
+            position: "absolute",
+            top: HEADER_HEIGHT,
+            left: 20,
+            right: 20,
+            zIndex: 1001,
+          }}
+        >
+          <TextInput
+            placeholder="Search posts and media"
+            placeholderTextColor={colors.onSurfaceVariant}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            style={{
+              backgroundColor: colors.surface,
+              color: colors.onSurface,
+              borderRadius: 8,
+              paddingHorizontal: 12,
+              height: 40,
+              borderWidth: 1,
+              borderColor: isDarkMode ? colors.outline : Colors.PRIMARY,
+            }}
+          />
+        </View>
+      )}
 
       {/* Sticky Tabs Container */}
       <Animated.View
@@ -486,117 +714,148 @@ export default function ClubScreen() {
       </Animated.View>
 
       {/* Main Content */}
-      <ScrollView
-        style={styles.scrollView}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        scrollEventThrottle={16}
-        onScroll={(event) => {
-          const scrollY = event.nativeEvent.contentOffset.y;
-          const tabsThreshold = 450; // Threshold when main tabs are completely out of view
-          const mainTabsDisappearThreshold = 400; // Threshold when main tabs start disappearing
-          const mainTabsReappearThreshold = 500; // Threshold when main tabs should reappear
-
-          // Show sticky tabs when main tabs are out of view
-          if (scrollY > tabsThreshold) {
-            setIsTabsSticky(true);
+      {activeTab === "posts" && (
+        <FlatList
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <View style={styles.scrollContent}>{HeaderContent}</View>
           }
-          // Hide sticky tabs when scrolling back up
-          else if (scrollY < mainTabsDisappearThreshold) {
-            setIsTabsSticky(false);
-          }
-          // Show main tabs again when scrolling down past sticky tabs
-          else if (scrollY > mainTabsReappearThreshold) {
-            setIsTabsSticky(false);
-          }
-        }}
-      >
-        {/* Community Title Section */}
-        <View style={styles.communitySection}>
-          <Text style={styles.communityTitle}>
-            {club.name.length > 30
-              ? `${club.name.substring(0, 30)}...`
-              : club.name}
-          </Text>
-
-          <View style={styles.communityHeader}>
-            <Text style={styles.membersCount}>33K Members</Text>
-
-            <View style={styles.communityRight}>
-              <TouchableOpacity style={styles.shareButton}>
-                <Icon name="share-variant-outline" size={20} color="white" />
-              </TouchableOpacity>
-
-              {isAdmin ? (
-                <View style={styles.adminActions}>
-                  <Button
-                    onPress={() =>
-                      (navigation as any).navigate("EditClub", { club })
-                    }
-                    viewStyle={[styles.adminButton, styles.editButton]}
-                    smallText={true}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    onPress={() => setShowDeleteAlert(true)}
-                    viewStyle={[styles.adminButton, styles.deleteButton]}
-                    smallText={true}
-                    outline={true}
-                  >
-                    Delete
-                  </Button>
-                </View>
-              ) : (
-                <Button
-                  onPress={handleFollowToggle}
-                  isLoading={isLoading}
-                  outline={isFollowed}
-                  viewStyle={styles.joinButton}
-                  smallText={true}
-                >
-                  {isFollowed ? "Joined" : "Join"}
-                </Button>
-              )}
+          ListHeaderComponentStyle={{ paddingHorizontal: 0 }}
+          data={filteredPosts.slice(0, visibleCount)}
+          keyExtractor={(item: any, index) => `${item?.id || index}`}
+          renderItem={({ item }) => (
+            <View style={styles.postItemContainer}>
+              <PostCard
+                post={item}
+                onCommentPress={() =>
+                  (navigation as any).navigate("CommentScreen", { post: item })
+                }
+              />
             </View>
-          </View>
+          )}
+          ListEmptyComponent={renderPostsEmpty}
+          contentContainerStyle={{ paddingBottom: 16 }}
+          onEndReachedThreshold={0.4}
+          onEndReached={() => {
+            if (visibleCount < filteredPosts.length)
+              setVisibleCount((c) => c + 10);
+          }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ListFooterComponent={
+            visibleCount < filteredPosts.length ? (
+              <View style={{ paddingVertical: 16, alignItems: "center" }}>
+                <ActivityIndicator color={colors.primary} />
+              </View>
+            ) : null
+          }
+          scrollEventThrottle={16}
+          onScroll={(event) => {
+            const scrollY = event.nativeEvent.contentOffset.y;
+            const tabsThreshold = 300;
+            const mainTabsDisappearThreshold = 250;
+            const mainTabsReappearThreshold = 360;
+            if (scrollY > tabsThreshold) setIsTabsSticky(true);
+            else if (scrollY < mainTabsDisappearThreshold)
+              setIsTabsSticky(false);
+            else if (scrollY > mainTabsReappearThreshold)
+              setIsTabsSticky(false);
+          }}
+        />
+      )}
 
-          <TouchableOpacity
-            onPress={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
-          >
-            <Text
-              style={styles.communityDescription}
-              numberOfLines={isDescriptionExpanded ? undefined : 2}
-            >
-              {club.about}
-            </Text>
-          </TouchableOpacity>
-        </View>
+      {activeTab === "media" && (
+        <FlatList
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <View style={styles.scrollContent}>{HeaderContent}</View>
+          }
+          ListHeaderComponentStyle={{ paddingHorizontal: 0 }}
+          data={mediaItems}
+          keyExtractor={(item) => item.key}
+          numColumns={3}
+          renderItem={renderMediaItem}
+          contentContainerStyle={{
+            paddingBottom: 10,
+          }}
+          columnWrapperStyle={{
+            paddingHorizontal: 12,
+            columnGap: 6,
+            justifyContent: "flex-start",
+          }}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          ListEmptyComponent={
+            !isLoadingPosts ? (
+              <View style={styles.emptyStateContainer}>
+                <Icon
+                  name="image-outline"
+                  size={48}
+                  color={colors.onSurfaceVariant}
+                />
+                <Text
+                  style={[
+                    styles.emptyStateText,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  No media yet
+                </Text>
+                <Text
+                  style={[
+                    styles.emptyStateSubtext,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  Share some photos or videos to see them here!
+                </Text>
+              </View>
+            ) : null
+          }
+          scrollEventThrottle={16}
+          onScroll={(event) => {
+            const scrollY = event.nativeEvent.contentOffset.y;
+            const tabsThreshold = 300;
+            const mainTabsDisappearThreshold = 250;
+            const mainTabsReappearThreshold = 360;
+            if (scrollY > tabsThreshold) setIsTabsSticky(true);
+            else if (scrollY < mainTabsDisappearThreshold)
+              setIsTabsSticky(false);
+            else if (scrollY > mainTabsReappearThreshold)
+              setIsTabsSticky(false);
+          }}
+        />
+      )}
 
-        {/* Navigation Tabs */}
-        <Animated.View
-          style={[
-            styles.tabsContainer,
-            {
-              opacity: mainTabsOpacity,
-              transform: [{ translateY: mainTabsAnimation }],
-            },
-          ]}
-        >
-          {renderTabButton("posts", "Posts")}
-          {renderTabButton("media", "Media")}
-          {renderTabButton("about", "About")}
-        </Animated.View>
-
-        {/* Tab Content */}
-        {activeTab === "posts" && renderPostsTab()}
-        {activeTab === "media" && renderMediaTab()}
-        {activeTab === "about" && renderAboutTab()}
-
-        {/* Bottom spacing */}
-        <View style={{ height: 300 }} />
-      </ScrollView>
+      {activeTab === "about" && (
+        <FlatList
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
+            <View style={styles.scrollContent}>{HeaderContent}</View>
+          }
+          ListHeaderComponentStyle={{ paddingHorizontal: 0 }}
+          data={[1]}
+          keyExtractor={(item) => `${item}`}
+          renderItem={() => renderAboutTab()}
+          scrollEventThrottle={16}
+          onScroll={(event) => {
+            const scrollY = event.nativeEvent.contentOffset.y;
+            const tabsThreshold = 300;
+            const mainTabsDisappearThreshold = 250;
+            const mainTabsReappearThreshold = 360;
+            if (scrollY > tabsThreshold) setIsTabsSticky(true);
+            else if (scrollY < mainTabsDisappearThreshold)
+              setIsTabsSticky(false);
+            else if (scrollY > mainTabsReappearThreshold)
+              setIsTabsSticky(false);
+          }}
+        />
+      )}
 
       {/* Delete Confirmation Alert */}
       <CampuslyAlert
@@ -639,7 +898,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: LOGO_HEIGHT,
-    zIndex: 1,
+    zIndex: 0,
   },
   logoImage: {
     width: "100%",
@@ -759,6 +1018,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     alignItems: "center",
   },
+  activeTabButton: {
+    backgroundColor: "rgba(0,0,0,0.06)",
+    borderRadius: 10,
+  },
   tabText: {
     fontSize: RFValue(14),
     fontWeight: "600",
@@ -788,6 +1051,10 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   postsSection: {
+    paddingHorizontal: 20,
+    backgroundColor: "white",
+  },
+  postItemContainer: {
     paddingHorizontal: 20,
     backgroundColor: "white",
   },
@@ -840,8 +1107,8 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   mediaItem: {
-    width: (width - 56) / 3,
-    height: (width - 56) / 3,
+    width: (width - 12 * 2 - 6 * 2) / 3,
+    height: (width - 12 * 2 - 6 * 2) / 3,
     borderRadius: 8,
     overflow: "hidden",
     position: "relative",
@@ -894,6 +1161,16 @@ const styles = StyleSheet.create({
     fontSize: RFValue(16),
     marginLeft: 12,
   },
+  rulesText: {
+    fontSize: RFValue(14),
+    lineHeight: RFValue(20),
+    marginTop: 8,
+  },
+  noRulesText: {
+    fontSize: RFValue(14),
+    fontStyle: "italic",
+    marginTop: 8,
+  },
   adminCard: {
     backgroundColor: "white",
     borderRadius: 12,
@@ -914,6 +1191,9 @@ const styles = StyleSheet.create({
   },
   adminButton: {
     width: "100%",
+  },
+  secondaryButton: {
+    marginTop: 8,
   },
   adminActions: {
     flexDirection: "row",

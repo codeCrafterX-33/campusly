@@ -25,6 +25,7 @@ export const createPost = async (req, res) => {
 export const deletePost = async (req, res) => {
   const { postId } = req.params;
   const { user_id } = req.body;
+  
 
   try {
     // First check if the post exists and belongs to the user

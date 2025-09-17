@@ -80,6 +80,7 @@ export default function ExploreClubs() {
           renderItem={({ item }) => (
             <ClubCard
               {...item}
+              username={item.username}
               isFollowed={isClubFollowed(item.id)}
               refreshData={getFollowedClubs}
               isAdmin={false}

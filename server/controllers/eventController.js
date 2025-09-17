@@ -199,7 +199,7 @@ export const getRegisteredEvents = async (req, res) => {
   console.log("user_id", user_id);
   try {
     const result = await pool.query(
-      `SELECT events.*, event_registration.*, users.firstname as username FROM events
+      `SELECT events.*, event_registration.id as event_registration_id, event_registration.user_id as event_registration_user_id, event_registration.register_on as event_registration_register_on, event_registration.event_id as event_registration_event_id, users.firstname as username FROM events
 INNER JOIN event_registration ON events.id = event_registration.event_id
 INNER JOIN users 
   ON events.user_id = users.id

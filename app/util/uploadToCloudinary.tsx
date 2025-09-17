@@ -61,7 +61,12 @@ const uploadVideoWithThumbnail = async (fileUri: string) => {
     console.log(`Original video size: ${fileSize}`);
 
     // Generate thumbnail first
+    console.log("Generating video thumbnail...");
     const thumbnailUri = await generateVideoThumbnail(fileUri);
+    console.log(
+      "Video thumbnail generated:",
+      thumbnailUri ? "success" : "failed"
+    );
 
     // Upload thumbnail first (smaller, faster) - compress it
     let thumbnailUrl = null;
@@ -72,8 +77,9 @@ const uploadVideoWithThumbnail = async (fileUri: string) => {
     }
 
     // Upload video (larger, slower) - this will apply compression
-    console.log("Uploading video file...");
+    console.log("Starting video upload to Cloudinary...");
     const videoUrl = await uploadToCloudinary(fileUri, "video");
+    console.log("Video uploaded successfully:", videoUrl);
 
     return {
       videoUrl,
@@ -86,13 +92,20 @@ const uploadVideoWithThumbnail = async (fileUri: string) => {
   }
 };
 
-// Upload a single file to Cloudinary
+// Upload a single file to Cloudinary with retry mechanism
 const uploadToCloudinary = async (
   fileUri: string,
-  type: "image" | "video" = "image"
+  type: "image" | "video" = "image",
+  retryCount: number = 0
 ) => {
+  const maxRetries = type === "video" ? 2 : 1; // More retries for videos
+
   try {
-    console.log(`Starting upload: ${type} to folder: posts`);
+    console.log(
+      `Starting upload: ${type} to folder: posts (attempt ${retryCount + 1}/${
+        maxRetries + 1
+      })`
+    );
 
     // Resize & compress only images
     let uri = fileUri;
@@ -133,9 +146,12 @@ const uploadToCloudinary = async (
     // Add video compression parameters for Cloudinary
     if (type === "video") {
       formData.append("resource_type", "video");
-      formData.append("chunk_size", "5000000"); // 5MB chunks for better upload
+      formData.append("chunk_size", "3000000"); // 3MB chunks for faster upload
       formData.append("quality", "auto:low"); // More aggressive quality optimization
       formData.append("fetch_format", "auto"); // Auto format optimization
+      formData.append("bit_rate", "500k"); // Limit bitrate for smaller files
+      formData.append("audio_codec", "aac"); // Optimize audio codec
+      formData.append("video_codec", "h264"); // Optimize video codec
       // Note: transformation parameter not allowed with unsigned uploads
       // Video compression will be handled by Cloudinary's auto-optimization
     }
@@ -149,9 +165,10 @@ const uploadToCloudinary = async (
       () => {
         controller.abort();
       },
-      type === "video" ? 300000 : 60000
-    ); // 5 minutes for video, 1 minute for image
+      type === "video" ? 600000 : 60000
+    ); // 10 minutes for video, 1 minute for image
 
+    console.log(`Making request to Cloudinary for ${type}...`);
     const res = await fetch(cloudinaryUrl, {
       method: "POST",
       body: formData,
@@ -167,7 +184,7 @@ const uploadToCloudinary = async (
     }
 
     const data = await res.json();
-    console.log("Upload successful:", data.secure_url);
+    console.log(`${type} upload successful:`, data.secure_url);
 
     return data.secure_url; // Cloudinary URL
   } catch (err) {
@@ -175,19 +192,49 @@ const uploadToCloudinary = async (
       console.error(
         "Upload timeout:",
         type === "video"
-          ? "Video upload timed out after 5 minutes"
+          ? "Video upload timed out after 10 minutes"
           : "Image upload timed out after 1 minute"
       );
-      throw new Error(`Upload timeout: ${type} upload took too long`);
+
+      // Retry for timeout errors if we haven't exceeded max retries
+      if (retryCount < maxRetries) {
+        console.log(
+          `Retrying ${type} upload (attempt ${retryCount + 2}/${
+            maxRetries + 1
+          })...`
+        );
+        await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+        return uploadToCloudinary(fileUri, type, retryCount + 1);
+      }
+
+      throw new Error(
+        `Upload timeout: ${type} upload took too long after ${
+          maxRetries + 1
+        } attempts`
+      );
     }
-    console.error("Upload failed:", err);
+
+    // Retry for other errors if we haven't exceeded max retries
+    if (retryCount < maxRetries) {
+      console.log(
+        `Retrying ${type} upload due to error (attempt ${retryCount + 2}/${
+          maxRetries + 1
+        }):`,
+        err.message
+      );
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
+      return uploadToCloudinary(fileUri, type, retryCount + 1);
+    }
+
+    console.error("Upload failed after all retries:", err);
     throw err;
   }
 };
 
 // Upload multiple files in parallel with progress tracking
 export const uploadMultipleMedia = async (
-  files: Array<{ uri: string; type: "image" | "video" }>
+  files: Array<{ uri: string; type: "image" | "video" }>,
+  onProgress?: (completed: number, total: number, message: string) => void
 ) => {
   console.log(`Starting parallel upload of ${files.length} files`);
 
@@ -200,14 +247,26 @@ export const uploadMultipleMedia = async (
       `Uploading ${imageFiles.length} images and ${videoFiles.length} videos`
     );
 
+    const totalFiles = files.length;
+
+    // Notify start of upload
+    onProgress?.(0, totalFiles, `Starting upload of ${totalFiles} files...`);
+
     const uploadPromises = files.map(async (file, index) => {
-      console.log(`Uploading file ${index + 1}/${files.length}: ${file.type}`);
+      console.log(`Uploading file ${index + 1}/${totalFiles}: ${file.type}`);
 
       // Add extra logging for videos
       if (file.type === "video") {
         console.log(
           `Video upload started - this may take several minutes for large files`
         );
+        onProgress?.(
+          0,
+          totalFiles,
+          `Preparing video ${index + 1} for upload...`
+        );
+      } else {
+        onProgress?.(0, totalFiles, `Compressing image ${index + 1}...`);
       }
 
       try {
@@ -218,6 +277,7 @@ export const uploadMultipleMedia = async (
           console.log(
             `Video ${index + 1} uploaded successfully with thumbnail`
           );
+          onProgress?.(index + 1, totalFiles, `Video ${index + 1} uploaded`);
           return {
             success: true,
             url: result.videoUrl,
@@ -229,10 +289,16 @@ export const uploadMultipleMedia = async (
           // Regular image upload with compression
           const url = await uploadToCloudinary(file.uri, file.type);
           console.log(`File ${index + 1} uploaded successfully`);
+          onProgress?.(index + 1, totalFiles, `Image ${index + 1} uploaded`);
           return { success: true, url, type: file.type, index };
         }
       } catch (error) {
         console.error(`File ${index + 1} upload failed:`, error);
+        onProgress?.(
+          index + 1,
+          totalFiles,
+          `Upload failed for file ${index + 1}`
+        );
         return { success: false, error, type: file.type, index };
       }
     });
@@ -248,7 +314,14 @@ export const uploadMultipleMedia = async (
     }
 
     console.log(
-      `${successful.length}/${files.length} files uploaded successfully`
+      `${successful.length}/${totalFiles} files uploaded successfully`
+    );
+
+    // Final progress update
+    onProgress?.(
+      totalFiles,
+      totalFiles,
+      `Upload complete: ${successful.length}/${totalFiles} files`
     );
 
     // Return successful uploads with thumbnails in the same order as input
