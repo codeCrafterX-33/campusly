@@ -9,7 +9,7 @@ import {
   Modal,
   ActivityIndicator,
 } from "react-native";
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "react-native-paper";
 import { VideoView, useVideoPlayer } from "expo-video";
@@ -19,6 +19,7 @@ import { RootStackParamList } from "../../navigation/StackNavigator";
 import Colors from "../../constants/Colors";
 import UserAvatar from "./Useravatar";
 import CampuslyAlert from "../CampuslyAlert";
+import { AuthContext } from "../../context/AuthContext";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -83,6 +84,15 @@ interface Comment {
   comment_depth: number;
   parent_post_id: number;
   replies?: Comment[];
+  // Additional fields for profile navigation
+  headline?: string;
+  about?: string;
+  school?: string;
+  city?: string;
+  country?: string;
+  joined_at?: string;
+  skills?: string[];
+  interests?: string[];
 }
 
 interface CommentCardProps {
@@ -111,6 +121,7 @@ const CommentCard = ({
   const { colors } = useTheme();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { userData, getCachedUser } = useContext(AuthContext);
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -194,7 +205,66 @@ const CommentCard = ({
       >
         {/* User Info Row */}
         <View style={styles.userInfoRow}>
-          <Image source={{ uri: image }} style={styles.profilePicture} />
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation();
+              if (comment.user_id) {
+                // Only prevent navigation to your own profile
+                if (comment.user_id === userData?.id) {
+                  console.log("Cannot navigate to own profile from comment");
+                  return;
+                }
+
+                console.log(
+                  "Navigating to commenter profile:",
+                  comment.user_id
+                );
+                console.log("Comment data for navigation:", {
+                  user_id: comment.user_id,
+                  firstname: comment.firstname,
+                  lastname: comment.lastname,
+                  username: comment.username,
+                  headline: comment.headline,
+                  about: comment.about,
+                  school: comment.school,
+                  city: comment.city,
+                  country: comment.country,
+                  joined_at: comment.joined_at,
+                  skills: comment.skills,
+                  interests: comment.interests,
+                });
+                // Check if we have cached data for instant display
+                const cachedUser = getCachedUser(comment.user_id.toString());
+
+                navigation.navigate("Profile", {
+                  user_id: comment.user_id.toString(),
+                  firstname: comment.firstname,
+                  lastname: comment.lastname,
+                  username: comment.username,
+                  image: comment.image,
+                  studentstatusverified: comment.studentstatusverified,
+                  headline: comment.headline || "",
+                  about: comment.about || "",
+                  school: comment.school || "",
+                  city: comment.city || "",
+                  country: comment.country || "",
+                  joined_at: comment.joined_at || "",
+                  skills: comment.skills || [],
+                  interests: comment.interests || [],
+                });
+              }
+            }}
+            style={styles.clickableAvatar}
+          >
+            <Image
+              source={{ uri: image }}
+              style={
+                comment.user_id && comment.user_id !== userData?.id
+                  ? styles.clickableProfilePicture
+                  : styles.profilePicture
+              }
+            />
+          </TouchableOpacity>
           <View style={styles.userInfo}>
             <View style={styles.nameRow}>
               <View style={styles.nameWithVerification}>
@@ -579,6 +649,17 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
+    marginRight: 8,
+  },
+  clickableProfilePicture: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: Colors.PRIMARY + "30",
+  },
+  clickableAvatar: {
     marginRight: 8,
   },
   userInfo: {

@@ -1,4 +1,11 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+} from "react";
 import usePersistedState from "../util/PersistedState";
 import axios, { AxiosError } from "axios";
 import { AuthContext } from "./AuthContext";
@@ -22,7 +29,23 @@ function PostProvider({ children }: { children: React.ReactNode }) {
   const [userPosts, setUserPosts] = usePersistedState("userPosts", []);
   const [refreshing, setRefreshing] = useState(false);
   const [postMedia, setPostMedia] = useState<any>([]);
-  const { userData } = useContext(AuthContext);
+  const { userData, onLogout } = useContext(AuthContext);
+
+  // Register logout callback to clear post data
+  const hasRegisteredCallback = useRef(false);
+
+  const clearPostData = useCallback(() => {
+    setPosts([]);
+    setUserPosts([]);
+    setPostMedia([]);
+  }, []);
+
+  useEffect(() => {
+    if (!hasRegisteredCallback.current) {
+      onLogout(clearPostData);
+      hasRegisteredCallback.current = true;
+    }
+  }, [onLogout, clearPostData]);
 
   type getPosts = {
     id?: [];

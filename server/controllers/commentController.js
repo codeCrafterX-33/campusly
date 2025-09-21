@@ -11,7 +11,7 @@ const getNestedReplies = async (parentId) => {
       u.image,
       u.studentstatusverified
     FROM posts p
-    JOIN users u ON p.createdby = u.email
+    LEFT JOIN users u ON p.user_id = u.id
     WHERE p.parent_post_id = $1 
       AND p.comment_depth > 0
     ORDER BY p.createdon ASC
@@ -137,18 +137,24 @@ export const getComments = async (req, res) => {
   try {
     // First, let's test a simple query to see if the columns exist
     console.log("Testing basic query...");
-    const testQuery = `SELECT id, content, comment_depth, parent_post_id FROM posts WHERE parent_post_id = $1 LIMIT 1`;
+    const testQuery = `SELECT id, content, comment_depth, parent_post_id, user_id FROM posts WHERE parent_post_id = $1 LIMIT 5`;
     console.log("Executing test query with postIdInt:", postIdInt);
     const testResult = await pool.query(testQuery, [postIdInt]);
     console.log("Test query result:", testResult.rows);
 
     // Test if the posts table has the required columns
     console.log("Testing table structure...");
-    const structureQuery = `SELECT column_name FROM information_schema.columns WHERE table_name = 'posts' AND column_name IN ('parent_post_id', 'comment_depth')`;
+    const structureQuery = `SELECT column_name FROM information_schema.columns WHERE table_name = 'posts' AND column_name IN ('parent_post_id', 'comment_depth', 'user_id')`;
     const structureResult = await pool.query(structureQuery);
     console.log("Available columns:", structureResult.rows);
 
-    // Get all comments (no depth restrictions) with user info
+    // Test a broader query to see all comments for this post
+    console.log("Testing broader query...");
+    const broaderQuery = `SELECT id, content, user_id, createdby, comment_depth, parent_post_id FROM posts WHERE parent_post_id = $1 ORDER BY createdon ASC`;
+    const broaderResult = await pool.query(broaderQuery, [postIdInt]);
+    console.log("Broader query result:", broaderResult.rows);
+
+    // Get all comments with user info
     const commentsQuery = `
       SELECT 
         p.*,
@@ -156,9 +162,17 @@ export const getComments = async (req, res) => {
         u.lastname,
         u.username,
         u.image,
-        u.studentstatusverified
+        u.studentstatusverified,
+        u.headline,
+        u.about,
+        u.school,
+        u.city,
+        u.country,
+        u.joined_at,
+        u.skills,
+        u.interests
       FROM posts p
-      JOIN users u ON p.createdby = u.email
+      LEFT JOIN users u ON p.user_id = u.id
       WHERE p.parent_post_id = $1 
         AND p.comment_depth > 0
       ORDER BY p.createdon ASC
@@ -178,6 +192,17 @@ export const getComments = async (req, res) => {
       "Comments query result:",
       commentsResult.rows.length,
       "comments found"
+    );
+    console.log(
+      "Comments data:",
+      commentsResult.rows.map((c) => ({
+        id: c.id,
+        content: c.content?.substring(0, 50),
+        user_id: c.user_id,
+        username: c.username,
+        firstname: c.firstname,
+        lastname: c.lastname,
+      }))
     );
 
     let comments = commentsResult.rows;

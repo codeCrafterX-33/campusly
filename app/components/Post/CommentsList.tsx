@@ -64,6 +64,24 @@ const CommentsList = ({
 
   // Get cached comments for this post
   const cachedComments = contextComments[postId] || [];
+  console.log(
+    "CommentsList: Rendering comments for post",
+    postId,
+    ":",
+    cachedComments.length,
+    "comments"
+  );
+  console.log(
+    "CommentsList: Comments data:",
+    cachedComments.map((c) => ({
+      id: c.id,
+      content: c.content?.substring(0, 50),
+      user_id: c.user_id,
+      username: c.username,
+      firstname: c.firstname,
+      lastname: c.lastname,
+    }))
+  );
 
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
@@ -153,10 +171,35 @@ const CommentsList = ({
   };
 
   const renderComment = ({ item }: { item: Comment }) => {
-    // Don't render if essential data is missing
-    if (!item || !item.firstname || !item.lastname || !item.username) {
+    console.log("CommentsList: Rendering comment:", {
+      id: item.id,
+      content: item.content?.substring(0, 50),
+      user_id: item.user_id,
+      username: item.username,
+      firstname: item.firstname,
+      lastname: item.lastname,
+      hasEssentialData: !!(
+        item &&
+        item.firstname &&
+        item.lastname &&
+        item.username
+      ),
+    });
+
+    // Don't render if item is missing
+    if (!item) {
+      console.log("CommentsList: Skipping comment due to missing item");
       return null;
     }
+
+    // Provide fallback values for missing user data
+    const commentWithFallbacks = {
+      ...item,
+      firstname: item.firstname || "Unknown",
+      lastname: item.lastname || "User",
+      username: item.username || "unknown_user",
+      image: item.image || "https://via.placeholder.com/50",
+    };
 
     // Handle case where user_id might be null for existing comments
     const isOwner = Boolean(
@@ -166,7 +209,7 @@ const CommentsList = ({
     return (
       <View key={item.id}>
         <CommentCard
-          comment={item}
+          comment={commentWithFallbacks}
           depth={0}
           onLike={handleLike}
           onReply={onReplyPress}

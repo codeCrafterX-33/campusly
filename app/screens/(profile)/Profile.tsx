@@ -22,6 +22,7 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
 } from "react-native";
+import axios from "axios";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { AuthContext } from "../../context/AuthContext";
 import PostCard from "../../components/Post/PostCard";
@@ -39,6 +40,7 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { heightPercentageToDP as hp } from "react-native-responsive-screen";
 import { ActivitySectionMiniScreen } from "../ActivitySectionScreen";
 import EducationCard from "../../components/Profile/EducationCard";
+import ProfileSkeleton from "../../components/Skeletons/ProfileSkeleton";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const HEADER_HEIGHT = 56;
@@ -46,8 +48,9 @@ const COVER_HEIGHT = 200;
 
 const PULL_THRESHOLD = 80;
 
-const Profile = ({ navigation }: { navigation: any }) => {
-  const { userData, education } = useContext(AuthContext);
+const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
+  const { userData, education, getUserById, getCachedUser } =
+    useContext(AuthContext);
   const [aboutExpanded, setAboutExpanded] = useState(false);
   const [showReadMore, setShowReadMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -56,7 +59,11 @@ const Profile = ({ navigation }: { navigation: any }) => {
   const { showSuccessCheckmark, checkmark } = useCheckAnimation();
   const [skills, setSkills] = useState<string[]>(userData?.skills);
   const [interests, setInterests] = useState<string[]>(userData?.interests);
-
+  const { user_id } = route.params || {};
+  const [viewingUserData, setViewingUserData] = useState<any>(null);
+  const [viewingUserEducation, setViewingUserEducation] = useState<any[]>([]);
+  const [isRefreshingData, setIsRefreshingData] = useState(false);
+  const [showSkeleton, setShowSkeleton] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("Posts");
   const [showCheckmark, setShowCheckmark] = useState(false);
@@ -72,10 +79,30 @@ const Profile = ({ navigation }: { navigation: any }) => {
   const suggestionOpacity = useRef(new Animated.Value(0)).current;
   const suggestionTranslateY = useRef(new Animated.Value(-30)).current;
 
-  useEffect(() => {
-    setSkills(userData?.skills || []);
-    setInterests(userData?.interests || []);
-  }, [userData]);
+  // Determine which user data to display
+  const displayUserData = user_id ? viewingUserData : userData;
+  const displayEducation = user_id ? viewingUserEducation : education;
+  const isViewingOtherUser = !!user_id;
+
+  // Debug education data
+  console.log("Profile Education Debug:", {
+    user_id,
+    viewingUserData: viewingUserData
+      ? {
+          hasEducation: !!viewingUserData.education,
+          educationLength: viewingUserData.education?.length || 0,
+          education: viewingUserData.education,
+        }
+      : null,
+    viewingUserEducation: {
+      length: viewingUserEducation?.length || 0,
+      data: viewingUserEducation,
+    },
+    displayEducation: {
+      length: displayEducation?.length || 0,
+      data: displayEducation,
+    },
+  });
 
   const getPlaceholder = (value: string | undefined, placeholder: string) => ({
     text: value?.trim() || placeholder,
@@ -168,19 +195,108 @@ const Profile = ({ navigation }: { navigation: any }) => {
   });
 
   useEffect(() => {
+    setSkills(displayUserData?.skills || []);
+    setInterests(displayUserData?.interests || []);
+  }, [displayUserData]);
+
+  // Fetch viewing user data if user_id is provided
+  useEffect(() => {
+    const fetchViewingUserData = async () => {
+      if (user_id) {
+        // Check cache first for immediate display
+        const cachedUser = getCachedUser(user_id);
+        if (cachedUser) {
+          console.log("Using cached complete user data for immediate display");
+          console.log("Cached user education:", cachedUser.education);
+          setViewingUserData(cachedUser);
+          // Also set education separately for consistency
+          if (cachedUser.education && Array.isArray(cachedUser.education)) {
+            setViewingUserEducation(cachedUser.education);
+          }
+          setIsLoading(false);
+          setShowSkeleton(false);
+          return; // Don't fetch again if we have complete cached data
+        }
+
+        // LinkedIn-style loading: Show skeleton only if no cached data
+        console.log(
+          "No cached data, showing skeleton and fetching in background"
+        );
+        setShowSkeleton(true);
+        setIsLoading(false); // Don't show the old loading state
+
+        // Show basic info immediately from post data if available (for smooth transition)
+        const basicUserData = {
+          id: user_id,
+          firstname: route.params?.firstname || "",
+          lastname: route.params?.lastname || "",
+          username: route.params?.username || "",
+          image: route.params?.image || "https://via.placeholder.com/50",
+          studentstatusverified: route.params?.studentstatusverified || false,
+          headline: route.params?.headline || "",
+          about: route.params?.about || "",
+          school: route.params?.school || "",
+          city: route.params?.city || "",
+          country: route.params?.country || "",
+          joined_at: route.params?.joined_at || "",
+          skills: route.params?.skills || [],
+          interests: route.params?.interests || [],
+        };
+        setViewingUserData(basicUserData);
+
+        // Fetch complete data in background
+        try {
+          setIsRefreshingData(true);
+          const userData = await getUserById(user_id);
+
+          // Smooth transition: Replace skeleton with real data
+          setViewingUserData(userData);
+          setShowSkeleton(false);
+
+          // Fetch education data for the viewing user
+          try {
+            const educationResponse = await axios.get(
+              `${process.env.EXPO_PUBLIC_SERVER_URL}/education/${userData.email}`
+            );
+            setViewingUserEducation(educationResponse.data.data || []);
+          } catch (educationError) {
+            console.warn(
+              "Failed to fetch viewing user education data:",
+              educationError
+            );
+            setViewingUserEducation([]);
+          }
+        } catch (error) {
+          console.error("Failed to fetch viewing user data:", error);
+          setShowSkeleton(false); // Hide skeleton on error
+        } finally {
+          setIsRefreshingData(false);
+        }
+      } else {
+        setIsLoading(false);
+        setShowSkeleton(false);
+      }
+    };
+
+    fetchViewingUserData();
+  }, [user_id, getUserById, getCachedUser, route.params]);
+
+  useEffect(() => {
     getUserPosts();
     setTimeout(() => {
       setIsLoading(false);
     }, 2000);
   }, []);
 
-  // if (isLoading) {
-  //   return (
-  //     <View style={styles.container}>
-  //       <ProfileSkeleton />
-  //     </View>
-  //   );
-  // }
+  // Show loading skeleton only if no cached data and no basic data yet
+  if (showSkeleton && user_id && !displayUserData) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={Colors.PRIMARY} />
+        <ProfileSkeleton />
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -195,8 +311,11 @@ const Profile = ({ navigation }: { navigation: any }) => {
           <Text style={styles.headerButtonText}>←</Text>
         </TouchableOpacity>
         <View style={styles.headerTitle}>
-          <Text style={styles.headerName}>{userData?.name}</Text>
-          <Text style={styles.headerTweetCount}>{userPosts.length} posts</Text>
+          <Text style={styles.headerName}>{displayUserData?.name}</Text>
+          <Text style={styles.headerTweetCount}>
+            {userPosts.length} posts
+            {isRefreshingData && " • Updating..."}
+          </Text>
         </View>
         <TouchableOpacity style={styles.headerButton}>
           <Text style={styles.headerButtonText}>⋯</Text>
@@ -251,15 +370,19 @@ const Profile = ({ navigation }: { navigation: any }) => {
             { backgroundColor: colors.background },
           ]}
         >
-          <ProfileHeader user_id={userData?.email} scrollY={scrollY} />
+          <ProfileHeader
+            user_id={displayUserData?.email}
+            scrollY={scrollY}
+            userimage={displayUserData?.image}
+          />
           <View style={styles.profileInfo}>
             <View style={styles.nameContainer}>
               <Text
                 style={[styles.profileName, { color: colors.onBackground }]}
               >
-                {userData?.firstname} {userData?.lastname}
+                {displayUserData?.firstname} {displayUserData?.lastname}
               </Text>
-              {userData?.studentstatusverified && (
+              {displayUserData?.studentstatusverified && (
                 <Ionicons
                   name="checkmark-circle"
                   size={RFValue(20)}
@@ -268,12 +391,15 @@ const Profile = ({ navigation }: { navigation: any }) => {
                 />
               )}
             </View>
-            <Text style={[styles.profileHandle]}> @{userData?.username}</Text>
+            <Text style={[styles.profileHandle]}>
+              {" "}
+              @{displayUserData?.username}
+            </Text>
 
             {/* {bio} */}
             {(() => {
               const bio = getPlaceholder(
-                userData?.headline,
+                displayUserData?.headline,
                 "Mysterious stranger with no bio. Very suspicious 🤔"
               );
               return (
@@ -285,7 +411,7 @@ const Profile = ({ navigation }: { navigation: any }) => {
               {/* School */}
               {(() => {
                 const school = getPlaceholder(
-                  userData?.school,
+                  displayUserData?.school,
                   "A mystery school… yet to be revealed 🕵️‍♂️"
                 );
                 return (
@@ -306,8 +432,10 @@ const Profile = ({ navigation }: { navigation: any }) => {
               {(() => {
                 // Get education data from context
                 const educationData =
-                  education && Array.isArray(education) && education.length > 0
-                    ? education[0]
+                  displayEducation &&
+                  Array.isArray(displayEducation) &&
+                  displayEducation.length > 0
+                    ? displayEducation[0]
                     : null;
 
                 if (!educationData) {
@@ -386,8 +514,16 @@ const Profile = ({ navigation }: { navigation: any }) => {
 
               {/* Location */}
               {(() => {
+                // Properly handle null/undefined values for location
+                const city = displayUserData?.city?.trim();
+                const country = displayUserData?.country?.trim();
+                const locationString =
+                  city && country
+                    ? `${city}, ${country}`
+                    : city || country || undefined;
+
                 const location = getPlaceholder(
-                  userData?.city + ", " + userData?.country,
+                  locationString,
                   "Top Secret Academy 🕵️‍♂️"
                 );
                 return (
@@ -407,11 +543,14 @@ const Profile = ({ navigation }: { navigation: any }) => {
               {/* Joined App */}
               {(() => {
                 const joined = getPlaceholder(
-                  userData?.joined_at
-                    ? new Date(userData.joined_at).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                      })
+                  displayUserData?.joined_at
+                    ? new Date(displayUserData.joined_at).toLocaleDateString(
+                        "en-US",
+                        {
+                          year: "numeric",
+                          month: "long",
+                        }
+                      )
                     : undefined,
                   "Joined… who knows when? 🕰️"
                 );
@@ -468,20 +607,22 @@ const Profile = ({ navigation }: { navigation: any }) => {
               <Text style={[styles.aboutTitle, { color: colors.onBackground }]}>
                 About
               </Text>
-              <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("EditProfile", {
-                    userEmail: userData?.email,
-                    sectionToEdit: "about",
-                  })
-                }
-              >
-                <Ionicons
-                  name="pencil-outline"
-                  size={RFValue(16)}
-                  color={Colors.PRIMARY}
-                />
-              </TouchableOpacity>
+              {!isViewingOtherUser && (
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate("EditProfile", {
+                      userEmail: displayUserData?.email,
+                      sectionToEdit: "about",
+                    })
+                  }
+                >
+                  <Ionicons
+                    name="pencil-outline"
+                    size={RFValue(16)}
+                    color={Colors.PRIMARY}
+                  />
+                </TouchableOpacity>
+              )}
             </View>
 
             {(() => {
@@ -490,8 +631,9 @@ Rumor has it they code apps, chase deadlines, and survive on coffee.
 May or may not have a secret talent for finding the best study spots on campus. 🕵️‍♂️  
 Friend requests welcome, but beware… they might already have 3 group projects pending. 😏`;
 
-              const aboutData = userData?.about?.trim() || placeholderAbout;
-              const isPlaceholder = !userData?.about?.trim();
+              const aboutData =
+                displayUserData?.about?.trim() || placeholderAbout;
+              const isPlaceholder = !displayUserData?.about?.trim();
 
               return (
                 <>
@@ -580,22 +722,24 @@ Friend requests welcome, but beware… they might already have 3 group projects 
               >
                 Education
               </Text>
-              <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("EditEducation", {
-                    userEmail: userData?.email,
-                  })
-                }
-              >
-                <Ionicons
-                  name="pencil-outline"
-                  size={RFValue(16)}
-                  color={Colors.PRIMARY}
-                />
-              </TouchableOpacity>
+              {!isViewingOtherUser && (
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate("EditEducation", {
+                      userEmail: displayUserData?.email,
+                    })
+                  }
+                >
+                  <Ionicons
+                    name="pencil-outline"
+                    size={RFValue(16)}
+                    color={Colors.PRIMARY}
+                  />
+                </TouchableOpacity>
+              )}
             </View>
-            {Array.isArray(education) && education.length > 0 ? (
-              education.map((edu: any, index: number) => (
+            {Array.isArray(displayEducation) && displayEducation.length > 0 ? (
+              displayEducation.map((edu: any, index: number) => (
                 <EducationCard key={index} education={edu} />
               ))
             ) : (
@@ -622,20 +766,22 @@ Friend requests welcome, but beware… they might already have 3 group projects 
               >
                 Skills & Interests
               </Text>
-              <TouchableOpacity
-                onPress={() =>
-                  navigation.navigate("EditProfile", {
-                    userEmail: userData?.email,
-                    sectionToEdit: "skills",
-                  })
-                }
-              >
-                <Ionicons
-                  name="pencil-outline"
-                  size={RFValue(16)}
-                  color={Colors.PRIMARY}
-                />
-              </TouchableOpacity>
+              {!isViewingOtherUser && (
+                <TouchableOpacity
+                  onPress={() =>
+                    navigation.navigate("EditProfile", {
+                      userEmail: displayUserData?.email,
+                      sectionToEdit: "skills",
+                    })
+                  }
+                >
+                  <Ionicons
+                    name="pencil-outline"
+                    size={RFValue(16)}
+                    color={Colors.PRIMARY}
+                  />
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Skills Subsection */}

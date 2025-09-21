@@ -20,9 +20,11 @@ const PROFILE_IMAGE_SIZE = 80;
 interface ProfileHeaderProps {
   scrollY: Animated.Value;
   user_id: string;
+  userimage: string;
 }
 
-const ProfileHeader = ({ scrollY, user_id }: ProfileHeaderProps) => {
+const ProfileHeader = ({ scrollY, user_id, userimage }: ProfileHeaderProps) => {
+  console.log("user_id", user_id);
   const { userData } = useContext(AuthContext);
   const loggedInUser = user_id === userData?.email;
 
@@ -63,7 +65,7 @@ const ProfileHeader = ({ scrollY, user_id }: ProfileHeaderProps) => {
       >
         <Image
           source={{
-            uri: userData?.image,
+            uri: userimage,
           }}
           style={styles.profileImage}
         />
@@ -92,7 +94,7 @@ const ProfileHeader = ({ scrollY, user_id }: ProfileHeaderProps) => {
         <TouchableOpacity
           style={loggedInUser ? styles.editProfileButton : styles.followButton}
         >
-          <Text style={styles.editProfileButtonText}>"Follow"</Text>
+          <Text style={styles.editProfileButtonText}>Follow</Text>
         </TouchableOpacity>
       )}
     </View>

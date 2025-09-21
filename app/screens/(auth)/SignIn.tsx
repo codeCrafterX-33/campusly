@@ -6,6 +6,9 @@ import {
   Keyboard,
   TouchableWithoutFeedback,
   Pressable,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from "react-native";
 import AuthContent from "../../components/auth/AuthContent";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -65,39 +68,59 @@ export default function SignIn({ navigation }: { navigation: any }) {
   }
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.container}>
-        <View style={styles.logoContainer}>
-          <Image
-            source={require("../../assets/images/logo.png")}
-            style={styles.logo}
-          />
-          <Text style={styles.title}>Sign In To Campusly</Text>
-        </View>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.content}>
+            <View style={styles.logoContainer}>
+              <Image
+                source={require("../../assets/images/logo.png")}
+                style={styles.logo}
+              />
+              <Text style={styles.title}>Sign In To Campusly</Text>
+            </View>
 
-        <AuthContent
-          isLoading={isLoading}
-          isSignIn
-          onAuthenticate={signinHandler}
-        />
-        <Pressable
-          onPress={() => {
-            navigation.navigate("SignUp");
-          }}
-        >
-          <Text style={styles.footerText}>New to Campusly? Sign up here</Text>
-        </Pressable>
-      </View>
-    </TouchableWithoutFeedback>
+            <AuthContent
+              isLoading={isLoading}
+              isSignIn
+              onAuthenticate={signinHandler}
+            />
+            <Pressable
+              onPress={() => {
+                navigation.navigate("SignUp");
+              }}
+            >
+              <Text style={styles.footerText}>
+                New to Campusly? Sign up here
+              </Text>
+            </Pressable>
+          </View>
+        </TouchableWithoutFeedback>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
     paddingTop: 90,
-    fontSize: 25,
     paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  content: {
+    flex: 1,
   },
   title: {
     fontSize: 25,

@@ -38,6 +38,7 @@ import axios, { AxiosError } from "axios";
 import Toast from "react-native-toast-message";
 import PostCard from "../components/Post/PostCard";
 import CampuslyAlert from "../components/CampuslyAlert";
+import { useViewableItemsPreloader } from "../hooks/useViewableItemsPreloader";
 
 const { width, height } = Dimensions.get("window");
 const HEADER_HEIGHT = 60;
@@ -48,6 +49,8 @@ type TabType = "posts" | "media" | "about";
 export default function ClubScreen() {
   const { colors } = useTheme();
   const { isDarkMode } = useThemeContext();
+  const { onViewableItemsChanged, viewabilityConfig } =
+    useViewableItemsPreloader();
   const route = useRoute();
   const navigation = useNavigation();
   const { userData } = useContext(AuthContext);
@@ -184,10 +187,7 @@ export default function ClubScreen() {
     if (!searchQuery.trim()) return clubPosts;
     const q = searchQuery.toLowerCase();
     return clubPosts.filter((p: any) => {
-      const text = `${p?.title || ""} ${
-        p?.content || p?.caption || ""
-      }`.toLowerCase();
-      return text.includes(q);
+      return p?.content?.toLowerCase().includes(q);
     });
   }, [clubPosts, searchQuery]);
 
@@ -752,6 +752,8 @@ export default function ClubScreen() {
             ) : null
           }
           scrollEventThrottle={16}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
           onScroll={(event) => {
             const scrollY = event.nativeEvent.contentOffset.y;
             const tabsThreshold = 300;

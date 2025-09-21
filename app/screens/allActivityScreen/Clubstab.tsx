@@ -10,6 +10,7 @@ import {
 import React, { useContext, useState, useEffect, useRef } from "react";
 import { PostContext } from "../../context/PostContext";
 import PostCard from "../../components/Post/PostCard";
+import { useViewableItemsPreloader } from "../../hooks/useViewableItemsPreloader";
 import { Tabs } from "react-native-collapsible-tab-view";
 import { OnRefresh } from "../../util/OnRefresh";
 import Colors from "../../constants/Colors";
@@ -28,6 +29,8 @@ export default function ProfileClubtab({
   const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { colors } = useTheme();
+  const { onViewableItemsChanged, viewabilityConfig } =
+    useViewableItemsPreloader();
 
   const clubPosts = userPosts.filter(
     (post: any) => post.club !== 0 && post.club !== null
@@ -87,6 +90,8 @@ export default function ProfileClubtab({
           data={clubPosts}
           renderItem={({ item, index }) => <PostCard post={item} />}
           keyExtractor={(item: any) => item.id + Math.random() + item.createdon}
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

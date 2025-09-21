@@ -14,7 +14,14 @@ import {
   ActivityIndicator,
   Image,
 } from "react-native";
-import React, { useContext, useLayoutEffect, useState, useEffect } from "react";
+import React, {
+  useContext,
+  useLayoutEffect,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
 import { useNavigation } from "@react-navigation/native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "react-native-paper";
@@ -26,12 +33,45 @@ import ProfileSaveButton from "./ProfileSaveButton";
 import { AuthContext } from "../../context/AuthContext";
 import axios from "axios";
 
+// Debounce utility function
+const debounce = (func: Function, wait: number) => {
+  let timeout: NodeJS.Timeout;
+  return function executedFunction(...args: any[]) {
+    const later = () => {
+      clearTimeout(timeout);
+      func(...args);
+    };
+    clearTimeout(timeout);
+    timeout = setTimeout(later, wait);
+  };
+};
+
+// Calculate relevance score for search results
+const calculateRelevance = (text: string, query: string): number => {
+  const textLower = text.toLowerCase();
+  const queryLower = query.toLowerCase();
+
+  if (textLower === queryLower) return 100; // Exact match
+  if (textLower.startsWith(queryLower)) return 90; // Starts with query
+  if (textLower.includes(queryLower)) return 70; // Contains query
+  if (queryLower.includes(textLower)) return 50; // Query contains text
+
+  // Calculate similarity based on common characters
+  const commonChars = queryLower
+    .split("")
+    .filter((char) => textLower.includes(char)).length;
+  return (commonChars / query.length) * 30;
+};
+
 export default function EditProfile({ route }: { route: any }) {
   const navigation = useNavigation();
   // Destructure the parameters passed from the previous screen
   const { userEmail, sectionToEdit } = route.params;
   const { colors } = useTheme();
   const { userData, setUserData, education } = useContext(AuthContext);
+
+  // Cache for search results
+  const searchCache = useRef<Map<string, any[]>>(new Map());
 
   // Education options - will be fetched from database later
   const educationOptions = [
@@ -220,212 +260,127 @@ export default function EditProfile({ route }: { route: any }) {
     return String.fromCodePoint(...codePoints);
   };
 
-  // Search functions for countries and cities
-  const searchCountries = async (query: string) => {
-    if (!query.trim()) return;
-
-    setIsSearchingCountries(true);
-    try {
-      const response = await axios.get(
-        `https://restcountries.com/v3.1/name/${query}`
-      );
-      const countryData = response.data.map((country: any) => ({
-        name: country.name.common,
-        flag: getCountryFlag(country.cca2 || ""),
-        capital: country.capital?.[0] || "",
-        countryCode: country.cca2 || "",
-      }));
-
-      console.log("Country data:", countryData);
-      setCountries(countryData);
-    } catch (error) {
-      // Silently handle errors - don't show in UI
-      console.warn("Country search error (handled silently):", error);
-      setCountries([]);
-    } finally {
-      setIsSearchingCountries(false);
-    }
-  };
-
-  const searchCities = async (query: string) => {
-    if (!query.trim()) return;
-
-    setIsSearchingCities(true);
-    try {
-      // Using Nominatim (OpenStreetMap) API
-      // Try multiple search approaches to get more comprehensive results
-      let response;
-      try {
-        // First try: city-specific search
-        response = await axios.get(
-          `https://nominatim.openstreetmap.org/search?q=${query}&format=json&addressdetails=1&limit=50&featuretype=city&accept-language=en`
-        );
-
-        // If we get few results, try a broader search
-        if (response.data.length < 10) {
-          console.log(
-            "City search returned few results, trying broader search..."
-          );
-          const broaderResponse = await axios.get(
-            `https://nominatim.openstreetmap.org/search?q=${query}&format=json&addressdetails=1&limit=50&accept-language=en`
-          );
-
-          // Combine and deduplicate results
-          const combinedResults = [...response.data, ...broaderResponse.data];
-          const uniqueResults = combinedResults.filter(
-            (place: any, index: number, self: any[]) =>
-              index ===
-              self.findIndex((p: any) => p.place_id === place.place_id)
-          );
-
-          response = { data: uniqueResults };
-          console.log("Combined search results:", uniqueResults.length);
-        }
-      } catch (error) {
-        // Fallback to broader search if city search fails
-        console.log("City search failed, trying broader search...");
-        response = await axios.get(
-          `https://nominatim.openstreetmap.org/search?q=${query}&format=json&addressdetails=1&limit=50&accept-language=en`
-        );
+  // Debounced search functions for countries and cities
+  const searchCountries = useCallback(
+    debounce(async (query: string) => {
+      if (!query.trim()) {
+        setCountries([]);
+        return;
       }
 
-      console.log("Nominatim response:", response.data);
-      console.log("Current country filter:", country || userData?.country);
+      const cacheKey = `countries_${query.toLowerCase()}`;
+      if (searchCache.current.has(cacheKey)) {
+        setCountries(searchCache.current.get(cacheKey) || []);
+        return;
+      }
 
-      const cityData = response.data
-        .filter((place: any) => {
-          // Check if this place is city-like based on multiple criteria
-          const isCityLike =
-            // Direct city indicators
-            (place.class === "place" && place.type === "city") ||
-            // Administrative cities
-            (place.class === "boundary" &&
-              place.type === "administrative" &&
-              place.addresstype === "city") ||
-            // Other city-like administrative divisions
-            (place.class === "boundary" &&
-              place.type === "administrative" &&
-              (place.addresstype === "city" ||
-                place.addresstype === "state" ||
-                place.addresstype === "county")) ||
-            // Places with city names in display_name
-            (place.display_name && place.display_name.includes("city")) ||
-            // High importance places (usually major cities)
-            (place.importance && place.importance > 0.5);
-
-          // Additional check: if query looks like the city name, include it
-          const queryLower = query.toLowerCase();
-          const placeNameLower = (place.name || "").toLowerCase();
-          const displayNameLower = (place.display_name || "").toLowerCase();
-
-          const queryLooksLikeCityName =
-            placeNameLower.includes(queryLower) ||
-            queryLower.includes(placeNameLower) ||
-            displayNameLower.includes(queryLower) ||
-            queryLower.includes(displayNameLower);
-
-          // Check for exact or close matches
-          const exactMatch = placeNameLower === queryLower;
-          const startsWithQuery = placeNameLower.startsWith(queryLower);
-          const queryStartsWithName = queryLower.startsWith(placeNameLower);
-
-          console.log(
-            `Place: ${
-              place.name
-            }, isCityLike: ${isCityLike}, queryLooksLikeCityName: ${queryLooksLikeCityName}, exactMatch: ${exactMatch}, startsWithQuery: ${startsWithQuery}, country: ${
-              place.address?.country
-            }, targetCountry: ${country || userData?.country}`
-          );
-
-          // If user has selected a country, filter by that country
-          if (country || userData?.country) {
-            const targetCountry = country || userData?.country;
-            const countryMatch = place.address?.country === targetCountry;
-            console.log(`Country match for ${place.name}: ${countryMatch}`);
-            // Include if it's city-like AND country matches, OR if query looks like city name
-            return (isCityLike && countryMatch) || queryLooksLikeCityName;
-          } else {
-            // If no country selected, show all cities or places that look like the query
-            return isCityLike || queryLooksLikeCityName;
-          }
-        })
-        .map((place: any) => ({
-          name: place.name || place.display_name.split(",")[0],
-          country: place.address?.country || "",
-          region:
-            place.address?.state ||
-            place.address?.province ||
-            place.address?.city ||
-            "",
-          country_code: place.address?.country_code || "",
-          isOutOfCountry: false, // Default to false for main filter
-        }))
-        .filter((city: any) => city.name && city.country) // Only cities with names and countries
-        .slice(0, 20); // Increased limit to show more results
-
-      console.log("Final filtered cities:", cityData);
-
-      // If no cities found with country filter, show all cities but mark them
-      if (cityData.length === 0 && (country || userData?.country)) {
-        console.log(
-          "No cities found with country filter, showing all cities..."
+      setIsSearchingCountries(true);
+      try {
+        const response = await axios.get(
+          `https://restcountries.com/v3.1/name/${query}`,
+          { timeout: 5000 }
         );
-        const allCities = response.data
+        const countryData = response.data
+          .map((country: any) => ({
+            name: country.name.common,
+            flag: getCountryFlag(country.cca2 || ""),
+            capital: country.capital?.[0] || "",
+            countryCode: country.cca2 || "",
+            relevance: calculateRelevance(country.name.common, query),
+          }))
+          .sort((a: any, b: any) => b.relevance - a.relevance)
+          .slice(0, 15);
+
+        searchCache.current.set(cacheKey, countryData);
+        setCountries(countryData);
+      } catch (error) {
+        console.warn("Country search error:", error);
+        setCountries([]);
+      } finally {
+        setIsSearchingCountries(false);
+      }
+    }, 300),
+    []
+  );
+
+  const searchCities = useCallback(
+    debounce(async (query: string) => {
+      if (!query.trim()) {
+        setCities([]);
+        return;
+      }
+
+      const targetCountry = country || userData?.country;
+      const cacheKey = `cities_${query.toLowerCase()}_${
+        targetCountry || "all"
+      }`;
+
+      if (searchCache.current.has(cacheKey)) {
+        setCities(searchCache.current.get(cacheKey) || []);
+        return;
+      }
+
+      setIsSearchingCities(true);
+      try {
+        const encodedQuery = encodeURIComponent(query);
+
+        // Build search URL with country filter if available
+        let searchUrl = `https://nominatim.openstreetmap.org/search?q=${encodedQuery}&format=json&addressdetails=1&limit=30&accept-language=en&featuretype=city`;
+
+        if (targetCountry) {
+          searchUrl += `&countrycodes=${targetCountry.toLowerCase()}`;
+        }
+
+        const response = await axios.get(searchUrl, { timeout: 8000 });
+
+        const cityData = response.data
           .filter((place: any) => {
-            const isCityLike =
+            // More precise city filtering
+            const isCity =
               (place.class === "place" && place.type === "city") ||
-              (place.class === "boundary" &&
-                place.type === "administrative" &&
-                place.addresstype === "city") ||
-              (place.class === "boundary" &&
-                place.type === "administrative" &&
-                (place.addresstype === "city" ||
-                  place.addresstype === "state" ||
-                  place.addresstype === "county")) ||
-              (place.display_name && place.display_name.includes("city")) ||
-              (place.importance && place.importance > 0.5);
+              (place.class === "boundary" && place.addresstype === "city") ||
+              (place.importance && place.importance > 0.3);
 
-            // Also include places where query looks like the city name
             const queryLower = query.toLowerCase();
-            const placeNameLower = (place.name || "").toLowerCase();
-            const displayNameLower = (place.display_name || "").toLowerCase();
+            const placeName = (place.name || "").toLowerCase();
+            const displayName = (place.display_name || "").toLowerCase();
 
-            const queryLooksLikeCityName =
-              placeNameLower.includes(queryLower) ||
-              queryLower.includes(placeNameLower) ||
-              displayNameLower.includes(queryLower) ||
-              queryLower.includes(displayNameLower);
+            const nameMatch =
+              placeName.includes(queryLower) ||
+              queryLower.includes(placeName) ||
+              displayName.includes(queryLower);
 
-            return isCityLike || queryLooksLikeCityName;
+            return isCity && nameMatch;
           })
           .map((place: any) => ({
             name: place.name || place.display_name.split(",")[0],
             country: place.address?.country || "",
-            region:
-              place.address?.state ||
-              place.address?.province ||
-              place.address?.city ||
-              "",
+            region: place.address?.state || place.address?.province || "",
             country_code: place.address?.country_code || "",
-            isOutOfCountry:
-              place.address?.country !== (country || userData?.country),
+            relevance: calculateRelevance(place.name || "", query),
+            isOutOfCountry: targetCountry
+              ? place.address?.country !== targetCountry
+              : false,
           }))
           .filter((city: any) => city.name && city.country)
-          .slice(0, 20); // Increased limit to show more results
+          .sort((a: any, b: any) => {
+            // Sort by relevance, then by importance
+            if (a.relevance !== b.relevance) return b.relevance - a.relevance;
+            return (b.importance || 0) - (a.importance || 0);
+          })
+          .slice(0, 15);
 
-        console.log("All cities (including out-of-country):", allCities);
-        setCities(allCities);
-      } else {
+        searchCache.current.set(cacheKey, cityData);
         setCities(cityData);
+      } catch (error) {
+        console.warn("City search error:", error);
+        setCities([]);
+      } finally {
+        setIsSearchingCities(false);
       }
-    } catch (error) {
-      // Silently handle errors - don't show in UI
-      console.warn("City search error (handled silently):", error);
-      setCities([]);
-    } finally {
-      setIsSearchingCities(false);
-    }
-  };
+    }, 400),
+    [country, userData?.country]
+  );
 
   const handleSave = async () => {
     if (isSaving) return; // Prevent multiple saves

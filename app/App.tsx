@@ -22,6 +22,7 @@ import { Provider as PaperProvider } from "react-native-paper";
 import ThemedStatusBar from "./components/ThemedStatusBar";
 import ClubProvider from "./context/ClubContext";
 import EventProvider from "./context/EventContext";
+import { PreloaderProvider } from "./context/PreloaderContext";
 import {
   configureReanimatedLogger,
   ReanimatedLogLevel,
@@ -78,25 +79,27 @@ export default function App() {
                 <ThemedStatusBar />
 
                 <NavigationContainer theme={DefaultTheme}>
-                  <BackgroundPostProvider>
-                    <ClubProvider>
-                      <EventProvider>
-                        <PostProvider>
-                          <CommentProvider>
-                            <PostHistoryProvider>
-                              {isTryingLogin ? (
-                                <LoadingScreen />
-                              ) : user ? (
-                                <AuthenticatedStack />
-                              ) : (
-                                <StackNavigator />
-                              )}
-                            </PostHistoryProvider>
-                          </CommentProvider>
-                        </PostProvider>
-                      </EventProvider>
-                    </ClubProvider>
-                  </BackgroundPostProvider>
+                  <PreloaderProvider>
+                    <BackgroundPostProvider>
+                      <ClubProvider>
+                        <EventProvider>
+                          <PostProvider>
+                            <CommentProvider>
+                              <PostHistoryProvider>
+                                {isTryingLogin ? (
+                                  <LoadingScreen />
+                                ) : user ? (
+                                  <AuthenticatedStack />
+                                ) : (
+                                  <StackNavigator />
+                                )}
+                              </PostHistoryProvider>
+                            </CommentProvider>
+                          </PostProvider>
+                        </EventProvider>
+                      </ClubProvider>
+                    </BackgroundPostProvider>
+                  </PreloaderProvider>
                 </NavigationContainer>
               </PaperProvider>
             )}

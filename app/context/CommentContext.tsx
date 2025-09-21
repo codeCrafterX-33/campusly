@@ -19,6 +19,15 @@ interface Comment {
   comment_depth: number;
   parent_post_id: number;
   replies?: Comment[];
+  // Additional profile fields for navigation
+  headline?: string;
+  about?: string;
+  school?: string;
+  city?: string;
+  country?: string;
+  joined_at?: string;
+  skills?: string[];
+  interests?: string[];
 }
 
 interface CreateCommentData {
@@ -88,6 +97,24 @@ export const CommentProvider: React.FC<CommentProviderProps> = ({
       );
 
       const commentsData = response.data.comments || [];
+      console.log(
+        "CommentContext: Fetched comments for post",
+        postId,
+        ":",
+        commentsData.length,
+        "comments"
+      );
+      console.log(
+        "CommentContext: Comments data:",
+        commentsData.map((c) => ({
+          id: c.id,
+          content: c.content?.substring(0, 50),
+          user_id: c.user_id,
+          username: c.username,
+          firstname: c.firstname,
+          lastname: c.lastname,
+        }))
+      );
       setComments((prev) => ({
         ...prev,
         [postId]: commentsData,

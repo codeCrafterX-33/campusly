@@ -5,6 +5,9 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   Pressable,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from "react-native";
 import AuthContent from "../../components/auth/AuthContent";
 import { createUserWithEmailAndPassword } from "firebase/auth";
@@ -87,32 +90,50 @@ export default function SignUp({ navigation }: { navigation: any }) {
   }
 
   return (
-    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View style={styles.container}>
-        <Text style={styles.title}>Create New Account</Text>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContainer}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.content}>
+            <Text style={styles.title}>Create New Account</Text>
 
-        <AuthContent isLoading={isLoading} onAuthenticate={signupHandler} />
+            <AuthContent isLoading={isLoading} onAuthenticate={signupHandler} />
 
-        <Pressable
-          onPress={() => {
-            navigation.navigate("SignIn");
-          }}
-        >
-          <Text style={styles.footerText}>
-            Already have an account? Sign in here
-          </Text>
-        </Pressable>
-      </View>
-    </TouchableWithoutFeedback>
+            <Pressable
+              onPress={() => {
+                navigation.navigate("SignIn");
+              }}
+            >
+              <Text style={styles.footerText}>
+                Already have an account? Sign in here
+              </Text>
+            </Pressable>
+          </View>
+        </TouchableWithoutFeedback>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
     paddingTop: 90,
-    fontSize: 25,
     paddingHorizontal: 20,
+    paddingBottom: 20,
+  },
+  content: {
+    flex: 1,
   },
   title: {
     fontSize: 25,

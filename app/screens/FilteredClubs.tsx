@@ -15,6 +15,7 @@ import { AuthContext } from "../context/AuthContext";
 import ClubCard from "../components/Clubs/ClubCard";
 import Colors from "../constants/Colors";
 import { RFValue } from "react-native-responsive-fontsize";
+import Icon from "react-native-vector-icons/MaterialCommunityIcons";
 
 type TabType = "joined" | "my";
 
@@ -100,6 +101,7 @@ function JoinedClubsTab() {
       <View
         style={[styles.emptyContainer, { backgroundColor: colors.background }]}
       >
+        <Icon name="account-group-outline" size={64} color={Colors.PRIMARY} />
         <Text style={[styles.emptyText, { color: colors.onBackground }]}>
           You haven't joined any clubs yet
         </Text>
@@ -152,6 +154,7 @@ function MyClubsTab() {
       <View
         style={[styles.emptyContainer, { backgroundColor: colors.background }]}
       >
+        <Icon name="plus-circle-outline" size={64} color={Colors.PRIMARY} />
         <Text style={[styles.emptyText, { color: colors.onBackground }]}>
           You haven't created any clubs yet
         </Text>

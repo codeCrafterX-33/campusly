@@ -18,6 +18,7 @@ import {
 } from "react-native";
 import PostCard from "../../components/Post/PostCard";
 import { PostContext } from "../../context/PostContext";
+import { useViewableItemsPreloader } from "../../hooks/useViewableItemsPreloader";
 import Colors from "../../constants/Colors";
 import Toast from "react-native-toast-message";
 import { Tabs } from "react-native-collapsible-tab-view";
@@ -40,6 +41,8 @@ export default function PostsTab({
   const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { colors } = useTheme();
+  const { onViewableItemsChanged, viewabilityConfig } =
+    useViewableItemsPreloader();
 
   const publicPosts = userPosts.filter((post: any) => post.club === 0);
 
@@ -103,6 +106,8 @@ export default function PostsTab({
           keyExtractor={(item: any) =>
             (item.id?.toString() || "") + (item.createdon || "")
           }
+          onViewableItemsChanged={onViewableItemsChanged}
+          viewabilityConfig={viewabilityConfig}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

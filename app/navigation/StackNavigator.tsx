@@ -45,7 +45,22 @@ export type RootStackParamList = {
   TabLayout: undefined;
   AddPost: undefined;
   Event: undefined;
-  Profile: undefined;
+  Profile: {
+    user_id?: string;
+    firstname?: string;
+    lastname?: string;
+    username?: string;
+    image?: string;
+    studentstatusverified?: boolean;
+    headline?: string;
+    about?: string;
+    school?: string;
+    city?: string;
+    country?: string;
+    joined_at?: string;
+    skills?: string[];
+    interests?: string[];
+  };
   DrawerNavigator: undefined;
   ExploreClubs: undefined;
   CreateClub: undefined;

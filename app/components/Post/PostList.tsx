@@ -11,6 +11,7 @@ import PostCard from "./PostCard";
 import { PostContext } from "../../context/PostContext";
 import Colors from "../../constants/Colors";
 import { useTheme } from "react-native-paper";
+import { useViewableItemsPreloader } from "../../hooks/useViewableItemsPreloader";
 
 const PostList = ({
   posts,
@@ -27,6 +28,8 @@ const PostList = ({
 }) => {
   const { refreshing, onRefresh } = useContext(PostContext);
   const { colors: color } = useTheme();
+  const { onViewableItemsChanged, viewabilityConfig } =
+    useViewableItemsPreloader();
 
   const handleRefresh = () => {
     console.log("Refreshing with club_id:", club_id);
@@ -43,6 +46,8 @@ const PostList = ({
         onRefresh={clubOnRefresh ? clubOnRefresh : handleRefresh}
         contentContainerStyle={{ paddingBottom: 100 }}
         ref={flatListRef}
+        onViewableItemsChanged={onViewableItemsChanged}
+        viewabilityConfig={viewabilityConfig}
         ListEmptyComponent={
           <View
             style={{

@@ -19,7 +19,7 @@ import { useThemeContext } from "../../context/ThemeContext";
 import usePersistedState from "../../util/PersistedState";
 import Button from "../ui/Button";
 export function CustomDrawerContent(props: any) {
-  const authCtx = useContext(AuthContext);
+  const { userData, logout } = useContext(AuthContext);
   const { isDarkMode, setIsDarkMode } = useThemeContext();
   const [expanded, setExpanded] = usePersistedState("expanded", false);
 
@@ -41,7 +41,7 @@ export function CustomDrawerContent(props: any) {
           >
             <Avatar.Image
               source={{
-                uri: authCtx.userData?.image,
+                uri: userData?.image,
               }}
               size={50}
             />
@@ -50,10 +50,10 @@ export function CustomDrawerContent(props: any) {
             variant="titleMedium"
             style={[styles.title, { color: colors.onBackground }]}
           >
-            {authCtx.userData?.name}
+            {userData?.firstname} {userData?.lastname}
           </Typography>
           <Typography variant="titleLarge" style={[styles.caption]}>
-            {authCtx.userData?.email}
+            @{userData?.username}
           </Typography>
           <View style={styles.row}>
             <View style={styles.section}>
@@ -162,7 +162,7 @@ export function CustomDrawerContent(props: any) {
 
         <Button
           onPress={() => {
-            authCtx.logout();
+            userData.logout();
           }}
           viewStyle={{ marginTop: 50 }}
         >

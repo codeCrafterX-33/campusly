@@ -11,7 +11,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
-import React, { useState, useRef, useContext } from "react";
+import React, { useState, useRef, useContext, useEffect } from "react";
 import UserAvatar from "./Useravatar";
 import Colors from "../../constants/Colors";
 import { useTheme } from "react-native-paper";
@@ -23,10 +23,10 @@ import CampuslyAlert from "../CampuslyAlert";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { RootStackParamList } from "../../navigation/StackNavigator";
+import { Moment } from "../../util/Moment";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
-// Video component using new expo-video API
 const VideoComponent = ({
   uri,
   shouldPlay,
@@ -79,9 +79,12 @@ const PostCard = ({
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const { userData } = useContext(AuthContext);
+  const { userData, getUserById } = useContext(AuthContext);
   const { getPosts, deletePost } = useContext(PostContext);
   const carouselRef = useRef<FlatList>(null);
+
+  // Preload user data when post becomes visible (handled by parent FlatList)
+  // This useEffect is removed - preloading is now handled by onViewableItemsChanged
 
   const handleDelete = (postId: number) => {
     if (!userData?.id) return;
@@ -106,7 +109,6 @@ const PostCard = ({
     }
   };
 
-  // Comment functionality moved to dedicated CommentScreen
   if (!post) return null;
 
   const name = post.username || "Anonymous";
@@ -125,8 +127,6 @@ const PostCard = ({
     media = post.media.media;
   }
 
-  // Comment functionality moved to dedicated CommentScreen
-
   return (
     <Pressable
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -137,15 +137,63 @@ const PostCard = ({
       }}
     >
       <View style={styles.headerContainer}>
-        <UserAvatar
-          name={name}
-          fullname={fullname}
-          username={post.username}
-          image={image}
-          date={createdon}
-          studentstatusverified={post.studentstatusverified}
-          style={{ backgroundColor: colors.background }}
-        />
+        <View style={styles.userInfoContainer}>
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation();
+              if (post.user_id) {
+                navigation.navigate("Profile", {
+                  user_id: post.user_id,
+                  firstname: post.firstname,
+                  lastname: post.lastname,
+                  username: post.username,
+                  image: post.image,
+                  studentstatusverified: post.studentstatusverified,
+                  headline: post.headline,
+                  about: post.about,
+                  school: post.school,
+                  city: post.city,
+                  country: post.country,
+                  joined_at: post.joined_at,
+                  skills: post.skills,
+                  interests: post.interests,
+                });
+              }
+            }}
+            style={styles.clickableAvatar}
+          >
+            <Image source={{ uri: image }} style={styles.profileImage} />
+          </TouchableOpacity>
+          <View style={styles.userTextInfo}>
+            <View style={styles.nameRow}>
+              <View style={styles.nameWithVerification}>
+                <Text style={[styles.userName, { color: colors.onBackground }]}>
+                  {fullname}
+                </Text>
+                {post.studentstatusverified && (
+                  <View style={styles.greenCheckBadge}>
+                    <Ionicons
+                      name="checkmark-circle"
+                      size={16}
+                      color="#10B981"
+                    />
+                  </View>
+                )}
+                {post.studentstatusverified && (
+                  <View style={styles.verificationBadge}>
+                    <Text style={styles.verificationText}>🎓</Text>
+                  </View>
+                )}
+              </View>
+              {post.username && (
+                <Text style={styles.userHandle}>
+                  @{post.username.replace(/\s+/g, "")}
+                </Text>
+              )}
+            </View>
+            <Text style={styles.timestamp}>{Moment(createdon || "")}</Text>
+          </View>
+        </View>
         <TouchableOpacity
           style={styles.ellipsisButton}
           onPress={(e) => {
@@ -753,6 +801,67 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 8,
+  },
+  userInfoContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  clickableAvatar: {
+    marginRight: 8,
+  },
+  profileImage: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 1,
+    borderColor: Colors.PRIMARY + "30",
+  },
+  userTextInfo: {
+    flex: 1,
+    justifyContent: "flex-start",
+    paddingTop: 2,
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  nameWithVerification: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  greenCheckBadge: {
+    marginLeft: 4,
+  },
+  verificationBadge: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: "#4F46E5",
+    justifyContent: "center",
+    alignItems: "center",
+    marginLeft: 4,
+    borderWidth: 1,
+    borderColor: "#000",
+  },
+  verificationText: {
+    fontSize: 10,
+  },
+  userHandle: {
+    fontSize: 12,
+    color: "gray",
+    marginLeft: 8,
+    marginRight: 8,
+  },
+  timestamp: {
+    fontSize: 12,
+    color: "gray",
   },
   ellipsisButton: {
     padding: 8,

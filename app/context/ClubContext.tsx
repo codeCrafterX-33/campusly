@@ -1,7 +1,13 @@
-import { createContext, useState, useContext } from "react";
+import {
+  createContext,
+  useState,
+  useContext,
+  useEffect,
+  useCallback,
+  useRef,
+} from "react";
 import usePersistedState from "../util/PersistedState";
 import axios, { AxiosError } from "axios";
-import React from "react";
 import Toast from "react-native-toast-message";
 import { AuthContext } from "./AuthContext";
 
@@ -36,7 +42,23 @@ function ClubProvider({ children }: { children: React.ReactNode }) {
     "userCreatedClubs",
     []
   );
-  const { userData } = useContext(AuthContext);
+  const { userData, onLogout } = useContext(AuthContext);
+
+  // Register logout callback to clear club data
+  const hasRegisteredCallback = useRef(false);
+
+  const clearClubData = useCallback(() => {
+    setClubs([]);
+    setFollowedClubs([]);
+    setUserCreatedClubs([]);
+  }, []);
+
+  useEffect(() => {
+    if (!hasRegisteredCallback.current) {
+      onLogout(clearClubData);
+      hasRegisteredCallback.current = true;
+    }
+  }, [onLogout, clearClubData]);
 
   const getClubs = async () => {
     try {

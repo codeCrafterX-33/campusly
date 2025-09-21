@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  Image,
 } from "react-native";
 import { useTheme } from "react-native-paper";
 import { useRoute, useNavigation } from "@react-navigation/native";
@@ -21,12 +22,15 @@ import Toast from "react-native-toast-message";
 import Button from "../components/ui/Button";
 import CampuslyAlert from "../components/CampuslyAlert";
 
+type TabType = "all" | "admins";
+
 type Member = {
   id: number;
   username: string;
   firstname: string;
   lastname: string;
   user_image: string;
+  image: string;
   joined_date: string;
   is_admin: boolean;
 };
@@ -52,6 +56,7 @@ export default function ClubMembers() {
     null
   );
   const [isAdminActionLoading, setIsAdminActionLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>("all");
 
   useEffect(() => {
     fetchMembers();
@@ -80,6 +85,33 @@ export default function ClubMembers() {
     await fetchMembers();
     setRefreshing(false);
   };
+
+  // Filter members based on active tab
+  const filteredMembers = members.filter((member) => {
+    if (activeTab === "admins") {
+      return member.is_admin;
+    }
+    return true; // Show all members for "all" tab
+  });
+
+  const renderTabButton = (tab: TabType, label: string, count: number) => (
+    <TouchableOpacity
+      style={[
+        styles.tabButton,
+        activeTab === tab ? styles.activeTabButton : styles.inactiveTabButton,
+      ]}
+      onPress={() => setActiveTab(tab)}
+    >
+      <Text
+        style={[
+          styles.tabText,
+          activeTab === tab ? styles.activeTabText : styles.inactiveTabText,
+        ]}
+      >
+        {label} ({count})
+      </Text>
+    </TouchableOpacity>
+  );
 
   const handleRemoveMember = (member: Member) => {
     if (member.is_admin) {
@@ -167,8 +199,8 @@ export default function ClubMembers() {
     <View style={[styles.memberCard, { backgroundColor: colors.surface }]}>
       <View style={styles.memberInfo}>
         <View style={styles.avatarContainer}>
-          {item.user_image ? (
-            <Icon name="account-circle" size={40} color={Colors.PRIMARY} />
+          {item.image ? (
+            <Image source={{ uri: item.image }} style={styles.avatar} />
           ) : (
             <Icon name="account-circle-outline" size={40} color={Colors.GRAY} />
           )}
@@ -178,12 +210,17 @@ export default function ClubMembers() {
             {item.firstname} {item.lastname}
           </Text>
           <Text
-            style={[styles.memberUsername, { color: colors.onSurfaceVariant }]}
+            style={[styles.memberUsername, { color: Colors.GRAY }]}
           >
             @{item.username}
           </Text>
-          <Text style={[styles.joinDate, { color: colors.onSurfaceVariant }]}>
-            Joined {new Date(item.joined_date).toLocaleDateString()}
+          <Text style={[styles.joinDate, { color: Colors.GRAY }]}>
+            Joined{" "}
+            {new Date(item.joined_date).toLocaleDateString("en-US", {
+              month: "long",
+
+              year: "numeric",
+            })}
           </Text>
         </View>
       </View>
@@ -198,52 +235,66 @@ export default function ClubMembers() {
           </View>
         )}
 
-        {/* Admin management buttons - only show for club owner */}
-        {userData?.id === club.user_id && item.id !== userData.id && (
-          <View style={styles.adminManagementButtons}>
-            {!item.is_admin ? (
-              <TouchableOpacity
-                style={[styles.adminButton, styles.promoteButton]}
-                onPress={() => handleAdminAction(item, "promote")}
-              >
-                <Icon name="account-plus" size={16} color={Colors.PRIMARY} />
-              </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                style={[styles.adminButton, styles.demoteButton]}
-                onPress={() => handleAdminAction(item, "demote")}
-              >
-                <Icon name="account-minus" size={16} color="#FF6B6B" />
-              </TouchableOpacity>
-            )}
+        {/* Admin management buttons - only show for club owner and in "All Members" tab */}
+        {userData?.id === club.user_id &&
+          item.id !== userData.id &&
+          activeTab === "all" && (
+            <View style={styles.adminManagementButtons}>
+              {!item.is_admin ? (
+                <TouchableOpacity
+                  style={[styles.adminButton, styles.promoteButton]}
+                  onPress={() => handleAdminAction(item, "promote")}
+                >
+                  <Icon name="account-plus" size={16} color={Colors.PRIMARY} />
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.adminButton, styles.demoteButton]}
+                  onPress={() => handleAdminAction(item, "demote")}
+                >
+                  <Icon name="account-minus" size={16} color="#FF6B6B" />
+                </TouchableOpacity>
+              )}
 
-            <TouchableOpacity
-              style={[styles.adminButton, styles.removeButton]}
-              onPress={() => handleRemoveMember(item)}
-            >
-              <Icon name="account-remove" size={16} color="#FF6B6B" />
-            </TouchableOpacity>
-          </View>
-        )}
+              <TouchableOpacity
+                style={[styles.adminButton, styles.removeButton]}
+                onPress={() => handleRemoveMember(item)}
+              >
+                <Icon name="account-remove" size={16} color="#FF6B6B" />
+              </TouchableOpacity>
+            </View>
+          )}
       </View>
     </View>
   );
 
-  const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <Icon
-        name="account-group-outline"
-        size={64}
-        color={colors.onSurfaceVariant}
-      />
-      <Text style={[styles.emptyTitle, { color: colors.onBackground }]}>
-        No members yet
-      </Text>
-      <Text style={[styles.emptySubtitle, { color: colors.onSurfaceVariant }]}>
-        Members will appear here once they join the club
-      </Text>
-    </View>
-  );
+  const renderEmpty = () => {
+    const isAdminsTab = activeTab === "admins";
+    return (
+      <View style={styles.emptyContainer}>
+        <Icon
+          name={isAdminsTab ? "crown-outline" : "account-group-outline"}
+          size={64}
+          color={colors.onSurfaceVariant}
+        />
+        <Text style={[styles.emptyTitle, { color: colors.onBackground }]}>
+          {isAdminsTab ? "No admins yet" : "No members yet"}
+        </Text>
+        <Text
+          style={[styles.emptySubtitle, { color: colors.onSurfaceVariant }]}
+        >
+          {isAdminsTab
+            ? "Only the club creator is an admin by default"
+            : "Members will appear here once they join the club"}
+        </Text>
+        {isAdminsTab && members.length > 0 && (
+          <Text style={[styles.helpText, { color: colors.onSurfaceVariant }]}>
+            💡 Switch to "All Members" to promote members to admin
+          </Text>
+        )}
+      </View>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -274,29 +325,18 @@ export default function ClubMembers() {
         <View style={{ width: 24 }} />
       </View>
 
-      <View
-        style={[styles.statsContainer, { backgroundColor: colors.surface }]}
-      >
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: Colors.PRIMARY }]}>
-            {members.length}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.onSurfaceVariant }]}>
-            Total Members
-          </Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: Colors.PRIMARY }]}>
-            {members.filter((m) => m.is_admin).length}
-          </Text>
-          <Text style={[styles.statLabel, { color: colors.onSurfaceVariant }]}>
-            Admins
-          </Text>
-        </View>
+      {/* Tab Navigation */}
+      <View style={[styles.tabContainer, { backgroundColor: colors.surface }]}>
+        {renderTabButton("all", "All Members", members.length)}
+        {renderTabButton(
+          "admins",
+          "Admins",
+          members.filter((m) => m.is_admin).length
+        )}
       </View>
 
       <FlatList
-        data={members}
+        data={filteredMembers}
         keyExtractor={(item) => item.id.toString()}
         renderItem={renderMember}
         ListEmptyComponent={renderEmpty}
@@ -401,24 +441,38 @@ const styles = StyleSheet.create({
     fontSize: RFValue(18),
     fontWeight: "600",
   },
-  statsContainer: {
+  tabContainer: {
     flexDirection: "row",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "#E5E5E5",
+    gap: 8,
   },
-  statItem: {
+  tabButton: {
     flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
     alignItems: "center",
   },
-  statNumber: {
-    fontSize: RFValue(24),
-    fontWeight: "700",
+  activeTabButton: {
+    backgroundColor: Colors.PRIMARY,
   },
-  statLabel: {
-    fontSize: RFValue(12),
-    marginTop: 4,
+  inactiveTabButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: Colors.PRIMARY,
+  },
+  tabText: {
+    fontSize: RFValue(14),
+    fontWeight: "600",
+  },
+  activeTabText: {
+    color: "white",
+  },
+  inactiveTabText: {
+    color: Colors.PRIMARY,
   },
   listContainer: {
     padding: 16,
@@ -443,6 +497,11 @@ const styles = StyleSheet.create({
   },
   avatarContainer: {
     marginRight: 12,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
   },
   memberDetails: {
     flex: 1,
@@ -513,5 +572,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: "center",
     lineHeight: RFValue(20),
+  },
+  helpText: {
+    fontSize: RFValue(12),
+    marginTop: 12,
+    textAlign: "center",
+    fontStyle: "italic",
   },
 });
