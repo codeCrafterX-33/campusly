@@ -177,6 +177,10 @@ const CommentCard = ({
           { marginLeft: Math.min(depth * 16, 80) },
         ]}
         onPress={() => {
+          console.log(
+            "🟠 CommentCard Pressable PRESSED! comment.user_id:",
+            comment.user_id
+          );
           if (onCommentPress) {
             // Use the callback if provided (from PostScreen)
             onCommentPress(comment);
@@ -207,6 +211,10 @@ const CommentCard = ({
         <View style={styles.userInfoRow}>
           <TouchableOpacity
             onPress={(e) => {
+              console.log(
+                "🔴 CommentCard TouchableOpacity PRESSED! comment.user_id:",
+                comment.user_id
+              );
               e.stopPropagation();
               if (comment.user_id) {
                 // Only prevent navigation to your own profile
@@ -219,42 +227,93 @@ const CommentCard = ({
                   "Navigating to commenter profile:",
                   comment.user_id
                 );
-                console.log("Comment data for navigation:", {
-                  user_id: comment.user_id,
-                  firstname: comment.firstname,
-                  lastname: comment.lastname,
-                  username: comment.username,
-                  headline: comment.headline,
-                  about: comment.about,
-                  school: comment.school,
-                  city: comment.city,
-                  country: comment.country,
-                  joined_at: comment.joined_at,
-                  skills: comment.skills,
-                  interests: comment.interests,
-                });
-                // Check if we have cached data for instant display
-                const cachedUser = getCachedUser(comment.user_id.toString());
 
-                navigation.navigate("Profile", {
-                  user_id: comment.user_id.toString(),
-                  firstname: comment.firstname,
-                  lastname: comment.lastname,
-                  username: comment.username,
-                  image: comment.image,
-                  studentstatusverified: comment.studentstatusverified,
-                  headline: comment.headline || "",
-                  about: comment.about || "",
-                  school: comment.school || "",
-                  city: comment.city || "",
-                  country: comment.country || "",
-                  joined_at: comment.joined_at || "",
-                  skills: comment.skills || [],
-                  interests: comment.interests || [],
-                });
+                // Check if we have cached complete profile data first
+                const userIdString = comment.user_id.toString();
+                const cachedUser = getCachedUser(userIdString);
+                console.log(
+                  "CommentCard - Checking cache for user:",
+                  comment.user_id,
+                  "as string:",
+                  userIdString,
+                  "Cached:",
+                  !!cachedUser
+                );
+
+                if (cachedUser) {
+                  console.log(
+                    "CommentCard - Using cached complete profile data for commenter:",
+                    comment.user_id,
+                    "Cache data:",
+                    {
+                      hasEducation: !!cachedUser.education,
+                      educationLength: cachedUser.education?.length || 0,
+                      hasSchool: !!cachedUser.school,
+                      school: cachedUser.school,
+                      hasHeadline: !!cachedUser.headline,
+                      headline: cachedUser.headline,
+                    }
+                  );
+                  // If we have cached data, pass minimal params since Profile will use cached data
+                  console.log(
+                    "🔵 CommentCard - ABOUT TO NAVIGATE with cached data, comment.user_id:",
+                    comment.user_id,
+                    "userIdString:",
+                    userIdString,
+                    "Source: CommentCard_Cached"
+                  );
+                  navigation.navigate("Profile", {
+                    user_id: userIdString,
+                  });
+                  console.log(
+                    "🔵 CommentCard - Navigation call completed with user_id:",
+                    userIdString
+                  );
+                } else {
+                  console.log(
+                    "No cached data, passing comment data for immediate display:",
+                    {
+                      user_id: comment.user_id,
+                      firstname: comment.firstname,
+                      lastname: comment.lastname,
+                      username: comment.username,
+                      headline: comment.headline,
+                      about: comment.about,
+                      school: comment.school,
+                      city: comment.city,
+                      country: comment.country,
+                      joined_at: comment.joined_at,
+                      skills: comment.skills,
+                      interests: comment.interests,
+                    }
+                  );
+
+                  // Pass comment data for immediate display while fetching complete data
+                  console.log(
+                    "🟡 CommentCard - Navigating with comment data, user_id:",
+                    userIdString,
+                    "Source: CommentCard_Fresh"
+                  );
+                  navigation.navigate("Profile", {
+                    user_id: userIdString,
+                    firstname: comment.firstname,
+                    lastname: comment.lastname,
+                    username: comment.username,
+                    image: comment.image,
+                    studentstatusverified: comment.studentstatusverified,
+                    headline: comment.headline || "",
+                    about: comment.about || "",
+                    school: comment.school || "",
+                    city: comment.city || "",
+                    country: comment.country || "",
+                    joined_at: comment.joined_at || "",
+                    skills: comment.skills || [],
+                    interests: comment.interests || [],
+                  });
+                }
               }
             }}
-            style={styles.clickableAvatar}
+            style={[styles.clickableAvatar, { zIndex: 10 }]}
           >
             <Image
               source={{ uri: image }}
@@ -661,6 +720,8 @@ const styles = StyleSheet.create({
   },
   clickableAvatar: {
     marginRight: 8,
+    zIndex: 10,
+    elevation: 10, // For Android
   },
   userInfo: {
     flex: 1,

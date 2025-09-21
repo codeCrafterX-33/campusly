@@ -21,6 +21,7 @@ import {
   KeyboardAvoidingView,
   Keyboard,
   TouchableWithoutFeedback,
+  ActivityIndicator,
 } from "react-native";
 import axios from "axios";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -60,10 +61,19 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
   const [skills, setSkills] = useState<string[]>(userData?.skills);
   const [interests, setInterests] = useState<string[]>(userData?.interests);
   const { user_id } = route.params || {};
+  console.log(
+    "🎯 PROFILE - Received user_id:",
+    user_id,
+    "Type:",
+    typeof user_id,
+    "Full route.params:",
+    route.params
+  );
   const [viewingUserData, setViewingUserData] = useState<any>(null);
   const [viewingUserEducation, setViewingUserEducation] = useState<any[]>([]);
   const [isRefreshingData, setIsRefreshingData] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(false);
+  const [isLoadingEducation, setIsLoadingEducation] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState("Posts");
   const [showCheckmark, setShowCheckmark] = useState(false);
@@ -103,6 +113,14 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
       data: displayEducation,
     },
   });
+
+  // Track education state changes
+  useEffect(() => {
+    console.log("Profile - Education state changed:", {
+      viewingUserEducation: viewingUserEducation,
+      length: viewingUserEducation?.length || 0,
+    });
+  }, [viewingUserEducation]);
 
   const getPlaceholder = (value: string | undefined, placeholder: string) => ({
     text: value?.trim() || placeholder,
@@ -205,13 +223,67 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
       if (user_id) {
         // Check cache first for immediate display
         const cachedUser = getCachedUser(user_id);
+        console.log(
+          "Profile - Checking cache for user_id:",
+          user_id,
+          "Cached:",
+          !!cachedUser
+        );
+
         if (cachedUser) {
-          console.log("Using cached complete user data for immediate display");
-          console.log("Cached user education:", cachedUser.education);
+          console.log(
+            "Profile - Using cached complete user data for immediate display"
+          );
+          console.log("Profile - Cached user education:", cachedUser.education);
+          console.log("Profile - Cached user school:", cachedUser.school);
+          console.log("Profile - Cached user headline:", cachedUser.headline);
+          console.log("Profile - Cached user about:", cachedUser.about);
+          console.log(
+            "Profile - Full cached user data:",
+            JSON.stringify(cachedUser, null, 2)
+          );
+
           setViewingUserData(cachedUser);
           // Also set education separately for consistency
           if (cachedUser.education && Array.isArray(cachedUser.education)) {
+            console.log(
+              "Profile - Setting cached education data:",
+              cachedUser.education
+            );
             setViewingUserEducation(cachedUser.education);
+            console.log(
+              "Profile - Education state updated with cached data:",
+              cachedUser.education
+            );
+          } else {
+            console.log(
+              "Profile - No education data in cache, fetching fresh education data"
+            );
+            // If no education in cache, fetch it fresh
+            setIsLoadingEducation(true);
+            try {
+              const educationResponse = await axios.get(
+                `${process.env.EXPO_PUBLIC_SERVER_URL}/education/${cachedUser.email}`
+              );
+              const educationData = educationResponse.data.data || [];
+              console.log(
+                "Profile - Fetched fresh education data:",
+                educationData
+              );
+              setViewingUserEducation(educationData);
+              console.log(
+                "Profile - Education state updated with fresh data:",
+                educationData
+              );
+            } catch (educationError) {
+              console.warn(
+                "Profile - Failed to fetch fresh education data:",
+                educationError
+              );
+              setViewingUserEducation([]);
+            } finally {
+              setIsLoadingEducation(false);
+            }
           }
           setIsLoading(false);
           setShowSkeleton(false);
@@ -224,6 +296,7 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
         );
         setShowSkeleton(true);
         setIsLoading(false); // Don't show the old loading state
+        setIsLoadingEducation(true); // Set loading state immediately for education
 
         // Show basic info immediately from post data if available (for smooth transition)
         const basicUserData = {
@@ -254,17 +327,24 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
           setShowSkeleton(false);
 
           // Fetch education data for the viewing user
+          setIsLoadingEducation(true);
           try {
             const educationResponse = await axios.get(
               `${process.env.EXPO_PUBLIC_SERVER_URL}/education/${userData.email}`
             );
             setViewingUserEducation(educationResponse.data.data || []);
+            console.log(
+              "Profile - Education state updated with background fetch:",
+              educationResponse.data.data || []
+            );
           } catch (educationError) {
             console.warn(
               "Failed to fetch viewing user education data:",
               educationError
             );
             setViewingUserEducation([]);
+          } finally {
+            setIsLoadingEducation(false);
           }
         } catch (error) {
           console.error("Failed to fetch viewing user data:", error);
@@ -430,13 +510,56 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
 
               {/* Degree and Field of Study */}
               {(() => {
+                // Debug education data structure
+                console.log("Profile - Education debug:", {
+                  displayEducationLength: displayEducation?.length || 0,
+                  displayEducation: displayEducation,
+                  userSchool: displayUserData?.school,
+                  userSchoolType: typeof displayUserData?.school,
+                });
+
                 // Get education data from context
                 const educationData =
                   displayEducation &&
                   Array.isArray(displayEducation) &&
                   displayEducation.length > 0
-                    ? displayEducation[0]
+                    ? displayEducation.find((edu: any) => {
+                        // Handle both string and object school formats
+                        const schoolName =
+                          typeof edu.school === "string"
+                            ? edu.school
+                            : edu.school?.name;
+                        console.log("Profile - Education matching:", {
+                          eduSchool: edu.school,
+                          schoolName,
+                          userSchool: displayUserData?.school,
+                          matches: schoolName === displayUserData?.school,
+                        });
+                        return schoolName === displayUserData?.school;
+                      }) || displayEducation[0] // Fallback to first education if no match
                     : null;
+
+                console.log(
+                  "Profile - Selected education data:",
+                  educationData
+                );
+
+                // Show loading only if we're actively fetching education data
+                if (isLoadingEducation) {
+                  return (
+                    <View style={styles.educationLoadingContainer}>
+                      <ActivityIndicator size="small" color={Colors.PRIMARY} />
+                      <Text
+                        style={[
+                          styles.profileMetaText,
+                          { color: colors.onSurfaceVariant, marginLeft: 8 },
+                        ]}
+                      >
+                        Loading education...
+                      </Text>
+                    </View>
+                  );
+                }
 
                 if (!educationData) {
                   return (
@@ -988,6 +1111,11 @@ const styles = StyleSheet.create({
     color: Colors.GRAY,
     fontSize: 14,
     marginRight: 16,
+    marginBottom: 4,
+  },
+  educationLoadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 4,
   },
   profileStats: {

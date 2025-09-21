@@ -218,7 +218,13 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
           setUserCache((prev) => new Map(prev).set(userId, completeUserData));
           console.log(
             "Complete user profile preloaded and cached for:",
-            userId
+            userId,
+            "Education data:",
+            educationData
+          );
+          console.log(
+            "AuthContext - Cached complete user data:",
+            JSON.stringify(completeUserData, null, 2)
           );
         } catch (error: any) {
           console.warn("Failed to preload user data for:", userId, error);

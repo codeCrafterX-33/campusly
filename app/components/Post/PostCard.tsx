@@ -79,7 +79,7 @@ const PostCard = ({
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const { userData, getUserById } = useContext(AuthContext);
+  const { userData, getUserById, getCachedUser } = useContext(AuthContext);
   const { getPosts, deletePost } = useContext(PostContext);
   const carouselRef = useRef<FlatList>(null);
 
@@ -142,22 +142,43 @@ const PostCard = ({
             onPress={(e) => {
               e.stopPropagation();
               if (post.user_id) {
-                navigation.navigate("Profile", {
-                  user_id: post.user_id,
-                  firstname: post.firstname,
-                  lastname: post.lastname,
-                  username: post.username,
-                  image: post.image,
-                  studentstatusverified: post.studentstatusverified,
-                  headline: post.headline,
-                  about: post.about,
-                  school: post.school,
-                  city: post.city,
-                  country: post.country,
-                  joined_at: post.joined_at,
-                  skills: post.skills,
-                  interests: post.interests,
-                });
+                // Check if we have cached complete profile data first
+                const cachedUser = getCachedUser(post.user_id.toString());
+
+                if (cachedUser) {
+                  console.log(
+                    "🟢 PostCard - Using cached complete profile data for post author:",
+                    post.user_id,
+                    "Source: PostCard_Cached"
+                  );
+                  // If we have cached data, pass minimal params since Profile will use cached data
+                  navigation.navigate("Profile", {
+                    user_id: post.user_id,
+                  });
+                } else {
+                  console.log(
+                    "🟡 PostCard - No cached data, passing post data for immediate display:",
+                    post.user_id,
+                    "Source: PostCard_Fresh"
+                  );
+                  // Pass post data for immediate display while fetching complete data
+                  navigation.navigate("Profile", {
+                    user_id: post.user_id,
+                    firstname: post.firstname,
+                    lastname: post.lastname,
+                    username: post.username,
+                    image: post.image,
+                    studentstatusverified: post.studentstatusverified,
+                    headline: post.headline,
+                    about: post.about,
+                    school: post.school,
+                    city: post.city,
+                    country: post.country,
+                    joined_at: post.joined_at,
+                    skills: post.skills,
+                    interests: post.interests,
+                  });
+                }
               }
             }}
             style={styles.clickableAvatar}
