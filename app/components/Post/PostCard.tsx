@@ -62,11 +62,13 @@ const VideoComponent = ({
 const PostCard = ({
   post,
   onCommentPress,
+  onPostPress,
   onDelete,
   clickable = true,
 }: {
   post: any;
   onCommentPress?: () => void;
+  onPostPress?: () => void;
   onDelete?: (postId: number) => void;
   clickable?: boolean;
 }) => {
@@ -131,7 +133,9 @@ const PostCard = ({
     <Pressable
       style={[styles.container, { backgroundColor: colors.background }]}
       onPress={() => {
-        if (clickable) {
+        if (onPostPress) {
+          onPostPress();
+        } else if (clickable) {
           navigation.navigate("PostScreen", { post });
         }
       }}

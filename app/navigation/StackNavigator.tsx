@@ -65,7 +65,10 @@ export type RootStackParamList = {
   ExploreClubs: undefined;
   CreateClub: undefined;
   AddEvent: undefined;
-  AllActivityScreen: undefined;
+  AllActivityScreen: {
+    activeTab?: string;
+    user_id?: string;
+  };
   VerificationScreen: undefined;
   ProfileSetupScreen: undefined;
   OTPVerificationScreen: undefined;
@@ -73,7 +76,10 @@ export type RootStackParamList = {
   EditEducation: undefined;
   EditClub: { club: any };
   ClubScreen: { club: any };
-  PostScreen: { post: any };
+  PostScreen: {
+    post: any;
+    threadHistory?: any[];
+  };
   CommentScreen: {
     post: any;
     parentComment?: any;

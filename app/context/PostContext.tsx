@@ -13,6 +13,7 @@ import Toast from "react-native-toast-message";
 
 const PostContext = createContext<any>({
   posts: [],
+  commentPosts: [],
   postMedia: [],
   setPosts: () => {},
   getPosts: () => {},
@@ -22,13 +23,23 @@ const PostContext = createContext<any>({
   getUserPosts: () => {},
   setUserPosts: () => {},
   userPosts: [],
+  viewingUserPosts: [],
+  setViewingUserPosts: () => {},
+  getComments: () => {},
+  setComments: () => {},
+  comments: [],
+  viewingUserComments: [],
+  setViewingUserComments: () => {},
 });
 
 function PostProvider({ children }: { children: React.ReactNode }) {
   const [posts, setPosts] = usePersistedState("posts", []);
   const [userPosts, setUserPosts] = usePersistedState("userPosts", []);
+  const [comments, setComments] = usePersistedState("comments", []);
   const [refreshing, setRefreshing] = useState(false);
   const [postMedia, setPostMedia] = useState<any>([]);
+  const [viewingUserPosts, setViewingUserPosts] = useState<any>([]);
+  const [viewingUserComments, setViewingUserComments] = useState<any>([]);
   const { userData, onLogout } = useContext(AuthContext);
 
   // Register logout callback to clear post data
@@ -37,7 +48,10 @@ function PostProvider({ children }: { children: React.ReactNode }) {
   const clearPostData = useCallback(() => {
     setPosts([]);
     setUserPosts([]);
+    setComments([]);
     setPostMedia([]);
+    setViewingUserPosts([]);
+    setViewingUserComments([]);
   }, []);
 
   useEffect(() => {
@@ -98,20 +112,94 @@ function PostProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const GetUserPosts = async () => {
-    console.log("Fetching user posts");
-    const response = await axios.get(
-      `${process.env.EXPO_PUBLIC_SERVER_URL}/post/posts?userEmail=${userData?.email}`
+  const GetUserPosts = async (userId?: string) => {
+    console.log(
+      "GetUserPosts called with userId:",
+      userId,
+      "Type:",
+      typeof userId
     );
 
-    if (response.status === 200) {
-      const data = response.data;
-      setUserPosts(data.data);
-      console.log("User posts fetched successfully");
+    let url;
+    if (userId) {
+      url = `${process.env.EXPO_PUBLIC_SERVER_URL}/post/posts?userId=${userId}`;
+      console.log("Using userId URL:", url);
     } else {
-      console.log("Error fetching user posts");
+      url = `${process.env.EXPO_PUBLIC_SERVER_URL}/post/posts?userEmail=${userData?.email}`;
+      console.log("Using userEmail URL:", url);
     }
-    return response.status;
+
+    try {
+      const response = await axios.get(url);
+      console.log("GetUserPosts response status:", response.status);
+      console.log(
+        "GetUserPosts response data length:",
+        response.data?.data?.length || 0
+      );
+
+      if (response.status === 200) {
+        const data = response.data;
+        if (userId) {
+          console.log("Setting viewingUserPosts with data:", data.data);
+          setViewingUserPosts(data.data);
+          console.log("Viewing user posts fetched successfully");
+        } else {
+          setUserPosts(data.data);
+          console.log("User posts fetched successfully");
+        }
+      } else {
+        console.log("Error fetching user posts - status:", response.status);
+      }
+      return response.status;
+    } catch (error) {
+      console.error("GetUserPosts error:", error);
+      throw error;
+    }
+  };
+
+  const GetComments = async (userId?: string) => {
+    console.log(
+      "GetComments called with userId:",
+      userId,
+      "Type:",
+      typeof userId
+    );
+
+    let url;
+    if (userId) {
+      url = `${process.env.EXPO_PUBLIC_SERVER_URL}/post/comments?userId=${userId}`;
+      console.log("Using userId URL for comments:", url);
+    } else {
+      url = `${process.env.EXPO_PUBLIC_SERVER_URL}/post/comments?userEmail=${userData?.email}`;
+      console.log("Using userEmail URL for comments:", url);
+    }
+
+    try {
+      const response = await axios.get(url);
+      console.log("GetComments response status:", response.status);
+      console.log(
+        "GetComments response data length:",
+        response.data?.data?.length || 0
+      );
+
+      if (response.status === 200) {
+        const data = response.data;
+        if (userId) {
+          console.log("Setting viewingUserComments with data:", data.data);
+          setViewingUserComments(data.data);
+          console.log("Viewing user comments fetched successfully");
+        } else {
+          setComments(data.data);
+          console.log("Comments fetched successfully");
+        }
+      } else {
+        console.log("Error fetching comments - status:", response.status);
+      }
+      return response.status;
+    } catch (error) {
+      console.error("GetComments error:", error);
+      throw error;
+    }
   };
 
   const onRefresh = async () => {
@@ -170,6 +258,13 @@ function PostProvider({ children }: { children: React.ReactNode }) {
     getUserPosts: GetUserPosts,
     setUserPosts: setUserPosts,
     userPosts: userPosts,
+    viewingUserPosts: viewingUserPosts,
+    setViewingUserPosts: setViewingUserPosts,
+    getComments: GetComments,
+    setComments: setComments,
+    comments: comments,
+    viewingUserComments: viewingUserComments,
+    setViewingUserComments: setViewingUserComments,
   };
 
   return <PostContext.Provider value={value}>{children}</PostContext.Provider>;

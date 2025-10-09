@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
 } from "react";
 import {
   View,
@@ -42,6 +43,7 @@ import { heightPercentageToDP as hp } from "react-native-responsive-screen";
 import { ActivitySectionMiniScreen } from "../ActivitySectionScreen";
 import EducationCard from "../../components/Profile/EducationCard";
 import ProfileSkeleton from "../../components/Skeletons/ProfileSkeleton";
+import { ClubContext } from "../../context/ClubContext";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 const HEADER_HEIGHT = 56;
@@ -55,22 +57,25 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
   const [aboutExpanded, setAboutExpanded] = useState(false);
   const [showReadMore, setShowReadMore] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const { userPosts, getUserPosts } = useContext(PostContext);
+  const { userPosts, getUserPosts, viewingUserPosts, setViewingUserPosts } =
+    useContext(PostContext);
   const { colors } = useTheme();
+  const {
+    followedClubs,
+    getFollowedClubs,
+    userCreatedClubs,
+    getUserCreatedClubs,
+  } = useContext(ClubContext);
   const { showSuccessCheckmark, checkmark } = useCheckAnimation();
   const [skills, setSkills] = useState<string[]>(userData?.skills);
   const [interests, setInterests] = useState<string[]>(userData?.interests);
   const { user_id } = route.params || {};
-  console.log(
-    "🎯 PROFILE - Received user_id:",
-    user_id,
-    "Type:",
-    typeof user_id,
-    "Full route.params:",
-    route.params
-  );
+  console.log("Profile - Route params:", route.params);
+  console.log("Profile - Extracted user_id:", user_id, "Type:", typeof user_id);
+
   const [viewingUserData, setViewingUserData] = useState<any>(null);
   const [viewingUserEducation, setViewingUserEducation] = useState<any[]>([]);
+
   const [isRefreshingData, setIsRefreshingData] = useState(false);
   const [showSkeleton, setShowSkeleton] = useState(false);
   const [isLoadingEducation, setIsLoadingEducation] = useState(false);
@@ -93,34 +98,33 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
   const displayUserData = user_id ? viewingUserData : userData;
   const displayEducation = user_id ? viewingUserEducation : education;
   const isViewingOtherUser = !!user_id;
+  const displayUserPosts = user_id ? viewingUserPosts : userPosts;
 
-  // Debug education data
-  console.log("Profile Education Debug:", {
-    user_id,
-    viewingUserData: viewingUserData
-      ? {
-          hasEducation: !!viewingUserData.education,
-          educationLength: viewingUserData.education?.length || 0,
-          education: viewingUserData.education,
-        }
-      : null,
-    viewingUserEducation: {
-      length: viewingUserEducation?.length || 0,
-      data: viewingUserEducation,
-    },
-    displayEducation: {
-      length: displayEducation?.length || 0,
-      data: displayEducation,
-    },
-  });
-
-  // Track education state changes
-  useEffect(() => {
-    console.log("Profile - Education state changed:", {
-      viewingUserEducation: viewingUserEducation,
-      length: viewingUserEducation?.length || 0,
+  // Calculate media count from posts
+  const mediaCount = useMemo(() => {
+    let count = 0;
+    displayUserPosts.forEach((post: any) => {
+      if (post?.media && Array.isArray(post.media.media)) {
+        count += post.media.media.length;
+        console.log(
+          "Profile - Post",
+          post.id,
+          "has",
+          post.media.media.length,
+          "media items"
+        );
+      }
     });
-  }, [viewingUserEducation]);
+    console.log("Profile - Total media count calculated:", count);
+    return count;
+  }, [displayUserPosts]);
+
+  console.log(
+    "Profile - Posts count:",
+    displayUserPosts.length,
+    "Media count:",
+    mediaCount
+  );
 
   const getPlaceholder = (value: string | undefined, placeholder: string) => ({
     text: value?.trim() || placeholder,
@@ -190,8 +194,11 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
     }
   );
 
+  // Calculate username position: cover height + profile image overlap + padding + margins + name area
+  const USERNAME_POSITION = COVER_HEIGHT + 40 + 16 + 16 + 25; // ~297px
+
   const headerOpacity = scrollY.interpolate({
-    inputRange: [0, COVER_HEIGHT - HEADER_HEIGHT],
+    inputRange: [USERNAME_POSITION - 50, USERNAME_POSITION + 50],
     outputRange: [0, 1],
     extrapolate: "clamp",
   });
@@ -285,12 +292,39 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
               setIsLoadingEducation(false);
             }
           }
+
+          // Fetch user posts for the viewing user (cached path)
+          try {
+            console.log(
+              "Profile - About to call getUserPosts with user_id (cached):",
+              user_id,
+              "Type:",
+              typeof user_id
+            );
+            if (user_id) {
+              const result = await getUserPosts(user_id);
+              console.log("Profile - getUserPosts result (cached):", result);
+              console.log(
+                "Profile - viewingUserPosts after fetch (cached):",
+                viewingUserPosts
+              );
+            } else {
+              console.warn(
+                "Profile - user_id is undefined in cached path, skipping getUserPosts call"
+              );
+            }
+          } catch (postsError) {
+            console.warn(
+              "Failed to fetch viewing user posts (cached):",
+              postsError
+            );
+          }
+
           setIsLoading(false);
           setShowSkeleton(false);
           return; // Don't fetch again if we have complete cached data
         }
 
-        // LinkedIn-style loading: Show skeleton only if no cached data
         console.log(
           "No cached data, showing skeleton and fetching in background"
         );
@@ -326,6 +360,36 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
           setViewingUserData(userData);
           setShowSkeleton(false);
 
+          // Fetch user posts for the viewing user (background fetch path)
+          try {
+            console.log(
+              "Profile - About to call getUserPosts with user_id (background):",
+              user_id,
+              "Type:",
+              typeof user_id
+            );
+            if (user_id) {
+              const result = await getUserPosts(user_id);
+              console.log(
+                "Profile - getUserPosts result (background):",
+                result
+              );
+              console.log(
+                "Profile - viewingUserPosts after fetch (background):",
+                viewingUserPosts
+              );
+            } else {
+              console.warn(
+                "Profile - user_id is undefined in background path, skipping getUserPosts call"
+              );
+            }
+          } catch (postsError) {
+            console.warn(
+              "Failed to fetch viewing user posts (background):",
+              postsError
+            );
+          }
+
           // Fetch education data for the viewing user
           setIsLoadingEducation(true);
           try {
@@ -359,10 +423,12 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
     };
 
     fetchViewingUserData();
-  }, [user_id, getUserById, getCachedUser, route.params]);
+  }, [user_id]);
 
   useEffect(() => {
     getUserPosts();
+    getFollowedClubs();
+    getUserCreatedClubs();
     setTimeout(() => {
       setIsLoading(false);
     }, 2000);
@@ -391,9 +457,9 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
           <Text style={styles.headerButtonText}>←</Text>
         </TouchableOpacity>
         <View style={styles.headerTitle}>
-          <Text style={styles.headerName}>{displayUserData?.name}</Text>
-          <Text style={styles.headerTweetCount}>
-            {userPosts.length} posts
+          <Text style={styles.headerName}>@{displayUserData?.username}</Text>
+          <Text style={styles.headerPostCount}>
+            {displayUserPosts.length} posts
             {isRefreshingData && " • Updating..."}
           </Text>
         </View>
@@ -460,7 +526,8 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
               <Text
                 style={[styles.profileName, { color: colors.onBackground }]}
               >
-                {displayUserData?.firstname} {displayUserData?.lastname}
+                {displayUserData?.firstname}
+                {displayUserData?.lastname}
               </Text>
               {displayUserData?.studentstatusverified && (
                 <Ionicons
@@ -510,14 +577,6 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
 
               {/* Degree and Field of Study */}
               {(() => {
-                // Debug education data structure
-                console.log("Profile - Education debug:", {
-                  displayEducationLength: displayEducation?.length || 0,
-                  displayEducation: displayEducation,
-                  userSchool: displayUserData?.school,
-                  userSchoolType: typeof displayUserData?.school,
-                });
-
                 // Get education data from context
                 const educationData =
                   displayEducation &&
@@ -529,20 +588,10 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
                           typeof edu.school === "string"
                             ? edu.school
                             : edu.school?.name;
-                        console.log("Profile - Education matching:", {
-                          eduSchool: edu.school,
-                          schoolName,
-                          userSchool: displayUserData?.school,
-                          matches: schoolName === displayUserData?.school,
-                        });
+
                         return schoolName === displayUserData?.school;
                       }) || displayEducation[0] // Fallback to first education if no match
                     : null;
-
-                console.log(
-                  "Profile - Selected education data:",
-                  educationData
-                );
 
                 // Show loading only if we're actively fetching education data
                 if (isLoadingEducation) {
@@ -555,7 +604,7 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
                           { color: colors.onSurfaceVariant, marginLeft: 8 },
                         ]}
                       >
-                        Loading education...
+                        Loading degree...
                       </Text>
                     </View>
                   );
@@ -696,26 +745,44 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
                 <Text
                   style={[styles.statNumber, { color: colors.onBackground }]}
                 >
-                  1,234
+                  {displayUserPosts.length}
                 </Text>
-                <Text style={styles.statLabel}>Connections</Text>
+                <Text style={styles.statLabel}>Posts</Text>
               </TouchableOpacity>
               <TouchableOpacity style={styles.statItem}>
                 <Text
                   style={[styles.statNumber, { color: colors.onBackground }]}
                 >
-                  5,678
+                  {mediaCount}
                 </Text>
-                <Text style={styles.statLabel}>Following</Text>
+                <Text style={styles.statLabel}>Media</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.statItem]}>
+              <TouchableOpacity style={styles.statItem}>
                 <Text
                   style={[styles.statNumber, { color: colors.onBackground }]}
                 >
-                  12
+                  {displayUserData?.connections?.length || 0}
                 </Text>
-                <Text style={styles.statLabel}>Clubs</Text>
+                <Text style={styles.statLabel}>Followers</Text>
               </TouchableOpacity>
+              <TouchableOpacity style={styles.statItem}>
+                <Text
+                  style={[styles.statNumber, { color: colors.onBackground }]}
+                >
+                  {displayUserData?.following?.length || 0}
+                </Text>
+                <Text style={styles.statLabel}>Following</Text>
+              </TouchableOpacity>
+              {!user_id && (
+                <TouchableOpacity style={[styles.statItem]}>
+                  <Text
+                    style={[styles.statNumber, { color: colors.onBackground }]}
+                  >
+                    {followedClubs?.length + userCreatedClubs?.length}
+                  </Text>
+                  <Text style={styles.statLabel}>Clubs</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
 
@@ -812,24 +879,28 @@ Friend requests welcome, but beware… they might already have 3 group projects 
                 Activity
               </Text>
               <View style={styles.activityHeaderRight}>
-                <TouchableOpacity
-                  style={styles.activityButton}
-                  onPress={() => {
-                    navigation.navigate("AddPost");
-                  }}
-                >
-                  <Text style={styles.activityButtonText}>Create a post</Text>
-                </TouchableOpacity>
-                <TouchableOpacity>
-                  <Ionicons
-                    name="pencil-outline"
-                    size={RFValue(16)}
-                    color={Colors.PRIMARY}
-                  />
-                </TouchableOpacity>
+                {!isViewingOtherUser && (
+                  <TouchableOpacity
+                    style={styles.activityButton}
+                    onPress={() => {
+                      navigation.navigate("AddPost");
+                    }}
+                  >
+                    <Text style={styles.activityButtonText}>Create a post</Text>
+                  </TouchableOpacity>
+                )}
+                {!isViewingOtherUser && (
+                  <TouchableOpacity>
+                    <Ionicons
+                      name="pencil-outline"
+                      size={RFValue(16)}
+                      color={Colors.PRIMARY}
+                    />
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
-            <ActivitySectionMiniScreen />
+            <ActivitySectionMiniScreen user_id={user_id} />
           </View>
 
           {/* Education Section */}
@@ -1000,7 +1071,7 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "bold",
   },
-  headerTweetCount: {
+  headerPostCount: {
     color: "#fff",
     fontSize: 12,
     opacity: 0.8,
@@ -1249,7 +1320,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   activityButton: {
-    backgroundColor: "#fff",
+    backgroundColor: Colors.PRIMARY,
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 20,
@@ -1259,7 +1330,7 @@ const styles = StyleSheet.create({
   activityButtonText: {
     fontSize: RFValue(15),
     fontWeight: "bold",
-    color: Colors.PRIMARY,
+    color: "#fff",
   },
   activityHeaderRight: {
     flexDirection: "row",

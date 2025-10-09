@@ -34,17 +34,30 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 export default function PostsTab({
   setShowCheckmark,
+  user_id,
 }: {
   setShowCheckmark: (showCheckmark: boolean) => void;
+  user_id?: string;
 }) {
-  const { userPosts, getUserPosts, posts } = useContext(PostContext);
+  const { userPosts, getUserPosts, posts, viewingUserPosts } =
+    useContext(PostContext);
   const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { colors } = useTheme();
   const { onViewableItemsChanged, viewabilityConfig } =
     useViewableItemsPreloader();
 
-  const publicPosts = userPosts.filter((post: any) => post.club === 0);
+  // Use appropriate data source based on whether we're viewing a specific user
+  const displayPosts = user_id ? viewingUserPosts : userPosts;
+  const publicPosts = displayPosts.filter((post: any) => post.club === 0);
+  console.log(
+    "PostsTab - user_id:",
+    user_id,
+    "displayPosts length:",
+    displayPosts.length,
+    "publicPosts length:",
+    publicPosts.length
+  );
 
   const bounceAnim = useRef(new Animated.Value(0)).current;
 
@@ -82,8 +95,9 @@ export default function PostsTab({
             No posts yet 🎈
           </Text>
           <Text style={[styles.subtitle, { color: Colors.GRAY }]}>
-            You haven't shared anything publicly yet. Start posting and let your
-            campus know what's on your mind! 🎉
+            {user_id
+              ? "This user hasn't shared any posts yet."
+              : "You haven't shared anything publicly yet. Start posting and let your campus know what's on your mind! 🎉"}
           </Text>
           <TouchableOpacity
             style={styles.button}

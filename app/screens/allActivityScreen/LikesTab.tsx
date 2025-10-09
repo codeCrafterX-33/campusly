@@ -18,8 +18,10 @@ import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 export default function LikesTab({
   setShowCheckmark,
+  user_id,
 }: {
   setShowCheckmark: (showCheckmark: boolean) => void;
+  user_id?: string;
 }) {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { isDarkMode } = useContext(ThemeContext);
@@ -53,20 +55,26 @@ export default function LikesTab({
       </Animated.View>
 
       <Text style={[styles.title, { color: colors.onBackground }]}>
-        A little empty here 💔
+        {user_id ? "No likes yet 💔" : "A little empty here 💔"}
       </Text>
 
       <Text style={[styles.subtitle, { color: Colors.GRAY }]}>
-        Show some love! Posts you like will land here{" "}
-        <Ionicons name="heart" size={RFValue(16)} color={Colors.PRIMARY} />
+        {user_id
+          ? "This user hasn't liked any posts yet."
+          : "Show some love! Posts you like will land here "}
+        {!user_id && (
+          <Ionicons name="heart" size={RFValue(16)} color={Colors.PRIMARY} />
+        )}
       </Text>
 
-      <TouchableOpacity
-        style={styles.button}
-        onPress={() => navigation.navigate("DrawerNavigator")}
-      >
-        <Text style={styles.buttonText}>Explore Campus Feed</Text>
-      </TouchableOpacity>
+      {!user_id && (
+        <TouchableOpacity
+          style={styles.button}
+          onPress={() => navigation.navigate("DrawerNavigator")}
+        >
+          <Text style={styles.buttonText}>Explore Campus Feed</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

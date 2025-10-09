@@ -71,7 +71,10 @@ const PostScreen = () => {
   const route = useRoute();
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
-  const { post } = route.params as { post: any };
+  const { post, threadHistory: initialThreadHistory } = route.params as {
+    post: any;
+    threadHistory?: any[];
+  };
 
   const [modalVisible, setModalVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -79,7 +82,9 @@ const PostScreen = () => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [currentPost, setCurrentPost] = useState(post);
-  const [threadHistory, setThreadHistory] = useState<any[]>([]); // Track full thread history
+  const [threadHistory, setThreadHistory] = useState<any[]>(
+    initialThreadHistory || []
+  ); // Track full thread history
   const [isNavigatingToCommentScreen, setIsNavigatingToCommentScreen] =
     useState(false);
   const isNavigatingRef = useRef(false);
@@ -354,11 +359,20 @@ const PostScreen = () => {
   const buildThreadData = () => {
     const threadData = [];
 
+    console.log("PostScreen - buildThreadData - currentPost:", currentPost?.id);
+    console.log("PostScreen - buildThreadData - threadHistory:", threadHistory);
+
     // Always show the main post first
     threadData.push({ type: "post", id: currentPost.id, data: currentPost });
 
     // Show the full thread history (all clicked comments/replies)
     threadHistory.forEach((threadItem, index) => {
+      console.log(
+        "PostScreen - Adding thread item:",
+        threadItem.id,
+        "level:",
+        index + 1
+      );
       threadData.push({
         type: "threadComment",
         id: threadItem.id,
@@ -370,6 +384,10 @@ const PostScreen = () => {
     // Add comments section
     threadData.push({ type: "comments", id: "comments" });
 
+    console.log(
+      "PostScreen - Final thread data:",
+      threadData.map((item) => ({ type: item.type, id: item.id }))
+    );
     return threadData;
   };
 

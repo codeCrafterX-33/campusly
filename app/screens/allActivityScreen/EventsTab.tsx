@@ -22,8 +22,10 @@ import { OnRefresh } from "../../util/OnRefresh";
 
 export default function EventsTab({
   setShowCheckmark,
+  user_id,
 }: {
   setShowCheckmark: (showCheckmark: boolean) => void;
+  user_id?: string;
 }) {
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { isDarkMode } = useContext(ThemeContext);

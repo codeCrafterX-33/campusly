@@ -22,18 +22,30 @@ import Ionicons from "@expo/vector-icons/Ionicons";
 
 export default function ProfileClubtab({
   setShowCheckmark,
+  user_id,
 }: {
   setShowCheckmark: (showCheckmark: boolean) => void;
+  user_id?: string;
 }) {
-  const { userPosts, getUserPosts } = useContext(PostContext);
+  const { userPosts, getUserPosts, viewingUserPosts } = useContext(PostContext);
   const [refreshing, setRefreshing] = useState(false);
   const navigation = useNavigation<NativeStackNavigationProp<any>>();
   const { colors } = useTheme();
   const { onViewableItemsChanged, viewabilityConfig } =
     useViewableItemsPreloader();
 
-  const clubPosts = userPosts.filter(
+  // Use appropriate data source based on whether we're viewing a specific user
+  const posts = user_id ? viewingUserPosts : userPosts;
+  const clubPosts = posts.filter(
     (post: any) => post.club !== 0 && post.club !== null
+  );
+  console.log(
+    "Clubstab - user_id:",
+    user_id,
+    "posts length:",
+    posts.length,
+    "clubPosts length:",
+    clubPosts.length
   );
 
   const bounceAnim = useRef(new Animated.Value(0)).current;
@@ -68,8 +80,9 @@ export default function ProfileClubtab({
             No club posts yet 🎈
           </Text>
           <Text style={[styles.subtitle, { color: Colors.GRAY }]}>
-            You haven't shared anything in your clubs yet. Start the
-            conversation and connect with your club members! 🎉
+            {user_id
+              ? "This user hasn't shared any club posts yet."
+              : "You haven't shared anything in your clubs yet. Start the conversation and connect with your club members! 🎉"}
           </Text>
           <TouchableOpacity
             style={styles.button}

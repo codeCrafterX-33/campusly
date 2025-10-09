@@ -12,7 +12,8 @@ import { AuthContext } from "../../context/AuthContext";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { RFValue } from "react-native-responsive-fontsize";
 import Colors from "../../constants/Colors";
-import { useNavigation } from "@react-navigation/native";
+import {  useNavigation } from "@react-navigation/native";
+import { ThemeContext } from "../../context/ThemeContext";
 
 const COVER_HEIGHT = 200;
 const PROFILE_IMAGE_SIZE = 80;
@@ -27,7 +28,7 @@ const ProfileHeader = ({ scrollY, user_id, userimage }: ProfileHeaderProps) => {
   console.log("user_id", user_id);
   const { userData } = useContext(AuthContext);
   const loggedInUser = user_id === userData?.email;
-
+  const { isDarkMode } = useContext(ThemeContext);
   const navigation = useNavigation<any>();
 
   const profileImageScale = scrollY.interpolate({
@@ -92,9 +93,12 @@ const ProfileHeader = ({ scrollY, user_id, userimage }: ProfileHeaderProps) => {
         </TouchableOpacity>
       ) : (
         <TouchableOpacity
-          style={loggedInUser ? styles.editProfileButton : styles.followButton}
+          style={[
+            styles.followButton,
+            isDarkMode ? { backgroundColor: "white" } : { backgroundColor: "black" }
+          ]}
         >
-          <Text style={styles.editProfileButtonText}>Follow</Text>
+          <Text style={[styles.followButtonText, isDarkMode ? { color: "black" } : { color: "white" }]}>Follow</Text>
         </TouchableOpacity>
       )}
     </View>
@@ -138,7 +142,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   followButton: {
-    backgroundColor: "#1DA1F2",
     paddingHorizontal: 20,
     paddingVertical: 8,
     borderRadius: 20,

@@ -46,7 +46,7 @@ const compressVideo = async (
     // Note: Client-side video compression is complex and not easily achievable with current Expo setup
     // We rely on Cloudinary's server-side compression for videos
     console.log("Video processing completed (using server-side compression)");
-    return { videoUri: fileUri, thumbnailUri };
+    return { videoUri: fileUri, thumbnthgbthailUri };
   } catch (error) {
     console.error("Video processing failed:", error);
     return { videoUri: fileUri }; // Return original if processing fails

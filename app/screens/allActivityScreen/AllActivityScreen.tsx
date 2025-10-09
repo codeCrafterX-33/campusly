@@ -32,6 +32,7 @@ import MediaTab from "./MediaTab";
 
 const AllActivityScreen = ({ navigation, route }: any) => {
   const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const { colors } = useTheme();
   const layout = useWindowDimensions();
   const { isDarkMode } = useContext(ThemeContext);
@@ -44,14 +45,63 @@ const AllActivityScreen = ({ navigation, route }: any) => {
   const [currentTab, setCurrentTab] = useState(
     route.params.activeTab || "Posts"
   );
+  const [tabLoading, setTabLoading] = useState(false);
   const [showCheckmark, setShowCheckmark] = useState(false);
   const [hasTriggeredHaptic, setHasTriggeredHaptic] = useState(false);
 
+  // Extract user_id from route params
+  const { user_id } = route.params || {};
+  console.log("AllActivityScreen - Route params:", route.params);
+  console.log(
+    "AllActivityScreen - Extracted user_id:",
+    user_id,
+    "Type:",
+    typeof user_id
+  );
+
   useEffect(() => {
-    getUserPosts();
-    getFollowedClubs();
-    getRegisteredEvents();
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        await Promise.all([
+          getUserPosts(),
+          getFollowedClubs(),
+          getRegisteredEvents(),
+        ]);
+      } catch (error) {
+        console.error("Error loading data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
   }, []);
+
+  // Handle loading when user_id changes (viewing different user)
+  useEffect(() => {
+    if (user_id) {
+      setIsLoading(true);
+      // The data will be loaded by the individual tabs
+      // Set a timeout to hide loading after a reasonable time
+      const timer = setTimeout(() => {
+        setIsLoading(false);
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [user_id]);
+
+  // Handle tab change with loading
+  const handleTabChange = ({ tabName }: { tabName: string }) => {
+    setCurrentTab(tabName);
+    setTabLoading(true);
+    
+    // Simulate loading time for tab switch
+    setTimeout(() => {
+      setTabLoading(false);
+    }, 500);
+  };
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -63,9 +113,15 @@ const AllActivityScreen = ({ navigation, route }: any) => {
         <Checkmark visible={showCheckmark} setVisible={setShowCheckmark} />
       )}
       <Tabs.Container
-        renderHeader={() => <AllActivityHeader currentTab={currentTab} />}
+        renderHeader={() => (
+          <AllActivityHeader 
+            currentTab={currentTab} 
+            user_id={user_id} 
+            isLoading={isLoading || refreshing || tabLoading}
+          />
+        )}
         initialTabName={route.params.activeTab}
-        onTabChange={({ tabName }) => setCurrentTab(tabName)}
+        onTabChange={handleTabChange}
         lazy={false}
         renderTabBar={(props) => (
           <MaterialTabBar
@@ -87,26 +143,28 @@ const AllActivityScreen = ({ navigation, route }: any) => {
         )}
       >
         <Tabs.Tab name="Posts">
-          <PostsTab setShowCheckmark={setShowCheckmark} />
+          <PostsTab setShowCheckmark={setShowCheckmark} user_id={user_id} />
         </Tabs.Tab>
 
         <Tabs.Tab name="Clubs">
-          <Clubstab setShowCheckmark={setShowCheckmark} />
+          <Clubstab setShowCheckmark={setShowCheckmark} user_id={user_id} />
         </Tabs.Tab>
 
-        <Tabs.Tab name="Events">
-          <EventsTab setShowCheckmark={setShowCheckmark} />
-        </Tabs.Tab>
+        {!user_id ? (
+          <Tabs.Tab name="Events">
+            <EventsTab setShowCheckmark={setShowCheckmark} user_id={user_id} />
+          </Tabs.Tab>
+        ) : null}
 
         <Tabs.Tab name="Media">
-          <MediaTab setShowCheckmark={setShowCheckmark} />
+          <MediaTab setShowCheckmark={setShowCheckmark} user_id={user_id} />
         </Tabs.Tab>
 
         <Tabs.Tab name="Comments">
-          <CommentsTab setShowCheckmark={setShowCheckmark} />
+          <CommentsTab setShowCheckmark={setShowCheckmark} user_id={user_id} />
         </Tabs.Tab>
         <Tabs.Tab name="Likes">
-          <LikesTab setShowCheckmark={setShowCheckmark} />
+          <LikesTab setShowCheckmark={setShowCheckmark} user_id={user_id} />
         </Tabs.Tab>
       </Tabs.Container>
     </View>
