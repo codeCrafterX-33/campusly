@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "newArchEnabled": false,
     "splash": {
       "image": "./assets/my-splash.png",
       "resizeMode": "contain",
@@ -35,7 +35,8 @@
     "plugins": [
       "expo-router",
       "expo-splash-screen",
-      "expo-video"
+      "expo-video",
+      "react-native-reanimated/plugin"
     ],
     "extra": {
       "router": {},

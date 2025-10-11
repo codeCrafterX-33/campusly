@@ -8,7 +8,7 @@ import { useFocusEffect } from "@react-navigation/native";
 import { AuthContext } from "../context/AuthContext";
 import { PostContext } from "../context/PostContext";
 import usePersistedState from "../util/PersistedState";
-import { Colors } from "react-native/Libraries/NewAppScreen";
+import Colors from "../constants/Colors";
 import LatestPost from "../components/Home/LatestPost";
 
 export default function Clubs() {
