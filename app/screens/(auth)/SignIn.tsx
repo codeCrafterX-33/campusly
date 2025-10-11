@@ -33,7 +33,8 @@ export default function SignIn() {
     signIn(email, password)
       .then(() => {
         setIsLoading(false);
-        
+        // Navigation will be handled by app/index.tsx based on auth state
+        router.replace("/");
       })
       .catch((error: any) => {
         setIsLoading(false);

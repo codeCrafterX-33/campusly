@@ -16,33 +16,32 @@ import {
 export default function Index() {
   const { colors } = useTheme();
   const [isTryingLogin, setIsTryingLogin] = useState(true);
-  const [authChecked, setAuthChecked] = useState(false);
-  const { userData, getUser } = useContext(AuthContext);
+  const { userData, getUser, isAuthenticated, setIsAuthenticated } =
+    useContext(AuthContext);
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       setIsTryingLogin(false);
-      setAuthChecked(true);
+      if (user) {
+        setIsAuthenticated(true);
+        console.log("from index.tsx User authenticated");
+      } else {
+        setIsAuthenticated(false);
+        console.log("from index.tsx User not authenticated");
+      }
     });
     return unsubscribe;
-  }, []);
+  }, [setIsAuthenticated]);
 
-  // Trigger navigation when userData changes
-  useEffect(() => {
-    if (userData && !isTryingLogin && authChecked) {
-      console.log("UserData changed, navigating to app");
-      router.replace("/(app)");
-    }
-  }, [userData, isTryingLogin, authChecked]);
-
-  if (isTryingLogin || !authChecked) {
+  if (isTryingLogin) {
     return <LoadingScreen />;
   }
 
-  if (!userData) {
+  if (!isAuthenticated) {
     return <StackNavigator />;
   }
 
+  console.log("from index.tsx isAuthenticated", isAuthenticated);
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <AuthenticatedStack />

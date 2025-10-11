@@ -11,6 +11,7 @@ import { router } from "expo-router";
 const AuthContext = createContext<any>({
   userData: null,
   setUserData: () => {},
+  isAuthenticated: false,
   education: [],
   setEducation: () => {},
   logout: () => {},
@@ -25,6 +26,7 @@ const AuthContext = createContext<any>({
 function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userData, setUserData] = usePersistedState("userData", null);
   const [education, setEducation] = usePersistedState("education", []);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userCache, setUserCache] = useState<Map<string, any>>(new Map());
   const [preloadingUsers, setPreloadingUsers] = useState<Set<string>>(
     new Set()
@@ -43,6 +45,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     await auth.signOut();
+    setIsAuthenticated(false);
     try {
       // Clear all user-related cached data
       await AsyncStorage.removeItem("userData");
@@ -69,7 +72,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       logoutCallbacks.forEach((callback) => callback());
 
       // Navigate back to landing page
-      router.replace("/(auth)/sign-in");
+      router.replace("/");
 
       console.log("User logged out and all cached data cleared!");
     } catch (error) {
@@ -86,6 +89,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
       );
 
       if (userCredential.user) {
+        setIsAuthenticated(true);
+        console.log("User authenticated");
         const userEmail = userCredential.user?.email;
 
         Toast.show({
@@ -429,6 +434,8 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = {
     userData: userData,
     setUserData: setUserData,
+    isAuthenticated: isAuthenticated,
+    setIsAuthenticated: setIsAuthenticated,
     education: education,
     setEducation: setEducation,
     logout: logout,
