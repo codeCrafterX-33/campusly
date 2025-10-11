@@ -35,7 +35,7 @@ export default function Index() {
 
   if (isTryingLogin) {
     return <LoadingScreen />;
-  }
+  } 
 
   if (!isAuthenticated) {
     return <StackNavigator />;
