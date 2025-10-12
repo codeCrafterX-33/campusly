@@ -16,9 +16,13 @@ import { useContext, useState } from "react";
 import { ActivityIndicator } from "react-native";
 import axios from "axios";
 import { AuthContext } from "../../context/AuthContext";
-import { router } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../navigation/StackNavigator";
 
 export default function SignIn() {
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [isLoading, setIsLoading] = useState(false);
   const { signIn } = useContext(AuthContext);
 
@@ -34,7 +38,7 @@ export default function SignIn() {
       .then(() => {
         setIsLoading(false);
         // Navigation will be handled by app/index.tsx based on auth state
-        router.replace("/");
+        navigation.navigate("Landing");
       })
       .catch((error: any) => {
         setIsLoading(false);
@@ -70,7 +74,7 @@ export default function SignIn() {
             />
             <Pressable
               onPress={() => {
-                router.push("/(auth)/sign-up");
+                navigation.navigate("SignUp");
               }}
             >
               <Text style={styles.footerText}>

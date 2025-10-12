@@ -96,15 +96,16 @@ const uploadVideoWithThumbnail = async (fileUri: string) => {
 const uploadToCloudinary = async (
   fileUri: string,
   type: "image" | "video" = "image",
+  folder: string = "posts",
   retryCount: number = 0
 ) => {
   const maxRetries = type === "video" ? 2 : 1; // More retries for videos
 
   try {
     console.log(
-      `Starting upload: ${type} to folder: posts (attempt ${retryCount + 1}/${
-        maxRetries + 1
-      })`
+      `Starting upload: ${type} to folder: ${folder} (attempt ${
+        retryCount + 1
+      }/${maxRetries + 1})`
     );
 
     // Resize & compress only images
@@ -141,7 +142,7 @@ const uploadToCloudinary = async (
       "upload_preset",
       process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "my-school-event"
     );
-    formData.append("folder", "posts");
+    formData.append("folder", folder);
 
     // Add video compression parameters for Cloudinary
     if (type === "video") {
@@ -204,7 +205,7 @@ const uploadToCloudinary = async (
           })...`
         );
         await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
-        return uploadToCloudinary(fileUri, type, retryCount + 1);
+        return uploadToCloudinary(fileUri, type, folder, retryCount + 1);
       }
 
       throw new Error(
@@ -223,7 +224,7 @@ const uploadToCloudinary = async (
         err.message
       );
       await new Promise((resolve) => setTimeout(resolve, 2000)); // Wait 2 seconds before retry
-      return uploadToCloudinary(fileUri, type, retryCount + 1);
+      return uploadToCloudinary(fileUri, type, folder, retryCount + 1);
     }
 
     console.error("Upload failed after all retries:", err);

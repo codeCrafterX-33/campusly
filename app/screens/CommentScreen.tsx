@@ -20,8 +20,9 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import React, { useState, useRef, useContext, useEffect } from "react";
 import { useTheme } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { useLocalSearchParams } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/StackNavigator";
 import * as ImagePicker from "expo-image-picker";
 import Toast from "react-native-toast-message";
 import axios from "axios";
@@ -71,6 +72,8 @@ const VideoComponent = ({
 
 const CommentScreen = ({ route }: { route: any }) => {
   const { post, parentComment, onCommentPosted } = route.params || {};
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { colors } = useTheme();
 
   // Debug logging
@@ -104,7 +107,7 @@ const CommentScreen = ({ route }: { route: any }) => {
       if (commentContent.trim() || selectedMedia.length > 0) {
         // Show confirmation dialog if there's unsaved content
         // For now, just go back
-        router.back();
+        navigation.goBack();
         return true;
       }
       navigation.goBack();
@@ -256,7 +259,7 @@ const CommentScreen = ({ route }: { route: any }) => {
         console.log(
           "CommentScreen: Closing screen after successful comment post"
         );
-        router.back();
+        navigation.goBack();
       }
     } catch (error) {
       console.error("Error posting comment:", error);
@@ -283,7 +286,7 @@ const CommentScreen = ({ route }: { route: any }) => {
         {/* Header */}
         <View style={[styles.header, { backgroundColor: colors.background }]}>
           <TouchableOpacity
-            onPress={() => router.back()}
+            onPress={() => navigation.goBack()}
             style={styles.headerButton}
           >
             <Ionicons name="close" size={24} color={colors.onBackground} />

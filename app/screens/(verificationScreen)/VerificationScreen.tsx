@@ -12,6 +12,9 @@ import {
   Alert,
   BackHandler,
   Keyboard,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
 } from "react-native";
 import { useState, useEffect } from "react";
 import { useNavigation } from "@react-navigation/native";
@@ -26,12 +29,13 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { useThemeContext } from "../../context/ThemeContext";
 import CampuslyAlert from "../../components/CampuslyAlert";
 import { DynamicHeader } from "../../components/VerificationScreen/DynamicHeader";
-import { addListener } from "nodemon";
 import axios from "axios";
+import { RootStackParamList } from "../../navigation/StackNavigator";
 
 export default function VerificationScreen() {
   const [query, setQuery] = useState("");
-  const navigation = useNavigation<NativeStackNavigationProp<any>>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   const { colors } = useTheme();
   const { isDarkMode } = useThemeContext();
@@ -158,7 +162,6 @@ export default function VerificationScreen() {
       if (response.status === 200) {
         navigation.navigate("OTPVerificationScreen", { email: SchoolEmail });
       }
-
     } else {
       setAlertMessage({
         ...alertMessage,
@@ -172,167 +175,147 @@ export default function VerificationScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <DynamicHeader selectedSchool={selectedSchool} />
-        {!selectedSchool && (
-          <View style={{ width: "100%" }}>
-            <Text style={[styles.title, { color: colors.onBackground }]}>
-              What school do you attend?
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
+      >
+        <View
+          style={[styles.container, { backgroundColor: colors.background }]}
+        >
+          <DynamicHeader selectedSchool={selectedSchool} />
+          {!selectedSchool && (
+            <View style={{ width: "100%" }}>
+              <Text style={[styles.title, { color: colors.onBackground }]}>
+                What school do you attend?
+              </Text>
+              <TextInput
+                style={[styles.input, { backgroundColor: colors.background }]}
+                placeholder="🔍 Search for your school"
+                placeholderTextColor="gray"
+                value={query}
+                onChangeText={setQuery}
+              />
+            </View>
+          )}
+
+          {loading && <ActivityIndicator size="small" color="#555" />}
+          {error && <Text style={styles.errorText}>{error}</Text>}
+
+          {!results.length && !loading && !error && (
+            <Text style={styles.noResultsText}>
+              😕 No schools match that... Try checking the spelling!
             </Text>
-            <TextInput
-              style={[styles.input, { backgroundColor: colors.background }]}
-              placeholder="🔍 Search for your school"
-              placeholderTextColor="gray"
-              value={query}
-              onChangeText={setQuery}
-            />
-          </View>
-        )}
+          )}
 
-        {loading && <ActivityIndicator size="small" color="#555" />}
-        {error && <Text style={styles.errorText}>{error}</Text>}
+          {!selectedSchool && (
+            <View style={{ flex: 1 }}>
+              <FlatList
+                data={results}
+                keyExtractor={(item) => item.name + item.domains[0]}
+                renderItem={({ item }) => {
+                  const logoUrl = `https://logo.clearbit.com/${item.domains[0]}`;
+                  return (
+                    <TouchableOpacity
+                      onPress={() =>
+                        setSelectedSchool({
+                          name: item.name,
+                          logo: logoUrl,
+                          country: item.country,
+                          web_pages: item.web_pages[0],
+                          domains: item.domains,
+                        })
+                      }
+                    >
+                      <View style={styles.schoolItem}>
+                        <Image source={{ uri: logoUrl }} style={styles.logo} />
+                        <Text style={{ color: colors.onBackground }}>
+                          {item.name}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                }}
+                style={{ flex: 1 }}
+              />
+              <TouchableOpacity
+                onPress={() => navigation.navigate("DrawerNavigator")}
+              >
+                <Text style={styles.clearText}>Skip</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-        {!results.length && !loading && !error && (
-          <Text style={styles.noResultsText}>
-            😕 No schools match that... Try checking the spelling!
-          </Text>
-        )}
-
-        {!selectedSchool && (
-          <View style={{ flex: 1 }}>
-            <FlatList
-              data={results}
-              keyExtractor={(item) => item.name + item.domains[0]}
-              renderItem={({ item }) => {
-                const logoUrl = `https://logo.clearbit.com/${item.domains[0]}`;
-                return (
-                  <TouchableOpacity
-                    onPress={() =>
-                      setSelectedSchool({
-                        name: item.name,
-                        logo: logoUrl,
-                        country: item.country,
-                        web_pages: item.web_pages[0],
-                        domains: item.domains,
-                      })
-                    }
-                  >
-                    <View style={styles.schoolItem}>
-                      <Image source={{ uri: logoUrl }} style={styles.logo} />
-                      <Text style={{ color: colors.onBackground }}>
-                        {item.name}
+          {/* Ultra Modern Selected School Section */}
+          {selectedSchool && (
+            <View style={styles.modernSchoolContainer}>
+              {/* Header with Close Button */}
+              <View style={styles.modernHeader}>
+                <View style={styles.modernHeaderContent}>
+                  <View style={styles.modernLogoContainer}>
+                    <Image
+                      source={{ uri: selectedSchool.logo }}
+                      style={styles.modernLogo}
+                      defaultSource={require("../../assets/images/image.png")}
+                    />
+                  </View>
+                  <View style={styles.modernSchoolInfo}>
+                    <Text style={styles.modernSchoolName}>
+                      {selectedSchool.name}
+                    </Text>
+                    <View style={styles.modernBadge}>
+                      <Text style={styles.modernBadgeText}>
+                        🎓 {selectedSchool.country}
                       </Text>
                     </View>
-                  </TouchableOpacity>
-                );
-              }}
-              style={{ flex: 1 }}
-            />
-            <TouchableOpacity
-              onPress={() => navigation.navigate("DrawerNavigator")}
-            >
-              <Text style={styles.clearText}>Skip</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* {selected school section} */}
-        <View style={{ width: "100%", marginTop: 10 }}>
-          {selectedSchool && (
-            <View
-              style={[
-                styles.selectedSchoolContainer,
-                { backgroundColor: colors.background },
-              ]}
-            >
-              <View style={styles.selectedSchoolHeader}>
-                <Image
-                  source={{ uri: selectedSchool.logo }}
-                  style={styles.selectedSchoolLogo}
-                  defaultSource={require("../../assets/images/image.png")}
-                />
-                <Text
-                  style={[
-                    styles.selectedSchoolText,
-                    { color: colors.onBackground },
-                  ]}
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={styles.modernCloseButton}
+                  onPress={() => setSelectedSchool(null)}
                 >
-                  {selectedSchool.name}
-                </Text>
+                  <Ionicons name="close-circle" size={28} color="#EF4444" />
+                </TouchableOpacity>
               </View>
 
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setSelectedSchool(null)}
-              >
-                <Ionicons name="close" size={RFValue(30)} color="red" />
-              </TouchableOpacity>
-
-              <View style={styles.selectedSchoolInfo}>
-                <Text
-                  style={
-                    isDarkMode
-                      ? styles.selectedSchoolInfoTextDark
-                      : styles.selectedSchoolInfoTextLight
-                  }
-                >
-                  <Text
-                    style={
-                      isDarkMode
-                        ? styles.selectedSchoolLabelTextDark
-                        : styles.selectedSchoolLabelTextLight
-                    }
-                  >
-                    Country:
-                  </Text>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Text
-                      style={{
-                        marginLeft: 5,
-                        color: Colors.PRIMARY,
-                        fontSize: RFValue(16),
-                      }}
-                    >
+              {/* Modern Info Cards */}
+              <View style={styles.modernInfoGrid}>
+                <View style={styles.modernInfoCard}>
+                  <View style={styles.modernInfoIcon}>
+                    <Text style={styles.modernInfoIconText}>🌍</Text>
+                  </View>
+                  <View style={styles.modernInfoContent}>
+                    <Text style={styles.modernInfoLabel}>Country</Text>
+                    <Text style={styles.modernInfoValue}>
                       {selectedSchool.country}
                     </Text>
                   </View>
-                </Text>
-                <Text
-                  style={
-                    isDarkMode
-                      ? styles.selectedSchoolInfoTextDark
-                      : styles.selectedSchoolInfoTextLight
-                  }
+                </View>
+
+                <TouchableOpacity
+                  style={styles.modernInfoCard}
+                  onPress={() => Linking.openURL(selectedSchool.web_pages)}
                 >
-                  <Text
-                    style={
-                      isDarkMode
-                        ? styles.selectedSchoolLabelTextDark
-                        : styles.selectedSchoolLabelTextLight
-                    }
-                  >
-                    Website:
-                  </Text>
-                  <TouchableOpacity
-                    onPress={() => Linking.openURL(selectedSchool.web_pages)}
-                  >
-                    <Text
-                      style={{
-                        color: Colors.PRIMARY,
-                        textDecorationLine: "underline",
-                        marginLeft: 5,
-                        fontSize: RFValue(16),
-                      }}
-                    >
+                  <View style={styles.modernInfoIcon}>
+                    <Text style={styles.modernInfoIconText}>🔗</Text>
+                  </View>
+                  <View style={styles.modernInfoContent}>
+                    <Text style={styles.modernInfoLabel}>Website</Text>
+                    <Text style={styles.modernInfoValue} numberOfLines={1}>
                       {selectedSchool.web_pages}
                     </Text>
-                  </TouchableOpacity>
-                </Text>
+                  </View>
+                  <Ionicons
+                    name="open-outline"
+                    size={16}
+                    color={Colors.PRIMARY}
+                  />
+                </TouchableOpacity>
               </View>
             </View>
           )}
           {selectedSchool && (
-            <View style={{ width: "100%", marginTop: 30 }}>
+            <View style={{ width: "100%", marginTop: 20 }}>
               <Text
                 style={{
                   color: colors.onBackground,
@@ -349,6 +332,16 @@ export default function VerificationScreen() {
                 value={email}
                 onChangeText={setEmail}
               />
+
+              <TouchableOpacity
+                style={[!email ? styles.disabledButton : styles.button]}
+                disabled={!email}
+                onPress={() => verifyEmail()}
+              >
+                <Text style={styles.buttonText}>
+                  {loading ? "Verifying..." : "Verify school email"}
+                </Text>
+              </TouchableOpacity>
             </View>
           )}
           <CampuslyAlert
@@ -358,20 +351,7 @@ export default function VerificationScreen() {
             messages={alertMessage}
           />
         </View>
-        {selectedSchool && (
-          <View>
-            <TouchableOpacity
-              style={[!email ? styles.disabledButton : styles.button]}
-              disabled={!email}
-              onPress={() => verifyEmail()}
-            >
-              <Text style={styles.buttonText}>
-                {loading ? "Verifying..." : "Verify school email"}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -403,6 +383,7 @@ const styles = StyleSheet.create({
   },
   input: {
     width: "100%",
+    color: Colors.PRIMARY,
     padding: 12,
     borderRadius: 12,
     borderWidth: 1,
@@ -527,5 +508,121 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     alignSelf: "center",
     overflow: "hidden",
+  },
+  // Ultra Modern Styles
+  modernSchoolContainer: {
+    width: "100%",
+    marginTop: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderRadius: 24,
+    padding: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 12,
+    borderWidth: 1,
+    borderColor: "rgba(42, 157, 143, 0.1)",
+  },
+  modernHeader: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    marginBottom: 20,
+  },
+  modernHeaderContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  modernLogoContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 16,
+    backgroundColor: "rgba(42, 157, 143, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 16,
+    shadowColor: Colors.PRIMARY,
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  modernLogo: {
+    width: 40,
+    height: 40,
+    borderRadius: 8,
+  },
+  modernSchoolInfo: {
+    flex: 1,
+  },
+  modernSchoolName: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#1F2937",
+    marginBottom: 8,
+    lineHeight: 24,
+  },
+  modernBadge: {
+    backgroundColor: "rgba(42, 157, 143, 0.1)",
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: "flex-start",
+  },
+  modernBadgeText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: Colors.PRIMARY,
+  },
+  modernCloseButton: {
+    padding: 4,
+  },
+  modernInfoGrid: {
+    gap: 12,
+  },
+  modernInfoCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(42, 157, 143, 0.05)",
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(42, 157, 143, 0.1)",
+  },
+  modernInfoIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: "rgba(42, 157, 143, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 12,
+  },
+  modernInfoIconText: {
+    fontSize: 18,
+  },
+  modernInfoContent: {
+    flex: 1,
+  },
+  modernInfoLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "#6B7280",
+    marginBottom: 2,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  modernInfoValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1F2937",
   },
 });

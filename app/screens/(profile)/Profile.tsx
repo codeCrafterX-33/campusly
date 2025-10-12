@@ -34,8 +34,7 @@ import ClubCard from "../../components/Clubs/ClubCard";
 import { useTheme } from "react-native-paper";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import ProfileHeader from "../../components/Profile/ProfileHeader";
-import { router } from "expo-router";
-import { useLocalSearchParams } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
 import Toast from "react-native-toast-message";
 import { useCheckAnimation } from "../../util/showSuccessCheckmark";
 import PullToRefreshIndicator from "../../components/Profile/PullToRefreshIndicator";
@@ -52,8 +51,7 @@ const COVER_HEIGHT = 200;
 
 const PULL_THRESHOLD = 80;
 
-const Profile = ({ user_id: propUserId }: { user_id?: string } = {}) => {
-  const params = useLocalSearchParams<{ user_id?: string }>();
+const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
   const { userData, education, getUserById, getCachedUser } =
     useContext(AuthContext);
   const [aboutExpanded, setAboutExpanded] = useState(false);
@@ -71,8 +69,8 @@ const Profile = ({ user_id: propUserId }: { user_id?: string } = {}) => {
   const { showSuccessCheckmark, checkmark } = useCheckAnimation();
   const [skills, setSkills] = useState<string[]>(userData?.skills);
   const [interests, setInterests] = useState<string[]>(userData?.interests);
-  const user_id = propUserId || params?.user_id;
-  console.log("Profile - Route params:", params);
+  const { user_id } = route.params || {};
+  console.log("Profile - Route params:", route.params);
   console.log("Profile - Extracted user_id:", user_id, "Type:", typeof user_id);
 
   const [viewingUserData, setViewingUserData] = useState<any>(null);
@@ -95,6 +93,11 @@ const Profile = ({ user_id: propUserId }: { user_id?: string } = {}) => {
 
   const suggestionOpacity = useRef(new Animated.Value(0)).current;
   const suggestionTranslateY = useRef(new Animated.Value(-30)).current;
+
+  // Page entrance animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.95)).current;
 
   // Determine which user data to display
   const displayUserData = user_id ? viewingUserData : userData;
@@ -337,19 +340,19 @@ const Profile = ({ user_id: propUserId }: { user_id?: string } = {}) => {
         // Show basic info immediately from post data if available (for smooth transition)
         const basicUserData = {
           id: user_id,
-          firstname: params?.firstname || "",
-          lastname: params?.lastname || "",
-          username: params?.username || "",
-          image: params?.image || "https://via.placeholder.com/50",
-          studentstatusverified: params?.studentstatusverified || false,
-          headline: params?.headline || "",
-          about: params?.about || "",
-          school: params?.school || "",
-          city: params?.city || "",
-          country: params?.country || "",
-          joined_at: params?.joined_at || "",
-          skills: params?.skills || [],
-          interests: params?.interests || [],
+          firstname: route.params?.firstname || "",
+          lastname: route.params?.lastname || "",
+          username: route.params?.username || "",
+          image: route.params?.image || "https://via.placeholder.com/50",
+          studentstatusverified: route.params?.studentstatusverified || false,
+          headline: route.params?.headline || "",
+          about: route.params?.about || "",
+          school: route.params?.school || "",
+          city: route.params?.city || "",
+          country: route.params?.country || "",
+          joined_at: route.params?.joined_at || "",
+          skills: route.params?.skills || [],
+          interests: route.params?.interests || [],
         };
         setViewingUserData(basicUserData);
 
@@ -436,6 +439,36 @@ const Profile = ({ user_id: propUserId }: { user_id?: string } = {}) => {
     }, 2000);
   }, []);
 
+  // Page entrance animations
+  useEffect(() => {
+    if (!isLoading && displayUserData) {
+      // Reset animations
+      fadeAnim.setValue(0);
+      slideAnim.setValue(50);
+      scaleAnim.setValue(0.95);
+
+      // Start entrance animations
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [isLoading, displayUserData, fadeAnim, slideAnim, scaleAnim]);
+
   // Show loading skeleton only if no cached data and no basic data yet
   if (showSkeleton && user_id && !displayUserData) {
     return (
@@ -447,455 +480,405 @@ const Profile = ({ user_id: propUserId }: { user_id?: string } = {}) => {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.PRIMARY} />
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          opacity: fadeAnim,
+          transform: [{ scale: scaleAnim }],
+        },
+      ]}
+    >
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" backgroundColor={Colors.PRIMARY} />
 
-      {/* Animated Header */}
-      <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
-        <TouchableOpacity
-          style={styles.headerButton}
-          onPress={() => router.back()}
-        >
-          <Text style={styles.headerButtonText}>←</Text>
-        </TouchableOpacity>
-        <View style={styles.headerTitle}>
-          <Text style={styles.headerName}>@{displayUserData?.username}</Text>
-          <Text style={styles.headerPostCount}>
-            {displayUserPosts.length} posts
-            {isRefreshingData && " • Updating..."}
-          </Text>
-        </View>
-        <TouchableOpacity style={styles.headerButton}>
-          <Text style={styles.headerButtonText}>⋯</Text>
-        </TouchableOpacity>
-      </Animated.View>
-
-      {/* Pull Progress Indicator */}
-      <PullToRefreshIndicator
-        pullDistance={pullDistance}
-        pullProgress={pullProgress}
-        refreshing={refreshing}
-        threshold={PULL_THRESHOLD}
-      />
-
-      {/* Success Checkmark */}
-      {showCheckmark && checkmark()}
-
-      <Animated.ScrollView
-        style={[styles.scrollView, { backgroundColor: colors.background }]}
-        onScroll={handleScroll}
-        scrollEventThrottle={16}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={Colors.PRIMARY}
-            colors={[Colors.PRIMARY]}
-            progressViewOffset={60}
-          />
-        }
-      >
-        {/* Cover Photo */}
-        <View style={styles.coverContainer}>
-          <Image
-            source={{
-              uri: "https://images.unsplash.com/photo-1562774053-701939374585?w=400&h=200&fit=crop",
-            }}
-            style={styles.coverPhoto}
-          />
+        {/* Animated Header */}
+        <Animated.View style={[styles.header, { opacity: headerOpacity }]}>
           <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
+            style={styles.headerButton}
+            onPress={() => navigation.goBack()}
           >
-            <Ionicons name="arrow-back" size={RFValue(24)} color="white" />
+            <Text style={styles.headerButtonText}>←</Text>
           </TouchableOpacity>
-        </View>
-
-        {/* Profile Section */}
-        <View
-          style={[
-            styles.profileSection,
-            { backgroundColor: colors.background },
-          ]}
-        >
-          <ProfileHeader
-            user_id={displayUserData?.email}
-            scrollY={scrollY}
-            userimage={displayUserData?.image}
-          />
-          <View style={styles.profileInfo}>
-            <View style={styles.nameContainer}>
-              <Text
-                style={[styles.profileName, { color: colors.onBackground }]}
-              >
-                {displayUserData?.firstname}
-                {displayUserData?.lastname}
-              </Text>
-              {displayUserData?.studentstatusverified && (
-                <Ionicons
-                  name="checkmark-circle"
-                  size={RFValue(20)}
-                  color={Colors.PRIMARY}
-                  style={styles.verificationCheckmark}
-                />
-              )}
-            </View>
-            <Text style={[styles.profileHandle]}>
-              {" "}
-              @{displayUserData?.username}
+          <View style={styles.headerTitle}>
+            <Text style={styles.headerName}>@{displayUserData?.username}</Text>
+            <Text style={styles.headerPostCount}>
+              {displayUserPosts.length} posts
+              {isRefreshingData && " • Updating..."}
             </Text>
+          </View>
+          <TouchableOpacity style={styles.headerButton}>
+            <Text style={styles.headerButtonText}>⋯</Text>
+          </TouchableOpacity>
+        </Animated.View>
 
-            {/* {bio} */}
-            {(() => {
-              const bio = getPlaceholder(
-                displayUserData?.headline,
-                "Mysterious stranger with no bio. Very suspicious 🤔"
-              );
-              return (
-                <Text style={[styles.profileBio, bio.style]}>{bio.text}</Text>
-              );
-            })()}
+        {/* Pull Progress Indicator */}
+        <PullToRefreshIndicator
+          pullDistance={pullDistance}
+          pullProgress={pullProgress}
+          refreshing={refreshing}
+          threshold={PULL_THRESHOLD}
+        />
 
-            <View style={styles.profileMeta}>
-              {/* School */}
+        {/* Success Checkmark */}
+        {showCheckmark && checkmark()}
+
+        <Animated.ScrollView
+          style={[
+            styles.scrollView,
+            {
+              backgroundColor: colors.background,
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }],
+            },
+          ]}
+          onScroll={handleScroll}
+          scrollEventThrottle={16}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={Colors.PRIMARY}
+              colors={[Colors.PRIMARY]}
+              progressViewOffset={60}
+            />
+          }
+        >
+          {/* Cover Photo */}
+          <Animated.View
+            style={[
+              styles.coverContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            <Image
+              source={{
+                uri: "https://images.unsplash.com/photo-1562774053-701939374585?w=400&h=200&fit=crop",
+              }}
+              style={styles.coverPhoto}
+            />
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Ionicons name="arrow-back" size={RFValue(24)} color="white" />
+            </TouchableOpacity>
+          </Animated.View>
+
+          {/* Profile Section */}
+          <Animated.View
+            style={[
+              styles.profileSection,
+              { backgroundColor: colors.background },
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            <ProfileHeader
+              user_id={displayUserData?.email}
+              scrollY={scrollY}
+              userimage={displayUserData?.image}
+            />
+            <View style={styles.profileInfo}>
+              <View style={styles.nameContainer}>
+                <Text
+                  style={[styles.profileName, { color: colors.onBackground }]}
+                >
+                  {displayUserData?.firstname} {displayUserData?.lastname}
+                </Text>
+                {displayUserData?.studentstatusverified && (
+                  <Ionicons
+                    name="checkmark-circle"
+                    size={RFValue(20)}
+                    color={Colors.PRIMARY}
+                    style={styles.verificationCheckmark}
+                  />
+                )}
+              </View>
+              <Text style={[styles.profileHandle]}>
+                {" "}
+                @{displayUserData?.username}
+              </Text>
+
+              {/* {bio} */}
               {(() => {
-                const school = getPlaceholder(
-                  displayUserData?.school,
-                  "A mystery school… yet to be revealed 🕵️‍♂️"
+                const bio = getPlaceholder(
+                  displayUserData?.headline,
+                  "Mysterious stranger with no bio. Very suspicious 🤔"
                 );
                 return (
-                  <Text
-                    style={[styles.profileMetaText, { color: Colors.GRAY }]}
-                  >
-                    <Ionicons
-                      name="school"
-                      size={RFValue(16)}
-                      color={Colors.PRIMARY}
-                    />{" "}
-                    {school.text}
-                  </Text>
+                  <Text style={[styles.profileBio, bio.style]}>{bio.text}</Text>
                 );
               })()}
 
-              {/* Degree and Field of Study */}
-              {(() => {
-                // Get education data from context
-                const educationData =
-                  displayEducation &&
-                  Array.isArray(displayEducation) &&
-                  displayEducation.length > 0
-                    ? displayEducation.find((edu: any) => {
-                        // Handle both string and object school formats
-                        const schoolName =
-                          typeof edu.school === "string"
-                            ? edu.school
-                            : edu.school?.name;
-
-                        return schoolName === displayUserData?.school;
-                      }) || displayEducation[0] // Fallback to first education if no match
-                    : null;
-
-                // Show loading only if we're actively fetching education data
-                if (isLoadingEducation) {
+              <View style={styles.profileMeta}>
+                {/* School */}
+                {(() => {
+                  const school = getPlaceholder(
+                    displayUserData?.school,
+                    "A mystery school… yet to be revealed 🕵️‍♂️"
+                  );
                   return (
-                    <View style={styles.educationLoadingContainer}>
-                      <ActivityIndicator size="small" color={Colors.PRIMARY} />
+                    <Text
+                      style={[styles.profileMetaText, { color: Colors.GRAY }]}
+                    >
+                      <Ionicons
+                        name="school"
+                        size={RFValue(16)}
+                        color={Colors.PRIMARY}
+                      />{" "}
+                      {school.text}
+                    </Text>
+                  );
+                })()}
+
+                {/* Degree and Field of Study */}
+                {(() => {
+                  // Get education data from context
+                  const educationData =
+                    displayEducation &&
+                    Array.isArray(displayEducation) &&
+                    displayEducation.length > 0
+                      ? displayEducation.find((edu: any) => {
+                          // Handle both string and object school formats
+                          const schoolName =
+                            typeof edu.school === "string"
+                              ? edu.school
+                              : edu.school?.name;
+
+                          return schoolName === displayUserData?.school;
+                        }) || displayEducation[0] // Fallback to first education if no match
+                      : null;
+
+                  // Show loading only if we're actively fetching education data
+                  if (isLoadingEducation) {
+                    return (
+                      <View style={styles.educationLoadingContainer}>
+                        <ActivityIndicator
+                          size="small"
+                          color={Colors.PRIMARY}
+                        />
+                        <Text
+                          style={[
+                            styles.profileMetaText,
+                            { color: colors.onSurfaceVariant, marginLeft: 8 },
+                          ]}
+                        >
+                          Loading degree...
+                        </Text>
+                      </View>
+                    );
+                  }
+
+                  if (!educationData) {
+                    return (
                       <Text
                         style={[
                           styles.profileMetaText,
-                          { color: colors.onSurfaceVariant, marginLeft: 8 },
+                          {
+                            color: colors.onSurfaceVariant,
+                            fontStyle: "italic",
+                          },
                         ]}
                       >
-                        Loading degree...
+                        <Ionicons
+                          name="school-outline"
+                          size={16}
+                          color={Colors.PRIMARY}
+                        />{" "}
+                        No degree info yet 🎓
                       </Text>
-                    </View>
-                  );
-                }
+                    );
+                  }
 
-                if (!educationData) {
+                  // Parse school data safely
+                  let schoolName = "";
+                  try {
+                    if (typeof educationData.school === "string") {
+                      const parsed = JSON.parse(educationData.school);
+                      schoolName = parsed.name || "";
+                    } else if (
+                      educationData.school &&
+                      typeof educationData.school === "object"
+                    ) {
+                      schoolName = educationData.school.name || "";
+                    }
+                  } catch (error) {
+                    console.warn("Error parsing school data:", error);
+                  }
+
+                  const degree = educationData.degree || "";
+                  const fieldOfStudy = educationData.field_of_study || "";
+
+                  let degreeText = "";
+                  if (degree && fieldOfStudy) {
+                    const degreeAbbr = degree.toLowerCase().includes("bachelor")
+                      ? "BSc"
+                      : degree.toLowerCase().includes("master")
+                      ? "MSc"
+                      : degree.toLowerCase().includes("phd")
+                      ? "PhD"
+                      : degree.toLowerCase().includes("associate")
+                      ? "AAS"
+                      : degree.toLowerCase().includes("diploma")
+                      ? "Dip"
+                      : degree.toLowerCase().includes("certificate")
+                      ? "Cert."
+                      : degree;
+
+                    degreeText = `${degreeAbbr} in ${fieldOfStudy}`;
+                  } else if (degree) {
+                    degreeText = degree;
+                  } else if (fieldOfStudy) {
+                    degreeText = fieldOfStudy;
+                  }
+
                   return (
                     <Text
-                      style={[
-                        styles.profileMetaText,
-                        { color: colors.onSurfaceVariant, fontStyle: "italic" },
-                      ]}
+                      style={[styles.profileMetaText, { color: Colors.GRAY }]}
                     >
                       <Ionicons
                         name="school-outline"
                         size={16}
                         color={Colors.PRIMARY}
                       />{" "}
-                      No degree info yet 🎓
+                      {degreeText}
                     </Text>
                   );
-                }
+                })()}
 
-                // Parse school data safely
-                let schoolName = "";
-                try {
-                  if (typeof educationData.school === "string") {
-                    const parsed = JSON.parse(educationData.school);
-                    schoolName = parsed.name || "";
-                  } else if (
-                    educationData.school &&
-                    typeof educationData.school === "object"
-                  ) {
-                    schoolName = educationData.school.name || "";
-                  }
-                } catch (error) {
-                  console.warn("Error parsing school data:", error);
-                }
+                {/* Location */}
+                {(() => {
+                  // Properly handle null/undefined values for location
+                  const city = displayUserData?.city?.trim();
+                  const country = displayUserData?.country?.trim();
+                  const locationString =
+                    city && country
+                      ? `${city}, ${country}`
+                      : city || country || undefined;
 
-                const degree = educationData.degree || "";
-                const fieldOfStudy = educationData.field_of_study || "";
+                  const location = getPlaceholder(
+                    locationString,
+                    "Top Secret Academy 🕵️‍♂️"
+                  );
+                  return (
+                    <Text
+                      style={[styles.profileMetaText, { color: Colors.GRAY }]}
+                    >
+                      <Ionicons
+                        name="location"
+                        size={16}
+                        color={Colors.PRIMARY}
+                      />{" "}
+                      {location.text}
+                    </Text>
+                  );
+                })()}
 
-                let degreeText = "";
-                if (degree && fieldOfStudy) {
-                  const degreeAbbr = degree.toLowerCase().includes("bachelor")
-                    ? "BSc"
-                    : degree.toLowerCase().includes("master")
-                    ? "MSc"
-                    : degree.toLowerCase().includes("phd")
-                    ? "PhD"
-                    : degree.toLowerCase().includes("associate")
-                    ? "AAS"
-                    : degree.toLowerCase().includes("diploma")
-                    ? "Dip"
-                    : degree.toLowerCase().includes("certificate")
-                    ? "Cert."
-                    : degree;
-
-                  degreeText = `${degreeAbbr} in ${fieldOfStudy}`;
-                } else if (degree) {
-                  degreeText = degree;
-                } else if (fieldOfStudy) {
-                  degreeText = fieldOfStudy;
-                }
-
-                return (
-                  <Text
-                    style={[styles.profileMetaText, { color: Colors.GRAY }]}
-                  >
-                    <Ionicons
-                      name="school-outline"
-                      size={16}
-                      color={Colors.PRIMARY}
-                    />{" "}
-                    {degreeText}
-                  </Text>
-                );
-              })()}
-
-              {/* Location */}
-              {(() => {
-                // Properly handle null/undefined values for location
-                const city = displayUserData?.city?.trim();
-                const country = displayUserData?.country?.trim();
-                const locationString =
-                  city && country
-                    ? `${city}, ${country}`
-                    : city || country || undefined;
-
-                const location = getPlaceholder(
-                  locationString,
-                  "Top Secret Academy 🕵️‍♂️"
-                );
-                return (
-                  <Text
-                    style={[styles.profileMetaText, { color: Colors.GRAY }]}
-                  >
-                    <Ionicons
-                      name="location"
-                      size={16}
-                      color={Colors.PRIMARY}
-                    />{" "}
-                    {location.text}
-                  </Text>
-                );
-              })()}
-
-              {/* Joined App */}
-              {(() => {
-                const joined = getPlaceholder(
-                  displayUserData?.joined_at
-                    ? new Date(displayUserData.joined_at).toLocaleDateString(
-                        "en-US",
-                        {
-                          year: "numeric",
-                          month: "long",
-                        }
-                      )
-                    : undefined,
-                  "Joined… who knows when? 🕰️"
-                );
-                return (
-                  <Text
-                    style={[styles.profileMetaText, { color: Colors.GRAY }]}
-                  >
-                    <Ionicons
-                      name="time-outline"
-                      size={16}
-                      color={Colors.PRIMARY}
-                    />{" "}
-                    {`Joined ${joined.text}`}
-                  </Text>
-                );
-              })()}
-            </View>
-            <View style={styles.profileStats}>
-              <TouchableOpacity style={styles.statItem}>
-                <Text
-                  style={[styles.statNumber, { color: colors.onBackground }]}
-                >
-                  {displayUserPosts.length}
-                </Text>
-                <Text style={styles.statLabel}>Posts</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.statItem}>
-                <Text
-                  style={[styles.statNumber, { color: colors.onBackground }]}
-                >
-                  {mediaCount}
-                </Text>
-                <Text style={styles.statLabel}>Media</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.statItem}>
-                <Text
-                  style={[styles.statNumber, { color: colors.onBackground }]}
-                >
-                  {displayUserData?.connections?.length || 0}
-                </Text>
-                <Text style={styles.statLabel}>Followers</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.statItem}>
-                <Text
-                  style={[styles.statNumber, { color: colors.onBackground }]}
-                >
-                  {displayUserData?.following?.length || 0}
-                </Text>
-                <Text style={styles.statLabel}>Following</Text>
-              </TouchableOpacity>
-              {!user_id && (
-                <TouchableOpacity style={[styles.statItem]}>
+                {/* Joined App */}
+                {(() => {
+                  const joined = getPlaceholder(
+                    displayUserData?.joined_at
+                      ? new Date(displayUserData.joined_at).toLocaleDateString(
+                          "en-US",
+                          {
+                            year: "numeric",
+                            month: "long",
+                          }
+                        )
+                      : undefined,
+                    "Joined… who knows when? 🕰️"
+                  );
+                  return (
+                    <Text
+                      style={[styles.profileMetaText, { color: Colors.GRAY }]}
+                    >
+                      <Ionicons
+                        name="time-outline"
+                        size={16}
+                        color={Colors.PRIMARY}
+                      />{" "}
+                      {`Joined ${joined.text}`}
+                    </Text>
+                  );
+                })()}
+              </View>
+              <View style={styles.profileStats}>
+                <TouchableOpacity style={styles.statItem}>
                   <Text
                     style={[styles.statNumber, { color: colors.onBackground }]}
                   >
-                    {followedClubs?.length + userCreatedClubs?.length}
+                    {displayUserPosts.length}
                   </Text>
-                  <Text style={styles.statLabel}>Clubs</Text>
+                  <Text style={styles.statLabel}>Posts</Text>
                 </TouchableOpacity>
-              )}
-            </View>
-          </View>
-
-          {/* About Section     */}
-          <View
-            style={[
-              styles.aboutSection,
-              { backgroundColor: colors.background },
-            ]}
-          >
-            <View style={[styles.aboutHeader]}>
-              <Text style={[styles.aboutTitle, { color: colors.onBackground }]}>
-                About
-              </Text>
-              {!isViewingOtherUser && (
-                <TouchableOpacity
-                  onPress={() =>
-                    router.push({
-                      pathname: "/(app)/profile/edit",
-                      params: {
-                        userEmail: displayUserData?.email,
-                        sectionToEdit: "about",
-                      },
-                    })
-                  }
-                >
-                  <Ionicons
-                    name="pencil-outline"
-                    size={RFValue(16)}
-                    color={Colors.PRIMARY}
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {(() => {
-              const placeholderAbout = `Mysterious student wandering Campusly’s halls… 👀  
-Rumor has it they code apps, chase deadlines, and survive on coffee.  
-May or may not have a secret talent for finding the best study spots on campus. 🕵️‍♂️  
-Friend requests welcome, but beware… they might already have 3 group projects pending. 😏`;
-
-              const aboutData =
-                displayUserData?.about?.trim() || placeholderAbout;
-              const isPlaceholder = !displayUserData?.about?.trim();
-
-              return (
-                <>
+                <TouchableOpacity style={styles.statItem}>
                   <Text
-                    style={[
-                      styles.aboutText,
-                      {
-                        color: isPlaceholder
-                          ? colors.onSurfaceVariant
-                          : colors.onBackground,
-                        fontStyle: isPlaceholder ? "italic" : "normal",
-                      },
-                    ]}
-                    numberOfLines={aboutExpanded ? undefined : 3}
-                    onTextLayout={(e) => {
-                      const { lines } = e.nativeEvent;
-                      if (lines.length > 3) {
-                        setShowReadMore(true);
-                      } else {
-                        setShowReadMore(false);
-                      }
-                    }}
+                    style={[styles.statNumber, { color: colors.onBackground }]}
                   >
-                    {aboutData}
+                    {mediaCount}
                   </Text>
-
-                  {/* Toggle button */}
-                  {showReadMore && (
-                    <TouchableOpacity
-                      onPress={() => setAboutExpanded(!aboutExpanded)}
-                    >
-                      <Text style={styles.readMoreText}>
-                        {aboutExpanded ? "Show less" : "Read more"}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </>
-              );
-            })()}
-          </View>
-
-          {/* {Activity Section} */}
-          <View
-            style={[
-              styles.activitySection,
-              { backgroundColor: colors.background },
-            ]}
-          >
-            <View style={styles.activityHeader}>
-              <Text
-                style={[styles.activityTitle, { color: colors.onBackground }]}
-              >
-                Activity
-              </Text>
-              <View style={styles.activityHeaderRight}>
-                {!isViewingOtherUser && (
-                  <TouchableOpacity
-                    style={styles.activityButton}
-                    onPress={() => {
-                      router.push("/(app)/posts/add");
-                    }}
+                  <Text style={styles.statLabel}>Media</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.statItem}>
+                  <Text
+                    style={[styles.statNumber, { color: colors.onBackground }]}
                   >
-                    <Text style={styles.activityButtonText}>Create a post</Text>
+                    {displayUserData?.connections?.length || 0}
+                  </Text>
+                  <Text style={styles.statLabel}>Followers</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.statItem}>
+                  <Text
+                    style={[styles.statNumber, { color: colors.onBackground }]}
+                  >
+                    {displayUserData?.following?.length || 0}
+                  </Text>
+                  <Text style={styles.statLabel}>Following</Text>
+                </TouchableOpacity>
+                {!user_id && (
+                  <TouchableOpacity style={[styles.statItem]}>
+                    <Text
+                      style={[
+                        styles.statNumber,
+                        { color: colors.onBackground },
+                      ]}
+                    >
+                      {followedClubs?.length + userCreatedClubs?.length}
+                    </Text>
+                    <Text style={styles.statLabel}>Clubs</Text>
                   </TouchableOpacity>
                 )}
+              </View>
+            </View>
+
+            {/* About Section     */}
+            <View
+              style={[
+                styles.aboutSection,
+                { backgroundColor: colors.background },
+              ]}
+            >
+              <View style={[styles.aboutHeader]}>
+                <Text
+                  style={[styles.aboutTitle, { color: colors.onBackground }]}
+                >
+                  About
+                </Text>
                 {!isViewingOtherUser && (
-                  <TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate("EditProfile", {
+                        userEmail: displayUserData?.email,
+                        sectionToEdit: "about",
+                      })
+                    }
+                  >
                     <Ionicons
                       name="pencil-outline"
                       size={RFValue(16)}
@@ -904,146 +887,250 @@ Friend requests welcome, but beware… they might already have 3 group projects 
                   </TouchableOpacity>
                 )}
               </View>
-            </View>
-            <ActivitySectionMiniScreen user_id={user_id} />
-          </View>
 
-          {/* Education Section */}
-          <View
-            style={[
-              styles.educationSection,
-              { backgroundColor: colors.background },
-            ]}
-          >
-            <View style={styles.educationHeader}>
-              <Text
-                style={[styles.sectionTitle, { color: colors.onBackground }]}
-              >
-                Education
-              </Text>
-              {!isViewingOtherUser && (
-                <TouchableOpacity
-                  onPress={() =>
-                    router.push({
-                      pathname: "/(app)/profile/edit-education",
-                      params: {
-                        userEmail: displayUserData?.email,
-                      },
-                    })
-                  }
+              {(() => {
+                const placeholderAbout = `Mysterious student wandering Campusly’s halls… 👀  
+Rumor has it they code apps, chase deadlines, and survive on coffee.  
+May or may not have a secret talent for finding the best study spots on campus. 🕵️‍♂️  
+Friend requests welcome, but beware… they might already have 3 group projects pending. 😏`;
+
+                const aboutData =
+                  displayUserData?.about?.trim() || placeholderAbout;
+                const isPlaceholder = !displayUserData?.about?.trim();
+
+                // Fallback: Show read more if text is longer than ~150 characters (approx 3 lines)
+                const shouldShowReadMore = aboutData.length > 150;
+
+                return (
+                  <>
+                    <Text
+                      style={[
+                        styles.aboutText,
+                        {
+                          color: isPlaceholder
+                            ? colors.onSurfaceVariant
+                            : colors.onBackground,
+                          fontStyle: isPlaceholder ? "italic" : "normal",
+                        },
+                      ]}
+                      numberOfLines={aboutExpanded ? undefined : 3}
+                      onTextLayout={(e) => {
+                        const { lines } = e.nativeEvent;
+                        console.log("Text layout:", {
+                          linesCount: lines.length,
+                          textLength: aboutData.length,
+                        });
+                        if (lines.length > 3) {
+                          setShowReadMore(true);
+                        } else {
+                          setShowReadMore(false);
+                        }
+                      }}
+                    >
+                      {aboutData}
+                    </Text>
+
+                    {/* Toggle button */}
+                    {(showReadMore || shouldShowReadMore) && (
+                      <TouchableOpacity
+                        onPress={() => setAboutExpanded(!aboutExpanded)}
+                      >
+                        <Text style={styles.readMoreText}>
+                          {aboutExpanded ? "Show less" : "Read more"}
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
+                );
+              })()}
+            </View>
+
+            {/* {Activity Section} */}
+            <View
+              style={[
+                styles.activitySection,
+                { backgroundColor: colors.background },
+              ]}
+            >
+              <View style={styles.activityHeader}>
+                <Text
+                  style={[styles.activityTitle, { color: colors.onBackground }]}
                 >
-                  <Ionicons
-                    name="pencil-outline"
-                    size={RFValue(16)}
-                    color={Colors.PRIMARY}
-                  />
-                </TouchableOpacity>
+                  Activity
+                </Text>
+                <View style={styles.activityHeaderRight}>
+                  {!isViewingOtherUser && (
+                    <TouchableOpacity
+                      style={styles.activityButton}
+                      onPress={() => {
+                        navigation.navigate("AddPost");
+                      }}
+                    >
+                      <Text style={styles.activityButtonText}>
+                        Create a post
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  {!isViewingOtherUser && (
+                    <TouchableOpacity>
+                      <Ionicons
+                        name="pencil-outline"
+                        size={RFValue(16)}
+                        color={Colors.PRIMARY}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              </View>
+              <ActivitySectionMiniScreen user_id={user_id} />
+            </View>
+
+            {/* Education Section */}
+            <View
+              style={[
+                styles.educationSection,
+                { backgroundColor: colors.background },
+              ]}
+            >
+              <View style={styles.educationHeader}>
+                <Text
+                  style={[styles.sectionTitle, { color: colors.onBackground }]}
+                >
+                  Education
+                </Text>
+                {!isViewingOtherUser && (
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate("EditEducation", {
+                        userEmail: displayUserData?.email,
+                      })
+                    }
+                  >
+                    <Ionicons
+                      name="pencil-outline"
+                      size={RFValue(16)}
+                      color={Colors.PRIMARY}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+              {Array.isArray(displayEducation) &&
+              displayEducation.length > 0 ? (
+                displayEducation.map((edu: any, index: number) => (
+                  <EducationCard key={index} education={edu} />
+                ))
+              ) : (
+                <Text
+                  style={[styles.eduItem, { color: colors.onSurfaceVariant }]}
+                >
+                  {isViewingOtherUser
+                    ? "This student's academic journey is still a mystery... 🎓✨"
+                    : "No education details added. Click the pencil icon to add."}
+                </Text>
               )}
             </View>
-            {Array.isArray(displayEducation) && displayEducation.length > 0 ? (
-              displayEducation.map((edu: any, index: number) => (
-                <EducationCard key={index} education={edu} />
-              ))
-            ) : (
-              <Text
-                style={[styles.eduItem, { color: colors.onSurfaceVariant }]}
-              >
-                No education details added. Click the pencil icon to add.
-              </Text>
-            )}
-          </View>
 
-          {/* Skills & Interests Section */}
-          <View style={styles.skillsSection}>
-            <View
-              style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: RFValue(16),
-              }}
-            >
-              <Text
-                style={[styles.skillsTitle, { color: colors.onBackground }]}
+            {/* Skills & Interests Section */}
+            <View style={styles.skillsSection}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: RFValue(16),
+                }}
               >
-                Skills & Interests
-              </Text>
-              {!isViewingOtherUser && (
-                <TouchableOpacity
-                  onPress={() =>
-                    router.push({
-                      pathname: "/(app)/profile/edit",
-                      params: {
+                <Text
+                  style={[styles.skillsTitle, { color: colors.onBackground }]}
+                >
+                  Skills & Interests
+                </Text>
+                {!isViewingOtherUser && (
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate("EditProfile", {
                         userEmail: displayUserData?.email,
                         sectionToEdit: "skills",
-                      },
-                    })
-                  }
+                      })
+                    }
+                  >
+                    <Ionicons
+                      name="pencil-outline"
+                      size={RFValue(16)}
+                      color={Colors.PRIMARY}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Skills Subsection */}
+              <View style={styles.subsection}>
+                <Text
+                  style={[
+                    styles.subsectionTitle,
+                    { color: colors.onBackground },
+                  ]}
                 >
-                  <Ionicons
-                    name="pencil-outline"
-                    size={RFValue(16)}
-                    color={Colors.PRIMARY}
-                  />
-                </TouchableOpacity>
-              )}
-            </View>
+                  Skills{" "}
+                  {!isViewingOtherUser ? `(${(skills || []).length}/5)` : ""}
+                </Text>
+                <View style={styles.skillsWrapper}>
+                  {(skills || []).length <= 0 && (
+                    <Text
+                      style={[
+                        styles.skillText,
+                        { color: colors.onSurfaceVariant },
+                      ]}
+                    >
+                      {isViewingOtherUser
+                        ? "Their superpowers are still under wraps... 🦸‍♂️💫"
+                        : "No skills added yet… what are you waiting for? 🤔"}
+                    </Text>
+                  )}
+                  {(skills || []).map((skill, index) => (
+                    <View key={index} style={styles.skillTag}>
+                      <Text style={styles.skillText}>#{skill}</Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
 
-            {/* Skills Subsection */}
-            <View style={styles.subsection}>
-              <Text
-                style={[styles.subsectionTitle, { color: colors.onBackground }]}
-              >
-                Skills ({(skills || []).length}/5)
-              </Text>
-              <View style={styles.skillsWrapper}>
-                {(skills || []).length <= 0 && (
-                  <Text
-                    style={[
-                      styles.skillText,
-                      { color: colors.onSurfaceVariant },
-                    ]}
-                  >
-                    No skills added yet… what are you waiting for? 🚀
-                  </Text>
-                )}
-                {(skills || []).map((skill, index) => (
-                  <View key={index} style={styles.skillTag}>
-                    <Text style={styles.skillText}>#{skill}</Text>
-                  </View>
-                ))}
+              {/* Interests Subsection */}
+              <View style={styles.subsection}>
+                <Text
+                  style={[
+                    styles.subsectionTitle,
+                    { color: colors.onBackground },
+                  ]}
+                >
+                  Interests{" "}
+                  {!isViewingOtherUser ? `(${(interests || []).length}/5)` : ""}
+                </Text>
+                <View style={styles.interestsWrapper}>
+                  {(interests || []).length <= 0 && (
+                    <Text
+                      style={[
+                        styles.interestText,
+                        { color: colors.onSurfaceVariant },
+                      ]}
+                    >
+                      {isViewingOtherUser
+                        ? "Their passions are hidden like buried treasure... 🏴‍☠️💎"
+                        : "No interests added yet… are you secretly a robot? 🤖"}
+                    </Text>
+                  )}
+                  {(interests || []).map((interest, index) => (
+                    <View key={index} style={styles.interestTag}>
+                      <Text style={styles.interestText}>#{interest}</Text>
+                    </View>
+                  ))}
+                </View>
               </View>
             </View>
-
-            {/* Interests Subsection */}
-            <View style={styles.subsection}>
-              <Text
-                style={[styles.subsectionTitle, { color: colors.onBackground }]}
-              >
-                Interests ({(interests || []).length}/5)
-              </Text>
-              <View style={styles.interestsWrapper}>
-                {(interests || []).length <= 0 && (
-                  <Text
-                    style={[
-                      styles.interestText,
-                      { color: colors.onSurfaceVariant },
-                    ]}
-                  >
-                    No interests added yet… are you secretly a robot? 🤖
-                  </Text>
-                )}
-                {(interests || []).map((interest, index) => (
-                  <View key={index} style={styles.interestTag}>
-                    <Text style={styles.interestText}>#{interest}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          </View>
-        </View>
-      </Animated.ScrollView>
-    </SafeAreaView>
+          </Animated.View>
+        </Animated.ScrollView>
+      </SafeAreaView>
+    </Animated.View>
   );
 };
 

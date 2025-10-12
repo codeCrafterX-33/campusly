@@ -16,7 +16,9 @@ import { ThemeContext } from "../../context/ThemeContext";
 import Colors from "../../constants/Colors";
 import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "react-native-paper";
-import { navigateToPost } from "../../util/navigation";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../navigation/StackNavigator";
 import { PostContext } from "../../context/PostContext";
 import { Tabs } from "react-native-collapsible-tab-view";
 import { useViewableItemsPreloader } from "../../hooks/useViewableItemsPreloader";
@@ -32,7 +34,8 @@ export default function MediaTab({
   setShowCheckmark: (showCheckmark: boolean) => void;
   user_id?: string;
 }) {
-  // Navigation is now handled through utility functions
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { isDarkMode } = useContext(ThemeContext);
   const { colors } = useTheme();
   const { userPosts, getUserPosts, viewingUserPosts } = useContext(PostContext);
@@ -82,7 +85,12 @@ export default function MediaTab({
   const renderMediaItem = ({ item }: { item: any }) => (
     <TouchableOpacity
       style={styles.mediaItem}
-      onPress={() => navigateToPost(item.post)}
+      onPress={() =>
+        navigation.navigate("PostScreen", {
+          post: item.post,
+          threadHistory: [],
+        })
+      }
     >
       <Image
         source={{

@@ -16,8 +16,9 @@ import {
 import React, { useState, useRef, useContext, useEffect } from "react";
 import { useTheme } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { useLocalSearchParams } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../navigation/StackNavigator";
 import { useFocusEffect } from "@react-navigation/native";
 // Removed React Navigation imports
 import { VideoView, useVideoPlayer } from "expo-video";
@@ -63,21 +64,16 @@ const VideoComponent = ({
   );
 };
 
-const PostScreen = ({
-  post: propPost,
-  threadHistory: initialThreadHistory,
-}: { post?: any; threadHistory?: any[] } = {}) => {
+const PostScreen = ({ route }: { route: any }) => {
   const { colors } = useTheme();
-  const params = useLocalSearchParams<{
-    post: string;
-    threadHistory?: string;
-  }>();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { post: propPost, threadHistory: initialThreadHistory } =
+    route.params || {};
 
   // Parse the post data if it's passed as a string
-  const post = propPost || (params.post ? JSON.parse(params.post) : null);
-  const parsedThreadHistory =
-    initialThreadHistory ||
-    (params.threadHistory ? JSON.parse(params.threadHistory) : undefined);
+  const post = propPost;
+  const parsedThreadHistory = initialThreadHistory;
 
   const [modalVisible, setModalVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);

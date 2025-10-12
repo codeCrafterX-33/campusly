@@ -20,12 +20,10 @@ import { VideoView, useVideoPlayer } from "expo-video";
 import { AuthContext } from "../../context/AuthContext";
 import { PostContext } from "../../context/PostContext";
 import CampuslyAlert from "../CampuslyAlert";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../navigation/StackNavigator";
 import { Moment } from "../../util/Moment";
-import {
-  navigateToPost,
-  navigateToProfile,
-  navigateToComment,
-} from "../../util/navigation";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -75,7 +73,8 @@ const PostCard = ({
   clickable?: boolean;
 }) => {
   const { colors } = useTheme();
-  // Navigation is now handled through utility functions
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const [modalVisible, setModalVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
@@ -137,7 +136,7 @@ const PostCard = ({
         if (onPostPress) {
           onPostPress();
         } else if (clickable) {
-          navigateToPost(post);
+          navigation.navigate("PostScreen", { post });
         }
       }}
     >
@@ -157,7 +156,9 @@ const PostCard = ({
                     "Source: PostCard_Cached"
                   );
                   // If we have cached data, pass minimal params since Profile will use cached data
-                  navigateToProfile(post.user_id);
+                  navigation.navigate("Profile", {
+                    user_id: post.user_id,
+                  });
                 } else {
                   console.log(
                     "🟡 PostCard - No cached data, passing post data for immediate display:",
@@ -165,7 +166,22 @@ const PostCard = ({
                     "Source: PostCard_Fresh"
                   );
                   // Pass post data for immediate display while fetching complete data
-                  navigateToProfile(post.user_id);
+                  navigation.navigate("Profile", {
+                    user_id: post.user_id,
+                    firstname: post.firstname,
+                    lastname: post.lastname,
+                    username: post.username,
+                    image: post.image,
+                    studentstatusverified: post.studentstatusverified,
+                    headline: post.headline,
+                    about: post.about,
+                    school: post.school,
+                    city: post.city,
+                    country: post.country,
+                    joined_at: post.joined_at,
+                    skills: post.skills,
+                    interests: post.interests,
+                  });
                 }
               }
             }}
@@ -529,7 +545,7 @@ const PostCard = ({
                 "PostCard: Navigating to CommentScreen with post:",
                 post.id
               );
-              navigateToComment(post);
+              navigation.navigate("CommentScreen", { post });
             }
           }}
         >

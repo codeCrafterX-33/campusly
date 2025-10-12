@@ -37,6 +37,7 @@ import PostScreen from "../screens/PostScreen";
 import CommentScreen from "../screens/CommentScreen";
 import ClubMembers from "../screens/ClubMembers";
 import ClubRules from "../screens/ClubRules";
+import GradientHeader from "../components/GradientHeader";
 
 export type RootStackParamList = {
   Landing: undefined;
@@ -71,9 +72,15 @@ export type RootStackParamList = {
   };
   VerificationScreen: undefined;
   ProfileSetupScreen: undefined;
-  OTPVerificationScreen: undefined;
-  EditProfile: undefined;
-  EditEducation: undefined;
+  OTPVerificationScreen: { email: string };
+  EditProfile: {
+    userEmail?: string;
+    sectionToEdit?: string;
+  };
+  EditEducation: {
+    userEmail?: string;
+    sectionToEdit?: string;
+  };
   EditClub: { club: any };
   ClubScreen: { club: any };
   PostScreen: {
@@ -85,6 +92,7 @@ export type RootStackParamList = {
     parentComment?: any;
     onCommentPosted?: (updatedComment: any) => void;
   };
+  "Add-Post": undefined;
   ClubMembers: { club: any };
   ClubRules: { club: any };
 };
@@ -330,6 +338,7 @@ export const AuthenticatedStack = () => {
         component={EditEducation}
         options={{
           headerShown: true,
+          header: () => <GradientHeader title="Education" />,
           ...TransitionPresets.SlideFromRightIOS,
           cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
         }}

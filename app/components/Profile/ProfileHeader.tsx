@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -6,14 +6,18 @@ import {
   TouchableOpacity,
   StyleSheet,
   Animated,
+  Alert,
 } from "react-native";
 import { useContext } from "react";
 import { AuthContext } from "../../context/AuthContext";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { RFValue } from "react-native-responsive-fontsize";
 import Colors from "../../constants/Colors";
-import {  useNavigation } from "@react-navigation/native";
+import { useNavigation } from "@react-navigation/native";
 import { ThemeContext } from "../../context/ThemeContext";
+import ProfilePictureModal from "./ProfilePictureModal";
+import * as ImagePicker from "expo-image-picker";
+import ProfilePictureAlert from "./ProfilePictureAlert";
 
 const COVER_HEIGHT = 200;
 const PROFILE_IMAGE_SIZE = 80;
@@ -30,6 +34,10 @@ const ProfileHeader = ({ scrollY, user_id, userimage }: ProfileHeaderProps) => {
   const loggedInUser = user_id === userData?.email;
   const { isDarkMode } = useContext(ThemeContext);
   const navigation = useNavigation<any>();
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [profilePictureAlertVisible, setProfilePictureAlertVisible] =
+    useState(false);
 
   const profileImageScale = scrollY.interpolate({
     inputRange: [0, COVER_HEIGHT / 2, COVER_HEIGHT],
@@ -43,12 +51,86 @@ const ProfileHeader = ({ scrollY, user_id, userimage }: ProfileHeaderProps) => {
     extrapolate: "clamp",
   });
 
-
   const profileImageOpacity = scrollY.interpolate({
     inputRange: [0, COVER_HEIGHT / 2, COVER_HEIGHT],
     outputRange: [1, 0.8, 0.4],
     extrapolate: "clamp",
   });
+
+  const handleChangePicture = async () => {
+    try {
+      // Request permissions
+      const { status } =
+        await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== "granted") {
+        Alert.alert(
+          "Permission Required",
+          "Please grant permission to access your photo library."
+        );
+        return;
+      }
+
+      // Show ProfilePictureAlert
+      setProfilePictureAlertVisible(true);
+    } catch (error) {
+      console.error("Error requesting permissions:", error);
+      Alert.alert("Error", "Failed to request permissions.");
+    }
+  };
+
+  const openImagePicker = async (source: "camera" | "library") => {
+    try {
+      setIsUploading(true);
+      setIsModalVisible(false);
+
+      let result;
+      if (source === "camera") {
+        const { status } = await ImagePicker.requestCameraPermissionsAsync();
+        if (status !== "granted") {
+          Alert.alert(
+            "Permission Required",
+            "Please grant permission to access your camera."
+          );
+          setIsUploading(false);
+          return;
+        }
+        result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      } else {
+        result = await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+      }
+
+      if (!result.canceled && result.assets[0]) {
+        const selectedImage = result.assets[0];
+        console.log("Selected image:", selectedImage.uri);
+
+        // TODO: Upload image to server/cloud storage
+        // For now, just show success message
+        Alert.alert("Success", "Profile picture updated successfully!");
+
+        // TODO: Update user profile with new image URL
+        // This would typically involve:
+        // 1. Upload image to cloud storage (Cloudinary, AWS S3, etc.)
+        // 2. Get the uploaded image URL
+        // 3. Update user profile in database
+        // 4. Refresh the UI with new image
+      }
+    } catch (error) {
+      console.error("Error picking image:", error);
+      Alert.alert("Error", "Failed to pick image. Please try again.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   return (
     <View style={styles.profileHeader}>
@@ -64,12 +146,17 @@ const ProfileHeader = ({ scrollY, user_id, userimage }: ProfileHeaderProps) => {
           },
         ]}
       >
-        <Image
-          source={{
-            uri: userimage,
-          }}
-          style={styles.profileImage}
-        />
+        <TouchableOpacity
+          onPress={() => setIsModalVisible(true)}
+          activeOpacity={0.8}
+        >
+          <Image
+            source={{
+              uri: userimage,
+            }}
+            style={styles.profileImage}
+          />
+        </TouchableOpacity>
         <View style={styles.verificationBadge}>
           <Text style={styles.verificationText}>🎓</Text>
         </View>
@@ -95,12 +182,38 @@ const ProfileHeader = ({ scrollY, user_id, userimage }: ProfileHeaderProps) => {
         <TouchableOpacity
           style={[
             styles.followButton,
-            isDarkMode ? { backgroundColor: "white" } : { backgroundColor: "black" }
+            isDarkMode
+              ? { backgroundColor: "white" }
+              : { backgroundColor: "black" },
           ]}
         >
-          <Text style={[styles.followButtonText, isDarkMode ? { color: "black" } : { color: "white" }]}>Follow</Text>
+          <Text
+            style={[
+              styles.followButtonText,
+              isDarkMode ? { color: "black" } : { color: "white" },
+            ]}
+          >
+            Follow
+          </Text>
         </TouchableOpacity>
       )}
+
+      {/* Profile Picture Modal */}
+      <ProfilePictureModal
+        visible={isModalVisible}
+        imageUri={userimage}
+        isOwnProfile={loggedInUser}
+        onClose={() => setIsModalVisible(false)}
+        onChangePicture={handleChangePicture}
+      />
+
+      {/* ProfilePictureAlert for camera/gallery selection */}
+      <ProfilePictureAlert
+        isVisible={profilePictureAlertVisible}
+        onClose={() => setProfilePictureAlertVisible(false)}
+        onCameraPress={() => openImagePicker("camera")}
+        onGalleryPress={() => openImagePicker("library")}
+      />
     </View>
   );
 };

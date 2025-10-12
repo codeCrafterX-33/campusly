@@ -13,11 +13,13 @@ import React, { useState, useContext } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "react-native-paper";
 import { VideoView, useVideoPlayer } from "expo-video";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../navigation/StackNavigator";
 import Colors from "../../constants/Colors";
 import UserAvatar from "./Useravatar";
 import CampuslyAlert from "../CampuslyAlert";
 import { AuthContext } from "../../context/AuthContext";
-import { navigateToPost } from "../../util/navigation";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -117,7 +119,8 @@ const CommentCard = ({
   parentComment,
 }: CommentCardProps) => {
   const { colors } = useTheme();
-  // Navigation is now handled through utility functions
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { userData, getCachedUser } = useContext(AuthContext);
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
@@ -183,21 +186,23 @@ const CommentCard = ({
             onCommentPress(comment);
           } else {
             // Fallback to direct navigation (from other screens)
-            navigateToPost({
-              id: comment.id,
-              content: comment.content,
-              media: comment.media,
-              createdon: comment.createdon,
-              createdby: comment.createdby,
-              user_id: comment.user_id,
-              firstname: comment.firstname,
-              lastname: comment.lastname,
-              username: comment.username,
-              image: comment.image,
-              studentstatusverified: comment.studentstatusverified,
-              like_count: comment.like_count,
-              comment_count: comment.comment_count || 0,
-              parent_post_id: comment.parent_post_id,
+            navigation.navigate("PostScreen", {
+              post: {
+                id: comment.id,
+                content: comment.content,
+                media: comment.media,
+                createdon: comment.createdon,
+                createdby: comment.createdby,
+                user_id: comment.user_id,
+                firstname: comment.firstname,
+                lastname: comment.lastname,
+                username: comment.username,
+                image: comment.image,
+                studentstatusverified: comment.studentstatusverified,
+                like_count: comment.like_count,
+                comment_count: comment.comment_count || 0,
+                parent_post_id: comment.parent_post_id,
+              },
             });
           }
         }}

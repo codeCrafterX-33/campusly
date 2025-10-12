@@ -1,15 +1,18 @@
 import { Pressable, StyleSheet, View, ViewStyle } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
-import { router } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
 
 interface AddPostBtnProps {
   style?: ViewStyle;
 }
 
 const AddPostBtn: React.FC<AddPostBtnProps> = ({ style }) => {
+  const navigation = useNavigation<NativeStackNavigationProp<any>>();
+
   const handleAddPost = () => {
-    router.push("/(app)/posts/add");
+    navigation.navigate("AddPost");
   };
 
   return (

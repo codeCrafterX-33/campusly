@@ -6,7 +6,7 @@ import axios from "axios";
 import usePersistedState from "../util/PersistedState";
 import { Toast } from "react-native-toast-message/lib/src/Toast";
 import { FirebaseError } from "firebase/app";
-import { router } from "expo-router";
+// Removed expo-router import - using React Navigation
 
 const AuthContext = createContext<any>({
   userData: null,
@@ -44,8 +44,10 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    // Navigation will be handled by App.tsx based on auth state
     await auth.signOut();
     setIsAuthenticated(false);
+
     try {
       // Clear all user-related cached data
       await AsyncStorage.removeItem("userData");
@@ -70,9 +72,6 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Execute all logout callbacks to clear other contexts
       logoutCallbacks.forEach((callback) => callback());
-
-      // Navigate back to landing page
-      router.replace("/");
 
       console.log("User logged out and all cached data cleared!");
     } catch (error) {

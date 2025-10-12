@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
+  Animated,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "react-native-paper";
@@ -74,6 +75,12 @@ export default function RenderEditProfileSection({
 }: Props) {
   const { colors } = useTheme();
   const aboutRef = useRef<TextInput>(null);
+
+  // Animation values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+
   useEffect(() => {
     if (sectionToEdit === "about") {
       requestAnimationFrame(() => {
@@ -84,351 +91,619 @@ export default function RenderEditProfileSection({
     }
   }, [sectionToEdit]);
 
+  // Intro section animations
+  useEffect(() => {
+    if (sectionToEdit === "intro") {
+      // Reset animations
+      fadeAnim.setValue(0);
+      slideAnim.setValue(50);
+      scaleAnim.setValue(0.9);
+
+      // Start animations
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [sectionToEdit, fadeAnim, slideAnim, scaleAnim]);
+
+  // About section animations
+  useEffect(() => {
+    if (sectionToEdit === "about") {
+      // Reset animations
+      fadeAnim.setValue(0);
+      slideAnim.setValue(50);
+      scaleAnim.setValue(0.9);
+
+      // Start animations
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 8,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [sectionToEdit, fadeAnim, slideAnim, scaleAnim]);
+
   switch (sectionToEdit) {
     case "intro":
       return (
-        <View style={styles.sectionContainer}>
-          <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>
-            Introduction
-          </Text>
-          <Text
+        <Animated.View
+          style={[
+            styles.ultraModernContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+            },
+          ]}
+        >
+          {/* Hero Header */}
+          <Animated.View
             style={[
-              styles.sectionDescription,
-              { color: colors.onSurfaceVariant },
+              styles.heroHeader,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
             ]}
           >
-            Tell people about yourself and where you're from
-          </Text>
-
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.onBackground }]}>
-              First Name
-            </Text>
-            <TextInput
-              placeholder="e.g., John"
-              placeholderTextColor={colors.onSurfaceVariant}
-              value={firstName}
-              onChangeText={onFirstNameChange}
-              style={[
-                styles.textInput,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.outline,
-                  color: colors.onBackground,
-                },
-              ]}
-              maxLength={30}
-            />
-            {firstNameError ? (
-              <Text style={styles.errorText}>{firstNameError}</Text>
-            ) : null}
-            <View style={styles.characterCounterContainer}>
-              <Text
-                style={[
-                  styles.characterCounterText,
-                  {
-                    color:
-                      firstName.length > 25
-                        ? "#ff4444"
-                        : firstName.length > 20
-                        ? "#ffaa00"
-                        : colors.onSurfaceVariant,
-                  },
-                ]}
-              >
-                {firstName.length}/30
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.onBackground }]}>
-              Last Name
-            </Text>
-            <TextInput
-              placeholder="e.g., Doe"
-              placeholderTextColor={colors.onSurfaceVariant}
-              value={lastName}
-              onChangeText={onLastNameChange}
-              style={[
-                styles.textInput,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.outline,
-                  color: colors.onBackground,
-                },
-              ]}
-              maxLength={30}
-            />
-            {lastNameError ? (
-              <Text style={styles.errorText}>{lastNameError}</Text>
-            ) : null}
-            <View style={styles.characterCounterContainer}>
-              <Text
-                style={[
-                  styles.characterCounterText,
-                  {
-                    color:
-                      lastName.length > 25
-                        ? "#ff4444"
-                        : lastName.length > 20
-                        ? "#ffaa00"
-                        : colors.onSurfaceVariant,
-                  },
-                ]}
-              >
-                {lastName.length}/30
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.onBackground }]}>
-              Headline
-            </Text>
-            <TextInput
-              placeholder="e.g., Accounting Student, Aspiring Developer"
-              placeholderTextColor={colors.onSurfaceVariant}
-              value={headline}
-              onChangeText={onHeadlineChange}
-              multiline={true}
-              numberOfLines={2}
-              scrollEnabled={true}
-              textAlignVertical="top"
-              style={[
-                styles.textInput,
-                styles.headlineInput,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.outline,
-                  color: colors.onBackground,
-                },
-              ]}
-              maxLength={200}
-            />
-            {headlineError ? (
-              <Text style={styles.errorText}>{headlineError}</Text>
-            ) : null}
-            <View style={styles.characterCounterContainer}>
-              <Text
-                style={[
-                  styles.characterCounterText,
-                  {
-                    color:
-                      headline.length > 190
-                        ? "#ff4444"
-                        : headline.length > 180
-                        ? "#ffaa00"
-                        : colors.onSurfaceVariant,
-                  },
-                ]}
-              >
-                {headline.length}/200
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.onBackground }]}>
-              Country
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.searchInput,
-                {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.outline,
-                },
-              ]}
-              onPress={onOpenCountryModal}
-            >
-              <Text
-                style={[
-                  styles.searchInputText,
-                  {
-                    color: country
-                      ? colors.onBackground
-                      : colors.onSurfaceVariant,
-                  },
-                ]}
-              >
-                {country || "Select country..."}
-              </Text>
-              <Ionicons
-                name="chevron-down"
-                size={20}
-                color={colors.onSurfaceVariant}
-              />
-            </TouchableOpacity>
-            {countryError ? (
-              <Text style={styles.errorText}>{countryError}</Text>
-            ) : null}
-            {country && (
-              <View style={styles.characterCounterContainer}>
-                <Text
+            <View style={styles.heroGradient}>
+              <View style={styles.heroContent}>
+                <Animated.View
                   style={[
-                    styles.characterCounterText,
+                    styles.heroIconWrapper,
                     {
-                      color:
-                        country.length > 40
-                          ? "#ff4444"
-                          : country.length > 35
-                          ? "#ffaa00"
-                          : colors.onSurfaceVariant,
+                      transform: [{ scale: scaleAnim }],
                     },
                   ]}
                 >
-                  {country.length}/50
-                </Text>
+                  <Ionicons
+                    name="person-circle"
+                    size={RFValue(40)}
+                    color="#fff"
+                  />
+                </Animated.View>
+                <View style={styles.heroText}>
+                  <Text style={styles.heroTitle}>Personal Information</Text>
+                  <Text style={styles.heroSubtitle}>
+                    Tell your story to the world
+                  </Text>
+                </View>
               </View>
-            )}
-          </View>
+            </View>
+          </Animated.View>
 
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.onBackground }]}>
-              City
-            </Text>
-            <TouchableOpacity
+          {/* Form Cards */}
+          <Animated.View
+            style={[
+              styles.formCardsContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            {/* Name Card */}
+            <Animated.View
               style={[
-                styles.searchInput,
+                styles.formCard,
+                { backgroundColor: colors.surface },
                 {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.outline,
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
                 },
               ]}
-              onPress={onOpenCityModal}
             >
-              <Text
-                style={[
-                  styles.searchInputText,
-                  {
-                    color: city ? colors.onBackground : colors.onSurfaceVariant,
-                  },
-                ]}
-              >
-                {city || "Select city..."}
-              </Text>
-              <Ionicons
-                name="chevron-down"
-                size={20}
-                color={colors.onSurfaceVariant}
-              />
-            </TouchableOpacity>
-            {cityError ? (
-              <Text style={styles.errorText}>{cityError}</Text>
-            ) : null}
-            {city && (
-              <View style={styles.characterCounterContainer}>
-                <Text
+              <View style={styles.cardHeader}>
+                <Animated.View
                   style={[
-                    styles.characterCounterText,
+                    styles.cardIcon,
                     {
-                      color:
-                        city.length > 40
-                          ? "#ff4444"
-                          : city.length > 35
-                          ? "#ffaa00"
-                          : colors.onSurfaceVariant,
+                      transform: [{ scale: scaleAnim }],
                     },
                   ]}
                 >
-                  {city.length}/50
+                  <Ionicons
+                    name="person"
+                    size={RFValue(20)}
+                    color={Colors.PRIMARY}
+                  />
+                </Animated.View>
+                <Text
+                  style={[styles.cardTitle, { color: colors.onBackground }]}
+                >
+                  Name
                 </Text>
               </View>
-            )}
-          </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={[styles.inputLabel, { color: colors.onBackground }]}>
-              School
-            </Text>
-            <TouchableOpacity
+              <View style={styles.fieldContainer}>
+                <Text
+                  style={[
+                    styles.fieldLabel,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  First Name
+                </Text>
+                <TextInput
+                  placeholder="John"
+                  placeholderTextColor={Colors.GRAY}
+                  value={firstName}
+                  onChangeText={onFirstNameChange}
+                  style={[
+                    styles.ultraModernInput,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: firstNameError ? "#ff4444" : "transparent",
+                      color: colors.onBackground,
+                    },
+                  ]}
+                  maxLength={30}
+                />
+                {firstNameError ? (
+                  <Text style={styles.errorText}>{firstNameError}</Text>
+                ) : null}
+              </View>
+
+              <View style={styles.fieldContainer}>
+                <Text
+                  style={[
+                    styles.fieldLabel,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  Last Name
+                </Text>
+                <TextInput
+                  placeholder="Doe"
+                  placeholderTextColor={Colors.GRAY}
+                  value={lastName}
+                  onChangeText={onLastNameChange}
+                  style={[
+                    styles.ultraModernInput,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: lastNameError ? "#ff4444" : "transparent",
+                      color: colors.onBackground,
+                    },
+                  ]}
+                  maxLength={30}
+                />
+                {lastNameError ? (
+                  <Text style={styles.errorText}>{lastNameError}</Text>
+                ) : null}
+              </View>
+            </Animated.View>
+
+            {/* Professional Card */}
+            <Animated.View
               style={[
-                styles.educationInput,
+                styles.formCard,
+                { backgroundColor: colors.surface },
                 {
-                  backgroundColor: colors.surface,
-                  borderColor: colors.outline,
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
                 },
               ]}
-              onPress={() => onOpenSchoolModal && onOpenSchoolModal("select")}
             >
-              <Text
-                style={[
-                  styles.educationInputText,
-                  {
-                    color: school
-                      ? colors.onBackground
-                      : colors.onSurfaceVariant,
-                  },
-                ]}
-              >
-                {school ? school : "Select your school"}
-              </Text>
-              <Ionicons
-                name="chevron-down"
-                size={20}
-                color={colors.onSurfaceVariant}
-              />
-            </TouchableOpacity>
-          </View>
-        </View>
+              <View style={styles.cardHeader}>
+                <Animated.View
+                  style={[
+                    styles.cardIcon,
+                    {
+                      transform: [{ scale: scaleAnim }],
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="star"
+                    size={RFValue(20)}
+                    color={Colors.PRIMARY}
+                  />
+                </Animated.View>
+                <Text
+                  style={[styles.cardTitle, { color: colors.onBackground }]}
+                >
+                  Professional Identity
+                </Text>
+              </View>
+
+              <View style={styles.fieldContainer}>
+                <Text
+                  style={[
+                    styles.fieldLabel,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  Headline
+                </Text>
+                <TextInput
+                  placeholder="e.g., Computer Science Student | Aspiring Software Engineer"
+                  placeholderTextColor={Colors.GRAY}
+                  value={headline}
+                  onChangeText={onHeadlineChange}
+                  multiline={true}
+                  numberOfLines={3}
+                  scrollEnabled={true}
+                  textAlignVertical="top"
+                  style={[
+                    styles.ultraModernTextArea,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: headlineError ? "#ff4444" : "transparent",
+                      color: colors.onBackground,
+                    },
+                  ]}
+                  maxLength={200}
+                />
+                {headlineError ? (
+                  <Text style={styles.errorText}>{headlineError}</Text>
+                ) : null}
+                <View style={styles.counterContainer}>
+                  <Text
+                    style={[
+                      styles.counterText,
+                      { color: colors.onSurfaceVariant },
+                    ]}
+                  >
+                    {headline.length}/200
+                  </Text>
+                </View>
+              </View>
+            </Animated.View>
+
+            {/* Location Card */}
+            <Animated.View
+              style={[
+                styles.formCard,
+                { backgroundColor: colors.surface },
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}
+            >
+              <View style={styles.cardHeader}>
+                <Animated.View
+                  style={[
+                    styles.cardIcon,
+                    {
+                      transform: [{ scale: scaleAnim }],
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="location"
+                    size={RFValue(20)}
+                    color={Colors.PRIMARY}
+                  />
+                </Animated.View>
+                <Text
+                  style={[styles.cardTitle, { color: colors.onBackground }]}
+                >
+                  Location
+                </Text>
+              </View>
+
+              <View style={styles.fieldContainer}>
+                <Text
+                  style={[
+                    styles.fieldLabel,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  Country
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.ultraModernSelect,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: countryError ? "#ff4444" : "transparent",
+                    },
+                  ]}
+                  onPress={onOpenCountryModal}
+                >
+                  <Text
+                    style={[
+                      styles.selectText,
+                      {
+                        color: country
+                          ? colors.onBackground
+                          : colors.onSurfaceVariant,
+                      },
+                    ]}
+                  >
+                    {country || "Select country"}
+                  </Text>
+                  <Ionicons
+                    name="chevron-down"
+                    size={RFValue(16)}
+                    color={colors.onSurfaceVariant}
+                  />
+                </TouchableOpacity>
+                {countryError ? (
+                  <Text style={styles.errorText}>{countryError}</Text>
+                ) : null}
+              </View>
+
+              <View style={styles.fieldContainer}>
+                <Text
+                  style={[
+                    styles.fieldLabel,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  City
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.ultraModernSelect,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: cityError ? "#ff4444" : "transparent",
+                    },
+                  ]}
+                  onPress={onOpenCityModal}
+                >
+                  <Text
+                    style={[
+                      styles.selectText,
+                      {
+                        color: city
+                          ? colors.onBackground
+                          : colors.onSurfaceVariant,
+                      },
+                    ]}
+                  >
+                    {city || "Select city"}
+                  </Text>
+                  <Ionicons
+                    name="chevron-down"
+                    size={RFValue(16)}
+                    color={colors.onSurfaceVariant}
+                  />
+                </TouchableOpacity>
+                {cityError ? (
+                  <Text style={styles.errorText}>{cityError}</Text>
+                ) : null}
+              </View>
+            </Animated.View>
+
+            {/* Education Card */}
+            <Animated.View
+              style={[
+                styles.formCard,
+                { backgroundColor: colors.surface },
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}
+            >
+              <View style={styles.cardHeader}>
+                <Animated.View
+                  style={[
+                    styles.cardIcon,
+                    {
+                      transform: [{ scale: scaleAnim }],
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="school"
+                    size={RFValue(20)}
+                    color={Colors.PRIMARY}
+                  />
+                </Animated.View>
+                <Text
+                  style={[styles.cardTitle, { color: colors.onBackground }]}
+                >
+                  Education
+                </Text>
+              </View>
+
+              <View style={styles.fieldContainer}>
+                <Text
+                  style={[
+                    styles.fieldLabel,
+                    { color: colors.onSurfaceVariant },
+                  ]}
+                >
+                  Institution
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.ultraModernSelect,
+                    {
+                      backgroundColor: colors.background,
+                      borderColor: "transparent",
+                    },
+                  ]}
+                  onPress={() =>
+                    onOpenSchoolModal && onOpenSchoolModal("select")
+                  }
+                >
+                  <Text
+                    style={[
+                      styles.selectText,
+                      {
+                        color: school
+                          ? colors.onBackground
+                          : colors.onSurfaceVariant,
+                      },
+                    ]}
+                  >
+                    {school || "Select your school"}
+                  </Text>
+                  <Ionicons
+                    name="chevron-down"
+                    size={RFValue(16)}
+                    color={colors.onSurfaceVariant}
+                  />
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </Animated.View>
+        </Animated.View>
       );
 
     case "about":
       return (
-        <View style={styles.fullscreenContainer}>
-          <Text style={[styles.sectionTitle, { color: colors.onBackground }]}>
-            About
-          </Text>
-          <Text
+        <Animated.View
+          style={[
+            styles.ultraModernContainer,
+            {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }, { scale: scaleAnim }],
+            },
+          ]}
+        >
+          {/* Hero Header */}
+          <Animated.View
             style={[
-              styles.sectionDescription,
-              { color: colors.onSurfaceVariant },
+              styles.heroHeader,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
             ]}
           >
-            Share your story, your passions, and the stuff that makes you, you
-            😎
-          </Text>
+            <View style={styles.heroGradient}>
+              <View style={styles.heroContent}>
+                <Animated.View
+                  style={[
+                    styles.heroIconWrapper,
+                    {
+                      transform: [{ scale: scaleAnim }],
+                    },
+                  ]}
+                >
+                  <Ionicons
+                    name="document-text"
+                    size={RFValue(40)}
+                    color="#fff"
+                  />
+                </Animated.View>
+                <View style={styles.heroText}>
+                  <Text style={styles.heroTitle}>About Me</Text>
+                  <Text style={styles.heroSubtitle}>
+                    Share your story, passions, and what makes you unique
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </Animated.View>
 
-          <View style={styles.inputContainer}>
-            <TextInput
-              ref={aboutRef}
-              placeholder="Write about yourself..."
-              placeholderTextColor={colors.onSurfaceVariant}
-              value={aboutText}
-              onChangeText={onAboutTextChange}
-              style={[
-                styles.fullscreenInput,
-                { color: colors.onBackground, borderColor: colors.outline },
-              ]}
-              multiline
-              textAlignVertical="top"
-              autoFocus={sectionToEdit === "about"}
-              scrollEnabled={true}
-              maxLength={1000}
-              onSubmitEditing={() => {
-                aboutRef.current?.blur();
-              }}
-              numberOfLines={9}
-            />
-          </View>
+          {/* About Card */}
+          <Animated.View
+            style={[
+              styles.formCard,
+              { backgroundColor: colors.surface },
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            <View style={styles.cardHeader}>
+              <Animated.View
+                style={[
+                  styles.cardIcon,
+                  {
+                    transform: [{ scale: scaleAnim }],
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="create"
+                  size={RFValue(20)}
+                  color={Colors.PRIMARY}
+                />
+              </Animated.View>
+              <Text style={[styles.cardTitle, { color: colors.onBackground }]}>
+                Your Story
+              </Text>
+            </View>
 
-          <View style={styles.characterCounterContainer}>
-            <Text
-              style={[
-                styles.characterCounterText,
-                {
-                  color:
-                    aboutText.length > 800
-                      ? "#ff4444"
-                      : colors.onSurfaceVariant,
-                },
-              ]}
-            >
-              {aboutText.length}/1000
-            </Text>
-          </View>
-        </View>
+            <View style={styles.fieldContainer}>
+              <Text
+                style={[styles.fieldLabel, { color: colors.onSurfaceVariant }]}
+              >
+                Tell us about yourself
+              </Text>
+              <TextInput
+                ref={aboutRef}
+                placeholder="Write about yourself, your interests, goals, or anything you'd like others to know..."
+                placeholderTextColor={Colors.GRAY}
+                value={aboutText}
+                onChangeText={onAboutTextChange}
+                style={[
+                  styles.ultraModernTextArea,
+                  {
+                    backgroundColor: colors.background,
+                    borderColor: "transparent",
+                    color: colors.onBackground,
+                    minHeight: RFValue(120),
+                    maxHeight: RFValue(200),
+                  },
+                ]}
+                multiline
+                textAlignVertical="top"
+                autoFocus={sectionToEdit === "about"}
+                scrollEnabled={true}
+                maxLength={1000}
+                onSubmitEditing={() => {
+                  aboutRef.current?.blur();
+                }}
+                numberOfLines={8}
+              />
+              <View style={styles.counterContainer}>
+                <Text
+                  style={[
+                    styles.counterText,
+                    {
+                      color:
+                        aboutText.length > 800
+                          ? "#ff4444"
+                          : aboutText.length > 600
+                          ? "#ffaa00"
+                          : colors.onSurfaceVariant,
+                    },
+                  ]}
+                >
+                  {aboutText.length}/1000
+                </Text>
+              </View>
+            </View>
+          </Animated.View>
+        </Animated.View>
       );
 
     case "skills":
@@ -709,5 +984,174 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: RFValue(16),
     marginRight: RFValue(8),
+  },
+  // Ultra Modern Intro Section Styles
+  ultraModernContainer: {
+    flex: 1,
+    padding: RFValue(20),
+  },
+  heroHeader: {
+    marginBottom: RFValue(32),
+    borderRadius: RFValue(20),
+    overflow: "hidden",
+  },
+  heroGradient: {
+    backgroundColor: Colors.PRIMARY,
+    padding: RFValue(24),
+    paddingTop: RFValue(32),
+    paddingBottom: RFValue(32),
+  },
+  heroContent: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  heroIconWrapper: {
+    width: RFValue(64),
+    height: RFValue(64),
+    borderRadius: RFValue(32),
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: RFValue(16),
+  },
+  heroText: {
+    flex: 1,
+  },
+  heroTitle: {
+    fontSize: RFValue(24),
+    fontWeight: "700",
+    color: "#fff",
+    marginBottom: RFValue(4),
+    letterSpacing: -0.5,
+  },
+  heroSubtitle: {
+    fontSize: RFValue(16),
+    fontWeight: "400",
+    color: "rgba(255, 255, 255, 0.9)",
+    opacity: 0.9,
+  },
+  formCardsContainer: {
+    gap: RFValue(20),
+  },
+  formCard: {
+    borderRadius: RFValue(16),
+    padding: RFValue(20),
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  cardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: RFValue(16),
+  },
+  cardIcon: {
+    width: RFValue(36),
+    height: RFValue(36),
+    borderRadius: RFValue(18),
+    backgroundColor: "rgba(42, 157, 143, 0.1)",
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: RFValue(12),
+  },
+  cardTitle: {
+    fontSize: RFValue(18),
+    fontWeight: "600",
+    letterSpacing: 0.2,
+  },
+  nameRow: {
+    flexDirection: "row",
+    gap: RFValue(12),
+  },
+  nameField: {
+    flex: 1,
+  },
+  locationRow: {
+    flexDirection: "row",
+    gap: RFValue(12),
+  },
+  locationField: {
+    flex: 1,
+  },
+  fieldContainer: {
+    marginBottom: RFValue(8),
+  },
+  fieldLabel: {
+    fontSize: RFValue(14),
+    fontWeight: "500",
+    marginBottom: RFValue(8),
+    letterSpacing: 0.2,
+  },
+  ultraModernInput: {
+    borderRadius: RFValue(12),
+    paddingHorizontal: RFValue(16),
+    paddingVertical: RFValue(14),
+    fontSize: RFValue(16),
+    fontWeight: "400",
+    minHeight: RFValue(48),
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  ultraModernTextArea: {
+    borderRadius: RFValue(12),
+    paddingHorizontal: RFValue(16),
+    paddingVertical: RFValue(14),
+    fontSize: RFValue(16),
+    fontWeight: "400",
+    minHeight: RFValue(80),
+    maxHeight: RFValue(120),
+    textAlignVertical: "top",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  ultraModernSelect: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderRadius: RFValue(12),
+    paddingHorizontal: RFValue(16),
+    paddingVertical: RFValue(14),
+    minHeight: RFValue(48),
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  selectText: {
+    flex: 1,
+    fontSize: RFValue(16),
+    fontWeight: "400",
+    marginRight: RFValue(8),
+  },
+  counterContainer: {
+    alignSelf: "flex-end",
+    marginTop: RFValue(6),
+    marginRight: RFValue(4),
+  },
+  counterText: {
+    fontSize: RFValue(11),
+    fontWeight: "500",
+    opacity: 0.7,
   },
 });

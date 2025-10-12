@@ -2,6 +2,7 @@ import React from "react";
 import { View, Text, StyleSheet, Image } from "react-native";
 import { useTheme } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
+import { format } from "date-fns";
 import Colors from "../../constants/Colors";
 
 interface EducationCardProps {
@@ -14,6 +15,8 @@ interface EducationCardProps {
         };
     degree?: string;
     field_of_study?: string;
+    start_date?: string;
+    end_date?: string;
   };
 }
 
@@ -39,6 +42,28 @@ export default function EducationCard({ education }: EducationCardProps) {
 
   const degree = education.degree || "";
   const fieldOfStudy = education.field_of_study || "";
+  const startDate = education.start_date;
+  const endDate = education.end_date;
+
+  // Format dates
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), "MMM yyyy");
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  const getDateRange = () => {
+    if (startDate && endDate) {
+      return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+    } else if (startDate) {
+      return `${formatDate(startDate)} - Present`;
+    } else if (endDate) {
+      return `Graduated ${formatDate(endDate)}`;
+    }
+    return null;
+  };
 
   return (
     <View style={[styles.card, { backgroundColor: colors.surface }]}>
@@ -74,6 +99,13 @@ export default function EducationCard({ education }: EducationCardProps) {
             {degree && fieldOfStudy
               ? `${degree} in ${fieldOfStudy}`
               : degree || fieldOfStudy}
+          </Text>
+        )}
+
+        {/* Date Range */}
+        {getDateRange() && (
+          <Text style={[styles.dateRange, { color: colors.onSurfaceVariant }]}>
+            {getDateRange()}
           </Text>
         )}
       </View>
@@ -126,5 +158,12 @@ const styles = StyleSheet.create({
     fontSize: RFValue(14),
     lineHeight: RFValue(18),
     opacity: 0.8,
+    marginBottom: RFValue(2),
+  },
+  dateRange: {
+    fontSize: RFValue(12),
+    lineHeight: RFValue(16),
+    opacity: 0.7,
+    fontWeight: "500",
   },
 });

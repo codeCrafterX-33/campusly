@@ -22,8 +22,9 @@ import React, {
   useCallback,
   useRef,
 } from "react";
-import { router } from "expo-router";
-import { useLocalSearchParams } from "expo-router";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../navigation/StackNavigator";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
@@ -36,7 +37,7 @@ import axios from "axios";
 
 // Debounce utility function
 const debounce = (func: Function, wait: number) => {
-  let timeout: NodeJS.Timeout;
+  let timeout: ReturnType<typeof setTimeout>;
   return function executedFunction(...args: any[]) {
     const later = () => {
       clearTimeout(timeout);
@@ -64,13 +65,11 @@ const calculateRelevance = (text: string, query: string): number => {
   return (commonChars / query.length) * 30;
 };
 
-export default function EditProfile() {
-  const params = useLocalSearchParams<{
-    userEmail?: string;
-    sectionToEdit?: string;
-  }>();
+export default function EditProfile({ route }: { route: any }) {
   // Destructure the parameters passed from the previous screen
-  const { userEmail, sectionToEdit } = params;
+  const { userEmail, sectionToEdit } = route.params;
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { colors } = useTheme();
   const { userData, setUserData, education } = useContext(AuthContext);
 
@@ -196,8 +195,32 @@ export default function EditProfile() {
     );
   };
 
-  // Note: Expo Router handles header configuration differently
-  // Header options are set in the route file or layout
+  // Dynamic header configuration
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      title: "",
+      headerStyle: {
+        backgroundColor: colors.background,
+      },
+      headerTitleStyle: {
+        fontWeight: "bold",
+        fontSize: RFValue(18),
+        color: colors.onBackground,
+      },
+      headerLeft: () => (
+        <TouchableOpacity
+          style={{ marginLeft: 15 }}
+          onPress={() => navigation.goBack()}
+        >
+          <Ionicons
+            name="arrow-back-outline"
+            size={24}
+            color={Colors.PRIMARY}
+          />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, colors, sectionToEdit]);
 
   // Initialize form fields with user data
   useEffect(() => {
@@ -216,7 +239,7 @@ export default function EditProfile() {
   // Handle back press
   useEffect(() => {
     const backAction = () => {
-      router.back();
+      navigation.goBack();
       return true; // Prevent default back behavior
     };
 
@@ -226,7 +249,7 @@ export default function EditProfile() {
     );
 
     return () => backHandler.remove();
-  }, [navigation]);
+  }, []);
 
   // Function to convert country code to flag emoji
   const getCountryFlag = (countryCode: string) => {
@@ -408,7 +431,7 @@ export default function EditProfile() {
 
       if (response.status === 200) {
         console.log("User updated successfully in database");
-        router.back();
+        navigation.goBack();
       } else {
         console.error("Failed to update user in database");
         // You might want to show an error message to the user here
@@ -424,7 +447,7 @@ export default function EditProfile() {
   const renderSection = () => {
     return (
       <RenderEditProfileSection
-        sectionToEdit={sectionToEdit}
+        sectionToEdit={sectionToEdit as string}
         skills={skills}
         interests={interests}
         aboutText={aboutText}
@@ -478,12 +501,12 @@ export default function EditProfile() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
-      <View style={{ flex: 1 }}>
-        <KeyboardAvoidingView
-          style={{ flex: 1 }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 60 : 0}
-        >
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 80}
+      >
+        <View style={{ flex: 1 }}>
           <ScrollView
             style={styles.container}
             showsVerticalScrollIndicator={false}
@@ -497,43 +520,43 @@ export default function EditProfile() {
           >
             {renderSection()}
           </ScrollView>
-        </KeyboardAvoidingView>
 
-        {/* Save Button - Sticks to bottom */}
-        {sectionToEdit && (
-          <View
-            style={[
-              styles.saveButtonContainer,
-              { backgroundColor: colors.background },
-            ]}
-          >
-            <ProfileSaveButton
-              sectionToSave={sectionToEdit}
-              dataToSave={
-                sectionToEdit === "about"
-                  ? aboutText
-                  : sectionToEdit === "skills"
-                  ? { skills: skills, interests: interests }
-                  : sectionToEdit === "intro"
-                  ? {
-                      firstName: firstName,
-                      lastName: lastName,
-                      headline: headline,
-                      country: country,
-                      city: city,
-                      school: school,
-                    }
-                  : intro
-              }
-              handleSave={handleSave}
-              isFormValid={
-                sectionToEdit === "intro" ? isIntroFormValid : undefined
-              }
-              isLoading={isSaving}
-            />
-          </View>
-        )}
-      </View>
+          {/* Save Button - Sticks to bottom */}
+          {sectionToEdit && (
+            <View
+              style={[
+                styles.saveButtonContainer,
+                { backgroundColor: colors.background },
+              ]}
+            >
+              <ProfileSaveButton
+                sectionToSave={sectionToEdit}
+                dataToSave={
+                  sectionToEdit === "about"
+                    ? aboutText
+                    : sectionToEdit === "skills"
+                    ? { skills: skills, interests: interests }
+                    : sectionToEdit === "intro"
+                    ? {
+                        firstName: firstName,
+                        lastName: lastName,
+                        headline: headline,
+                        country: country,
+                        city: city,
+                        school: school,
+                      }
+                    : intro
+                }
+                handleSave={handleSave}
+                isFormValid={
+                  sectionToEdit === "intro" ? isIntroFormValid : undefined
+                }
+                isLoading={isSaving}
+              />
+            </View>
+          )}
+        </View>
+      </KeyboardAvoidingView>
 
       {/* Full Screen Edit Modal */}
       <Modal
@@ -557,7 +580,11 @@ export default function EditProfile() {
                   setNewInterest("");
                 }}
               >
-                <Ionicons name="arrow-back" size={RFValue(24)} color={"#fff"} />
+                <Ionicons
+                  name="arrow-back"
+                  size={RFValue(24)}
+                  color={Colors.PRIMARY}
+                />
               </TouchableOpacity>
               <Text style={[styles.modalTitle]}>Edit Skills & Interests</Text>
               <View style={{ width: RFValue(24) }} />
@@ -1058,8 +1085,9 @@ export default function EditProfile() {
                 style={styles.addNewEducationOption}
                 onPress={() => {
                   setIsSchoolModalVisible(false);
-                  (navigation as any).navigate("EditEducation", {
+                  navigation.navigate("EditEducation", {
                     userEmail: userEmail,
+                    sectionToEdit: "education",
                   });
                 }}
               >

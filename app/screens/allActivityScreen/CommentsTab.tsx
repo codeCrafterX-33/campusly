@@ -18,7 +18,9 @@ import { RFValue } from "react-native-responsive-fontsize";
 import { useTheme } from "react-native-paper";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import axios from "axios";
-import { navigateToPost } from "../../util/navigation";
+import { useNavigation } from "@react-navigation/native";
+import { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { RootStackParamList } from "../../navigation/StackNavigator";
 
 export default function CommentsTab({
   setShowCheckmark,
@@ -30,7 +32,8 @@ export default function CommentsTab({
   const { comments, getComments, viewingUserComments } =
     useContext(PostContext);
   const [refreshing, setRefreshing] = useState(false);
-  // Navigation is now handled through utility functions
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { colors } = useTheme();
   const { onViewableItemsChanged, viewabilityConfig } =
     useViewableItemsPreloader();
@@ -110,16 +113,25 @@ export default function CommentsTab({
         );
         // Navigate to PostScreen with the parent post as the main post
         // and the comment in thread history
-        navigateToPost(parentPost, [comment]); // Start with the clicked comment in thread
+        navigation.navigate("PostScreen", {
+          post: parentPost,
+          threadHistory: [comment],
+        }); // Start with the clicked comment in thread
       } else {
         console.log("No parent post found, navigating with comment only");
         // Fallback: navigate with just the comment
-        navigateToPost(comment);
+        navigation.navigate("PostScreen", {
+          post: comment,
+          threadHistory: [],
+        });
       }
     } catch (error) {
       console.error("Error handling comment press:", error);
       // Fallback: navigate with just the comment
-      navigation.navigate("PostScreen", { post: comment });
+      navigation.navigate("PostScreen", {
+        post: comment,
+        threadHistory: [],
+      });
     }
   };
   useEffect(() => {

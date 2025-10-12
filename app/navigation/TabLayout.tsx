@@ -73,7 +73,7 @@ export default function TabLayout({ navigation }: TabLayoutProps) {
           marginBottom: 10,
         },
         tabBarHideOnKeyboard: true,
-        animationEnabled: true,
+        animation: "fade",
       }}
     >
       <Tab.Screen
