@@ -137,7 +137,7 @@ export const LikeProvider: React.FC<LikeProviderProps> = ({ children }) => {
           response.data
         );
         return false;
-      } catch (error) {
+      } catch (error: any) {
         // Don't log network errors as they're expected when server is down
         if (
           error.code === "NETWORK_ERROR" ||

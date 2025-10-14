@@ -20,6 +20,7 @@ import Colors from "../../constants/Colors";
 import UserAvatar from "./Useravatar";
 import CampuslyAlert from "../CampuslyAlert";
 import { AuthContext } from "../../context/AuthContext";
+import { useLikeCache } from "../../context/LikeCacheContext";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
@@ -122,11 +123,20 @@ const CommentCard = ({
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { userData, getCachedUser } = useContext(AuthContext);
+  const { getCachedLikeStatus, getCachedLikeCount } = useLikeCache();
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Get cached like status and count, fallback to props
+  const cachedLiked = getCachedLikeStatus(comment.id);
+  const cachedCount = getCachedLikeCount(comment.id);
+
+  const displayLiked = cachedLiked !== null ? cachedLiked : isLiked;
+  const displayCount =
+    cachedCount !== null ? cachedCount : comment.like_count || 0;
 
   const [showReplies, setShowReplies] = useState(false);
   // No depth restrictions - allow infinite nesting like Twitter
@@ -479,11 +489,11 @@ const CommentCard = ({
             }}
           >
             <Ionicons
-              name={isLiked ? "heart" : "heart-outline"}
+              name={displayLiked ? "heart" : "heart-outline"}
               size={20}
-              color={isLiked ? "#FF6B6B" : Colors.GRAY}
+              color={displayLiked ? "#FF6B6B" : Colors.GRAY}
             />
-            <Text style={styles.footerText}>{comment.like_count || 0}</Text>
+            <Text style={styles.footerText}>{displayCount}</Text>
           </TouchableOpacity>
           {/* 
           {canReply && (

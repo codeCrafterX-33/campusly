@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from "react";
 import axios from "axios";
 import usePersistedState from "../util/PersistedState";
+import { useLikeCache } from "./LikeCacheContext";
 
 interface Comment {
   id: number;
@@ -79,6 +80,9 @@ export const CommentProvider: React.FC<CommentProviderProps> = ({
   ];
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Use the new like caching system
+  const { toggleLike } = useLikeCache();
 
   const getComments = useCallback(async (postId: number) => {
     try {
@@ -269,42 +273,36 @@ export const CommentProvider: React.FC<CommentProviderProps> = ({
       try {
         setError(null);
 
-        const response = await axios.post(
-          `${process.env.EXPO_PUBLIC_SERVER_URL}/comment/${commentId}/like`,
-          { user_id }
-        );
+        // Use the new caching system for comment likes
+        const success = await toggleLike(commentId);
 
-        const wasLiked = response.data.liked;
-
-        // Update like count in state based on server response
-        setComments((prev) => {
-          const newComments = { ...prev };
-          Object.keys(newComments).forEach((postId) => {
-            newComments[parseInt(postId)] = newComments[parseInt(postId)].map(
-              (comment) => {
-                if (comment.id === commentId) {
-                  return {
-                    ...comment,
-                    like_count: wasLiked
-                      ? comment.like_count + 1
-                      : Math.max(comment.like_count - 1, 0),
-                  };
+        if (success) {
+          // Update comment like count in local state to match cache
+          setComments((prev) => {
+            const newComments = { ...prev };
+            Object.keys(newComments).forEach((postId) => {
+              newComments[parseInt(postId)] = newComments[parseInt(postId)].map(
+                (comment) => {
+                  if (comment.id === commentId) {
+                    // Get updated count from cache (this will be handled by the cache system)
+                    return comment;
+                  }
+                  return comment;
                 }
-                return comment;
-              }
-            );
+              );
+            });
+            return newComments;
           });
-          return newComments;
-        });
+        }
 
-        return true;
+        return success;
       } catch (err) {
         console.error("Error liking comment:", err);
         setError("Failed to like comment");
         return false;
       }
     },
-    []
+    [toggleLike]
   );
 
   const refreshComments = useCallback(

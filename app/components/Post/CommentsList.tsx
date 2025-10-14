@@ -12,7 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
 import CommentCard from "./CommentCard";
 import { useCommentContext } from "../../context/CommentContext";
-import { useLikeContext } from "../../context/LikeContext";
+import { useLikeCache } from "../../context/LikeCacheContext";
 import axios from "axios";
 
 interface Comment {
@@ -63,7 +63,7 @@ const CommentsList = ({
     deleteComment: contextDeleteComment,
   } = useCommentContext();
 
-  const { checkLikeStatus } = useLikeContext();
+  const { checkLikeStatus } = useLikeCache();
 
   // State to track like status for comments
   const [commentLikeStatus, setCommentLikeStatus] = useState<{
@@ -73,31 +73,19 @@ const CommentsList = ({
   // Get cached comments for this post
   const cachedComments = contextComments[postId] || [];
 
-  // Check like status for all comments when they load
+  // Initialize comment like status from cache or default to false
   useEffect(() => {
-    const checkAllCommentLikeStatus = async () => {
-      if (cachedComments.length > 0 && currentUserId) {
-        const newLikeStatus: { [key: number]: boolean } = {};
+    if (cachedComments.length > 0) {
+      const newLikeStatus: { [key: number]: boolean } = {};
 
-        for (const comment of cachedComments) {
-          try {
-            const isLiked = await checkLikeStatus(comment.id);
-            newLikeStatus[comment.id] = isLiked;
-          } catch (error) {
-            console.error(
-              `Error checking like status for comment ${comment.id}:`,
-              error
-            );
-            newLikeStatus[comment.id] = false;
-          }
-        }
-
-        setCommentLikeStatus(newLikeStatus);
+      for (const comment of cachedComments) {
+        // Use cached value or default to false (don't fetch from server immediately)
+        newLikeStatus[comment.id] = false; // Default to not liked
       }
-    };
 
-    checkAllCommentLikeStatus();
-  }, [cachedComments, currentUserId, checkLikeStatus]);
+      setCommentLikeStatus(newLikeStatus);
+    }
+  }, [cachedComments]);
 
   console.log(
     "CommentsList: Rendering comments for post",

@@ -19,7 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { AuthContext } from "../../context/AuthContext";
 import { PostContext } from "../../context/PostContext";
-import { useLikeContext } from "../../context/LikeContext";
+import { useLikeCache } from "../../context/LikeCacheContext";
 import CampuslyAlert from "../CampuslyAlert";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -86,76 +86,93 @@ const PostCard = ({
 
   const { userData, getUserById, getCachedUser } = useContext(AuthContext);
   const { getPosts, deletePost } = useContext(PostContext);
-  const { toggleLike, isLiking } = useLikeContext();
+  const {
+    toggleLike,
+    isLiking,
+    getCachedLikeStatus,
+    getCachedLikeCount,
+    setCachedLikeCount,
+    checkLikeStatus,
+    getLikeCount,
+  } = useLikeCache();
   const carouselRef = useRef<FlatList>(null);
 
-  // Like state
-  const [isLiked, setIsLiked] = useState(false);
-  const [likeCount, setLikeCount] = useState(post.like_count || 0);
+  // Like state - use cached values or fallback to post data
+  const [isLiked, setIsLiked] = useState(
+    () => getCachedLikeStatus(post.id) ?? false
+  );
+  const [likeCount, setLikeCount] = useState(
+    () => getCachedLikeCount(post.id) ?? post.like_count ?? 0
+  );
 
   // Preload user data when post becomes visible (handled by parent FlatList)
   // This useEffect is removed - preloading is now handled by onViewableItemsChanged
 
-  // Check initial like status and sync like count
+  // Sync with cache - use cached values or post data as fallback
   useEffect(() => {
-    const checkLikeStatus = async () => {
-      if (userData?.id) {
+    // Check cache first - use cached values immediately
+    const cachedLiked = getCachedLikeStatus(post.id);
+    const cachedCount = getCachedLikeCount(post.id);
+
+    if (cachedLiked !== null) {
+      setIsLiked(cachedLiked);
+    } else {
+      // Default to not liked, but don't cache this default value
+      // The cache will be populated when user interacts or when we fetch from server
+      setIsLiked(false);
+    }
+
+    if (cachedCount !== null) {
+      setLikeCount(cachedCount);
+    } else {
+      // Use post data as fallback and cache it
+      const count = post.like_count || 0;
+      setLikeCount(count);
+      setCachedLikeCount(post.id, count);
+    }
+  }, [
+    post.id,
+    post.like_count,
+    getCachedLikeStatus,
+    getCachedLikeCount,
+    setCachedLikeCount,
+  ]);
+
+  // Background check for like status when cache is empty
+  useEffect(() => {
+    const checkInitialLikeStatus = async () => {
+      const cachedLiked = getCachedLikeStatus(post.id);
+
+      // Only check server if we don't have cached data
+      if (cachedLiked === null && userData?.id) {
         try {
-          const response = await fetch(
-            `${process.env.EXPO_PUBLIC_SERVER_URL}/like/${post.id}/status?userId=${userData.id}`
-          );
-          const data = await response.json();
-          setIsLiked(data.isLiked);
+          const isLiked = await checkLikeStatus(post.id);
+          setIsLiked(isLiked);
         } catch (error) {
-          console.error("Error checking like status:", error);
+          // Silently fail - we'll default to false
+          console.warn("Could not fetch initial like status:", error);
         }
       }
     };
 
-    // Sync like count with post data
-    setLikeCount(post.like_count || 0);
-    checkLikeStatus();
-  }, [post.id, post.like_count, userData?.id]);
+    checkInitialLikeStatus();
+  }, [post.id, userData?.id, getCachedLikeStatus, checkLikeStatus]);
 
   const handleLike = async () => {
     if (!userData?.id) return;
 
-    // Optimistic update
-    const newIsLiked = !isLiked;
-    const newLikeCount = newIsLiked ? likeCount + 1 : likeCount - 1;
+    // The toggleLike function handles optimistic updates and caching
+    await toggleLike(post.id);
 
-    setIsLiked(newIsLiked);
-    setLikeCount(newLikeCount);
+    // Sync local state with cache after toggle
+    const cachedLiked = getCachedLikeStatus(post.id);
+    const cachedCount = getCachedLikeCount(post.id);
 
-    // Make API call
-    const serverIsLiked = await toggleLike(post.id);
-
-    if (serverIsLiked !== null) {
-      // Update with server response
-      setIsLiked(serverIsLiked);
-
-      // Refresh post data in background to get updated like_count
-      try {
-        const response = await fetch(
-          `${process.env.EXPO_PUBLIC_SERVER_URL}/post/post?postId=${post.id}`
-        );
-        const data = await response.json();
-        if (data.data && data.data[0]) {
-          const updatedPost = data.data[0];
-          setLikeCount(updatedPost.like_count || 0);
-
-          // Notify parent component of the update
-          if (onPostUpdate) {
-            onPostUpdate(updatedPost);
-          }
-        }
-      } catch (error) {
-        console.error("Error refreshing post data:", error);
-      }
-    } else {
-      // Revert if failed
-      setIsLiked(!newIsLiked);
-      setLikeCount(likeCount);
+    if (cachedLiked !== null) {
+      setIsLiked(cachedLiked);
+    }
+    if (cachedCount !== null) {
+      setLikeCount(cachedCount);
     }
   };
 

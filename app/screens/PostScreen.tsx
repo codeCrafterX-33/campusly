@@ -13,7 +13,13 @@ import {
   Animated,
   BackHandler,
 } from "react-native";
-import React, { useState, useRef, useContext, useEffect } from "react";
+import React, {
+  useState,
+  useRef,
+  useContext,
+  useEffect,
+  useCallback,
+} from "react";
 import { useTheme } from "react-native-paper";
 import { Ionicons } from "@expo/vector-icons";
 import { useNavigation } from "@react-navigation/native";
@@ -129,6 +135,35 @@ const PostScreen = ({ route }: { route: any }) => {
   useEffect(() => {
     animateInitialLoad();
   }, []);
+
+  // Refresh post data when screen comes into focus (only once)
+  useFocusEffect(
+    useCallback(() => {
+      let isMounted = true;
+
+      const fetchLatestPostData = async () => {
+        if (currentPost?.id && isMounted) {
+          try {
+            const response = await fetch(
+              `${process.env.EXPO_PUBLIC_SERVER_URL}/post/post?postId=${currentPost.id}`
+            );
+            const data = await response.json();
+            if (data.data && data.data[0] && isMounted) {
+              setCurrentPost(data.data[0]);
+            }
+          } catch (error) {
+            console.error("Error fetching latest post data:", error);
+          }
+        }
+      };
+
+      fetchLatestPostData();
+
+      return () => {
+        isMounted = false;
+      };
+    }, [])
+  );
 
   // Disable back button on PostScreen
   useEffect(() => {
