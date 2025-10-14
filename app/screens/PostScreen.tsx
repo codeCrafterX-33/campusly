@@ -84,6 +84,11 @@ const PostScreen = ({ route }: { route: any }) => {
   const [threadHistory, setThreadHistory] = useState<any[]>(
     parsedThreadHistory || []
   ); // Track full thread history
+
+  // Handle post updates (like count changes, etc.)
+  const handlePostUpdate = (updatedPost: any) => {
+    setCurrentPost(updatedPost);
+  };
   const [isNavigatingToCommentScreen, setIsNavigatingToCommentScreen] =
     useState(false);
   const isNavigatingRef = useRef(false);
@@ -410,6 +415,7 @@ const PostScreen = ({ route }: { route: any }) => {
             <PostCard
               post={item.data}
               clickable={false}
+              onPostUpdate={handlePostUpdate}
               onDelete={(postId) => {
                 // If the main post is deleted, clear thread history and go back
                 setThreadHistory([]);

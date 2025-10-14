@@ -65,12 +65,14 @@ const PostCard = ({
   onCommentPress,
   onPostPress,
   onDelete,
+  onPostUpdate,
   clickable = true,
 }: {
   post: any;
   onCommentPress?: () => void;
   onPostPress?: () => void;
   onDelete?: (postId: number) => void;
+  onPostUpdate?: (updatedPost: any) => void;
   clickable?: boolean;
 }) => {
   const { colors } = useTheme();
@@ -139,7 +141,13 @@ const PostCard = ({
         );
         const data = await response.json();
         if (data.data && data.data[0]) {
-          setLikeCount(data.data[0].like_count || 0);
+          const updatedPost = data.data[0];
+          setLikeCount(updatedPost.like_count || 0);
+
+          // Notify parent component of the update
+          if (onPostUpdate) {
+            onPostUpdate(updatedPost);
+          }
         }
       } catch (error) {
         console.error("Error refreshing post data:", error);

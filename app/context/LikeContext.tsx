@@ -126,9 +126,27 @@ export const LikeProvider: React.FC<LikeProviderProps> = ({ children }) => {
         const response = await axios.get(
           `${process.env.EXPO_PUBLIC_SERVER_URL}/like/${postId}/status?userId=${userData.id}`
         );
-        return response.data.isLiked;
+
+        // Check if response has the expected structure
+        if (response.data && typeof response.data.isLiked === "boolean") {
+          return response.data.isLiked;
+        }
+
+        console.warn(
+          "Unexpected response structure for like status:",
+          response.data
+        );
+        return false;
       } catch (error) {
-        console.error("Error checking like status:", error);
+        // Don't log network errors as they're expected when server is down
+        if (
+          error.code === "NETWORK_ERROR" ||
+          error.message?.includes("Network Error")
+        ) {
+          console.warn("Server not available for like status check");
+        } else {
+          console.error("Error checking like status:", error);
+        }
         return false;
       }
     },
