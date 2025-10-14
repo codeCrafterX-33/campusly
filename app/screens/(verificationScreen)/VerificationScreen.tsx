@@ -53,6 +53,7 @@ export default function VerificationScreen() {
   const [email, setEmail] = useState("");
   const [isAlertVisible, setIsAlertVisible] = useState(false);
   const [alertType, setAlertType] = useState<string>("");
+  const [showInfo, setShowInfo] = useState(true);
 
   const messages = {
     success: {
@@ -184,6 +185,98 @@ export default function VerificationScreen() {
           style={[styles.container, { backgroundColor: colors.background }]}
         >
           <DynamicHeader selectedSchool={selectedSchool} />
+
+          {/* Verification Benefits Info Modal */}
+          {showInfo && !selectedSchool && (
+            <View style={styles.modalOverlay}>
+              <View
+                style={[styles.infoModal, { backgroundColor: colors.surface }]}
+              >
+                <View style={styles.infoHeader}>
+                  <Text
+                    style={[styles.infoTitle, { color: colors.onBackground }]}
+                  >
+                    🎓 Why Get Verified?
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => setShowInfo(false)}
+                    style={styles.infoCloseButton}
+                  >
+                    <Ionicons
+                      name="close"
+                      size={20}
+                      color={colors.onSurfaceVariant}
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.benefitsList}>
+                  <View style={styles.benefitItem}>
+                    <Text style={styles.benefitIcon}>✅</Text>
+                    <Text
+                      style={[
+                        styles.benefitText,
+                        { color: colors.onBackground },
+                      ]}
+                    >
+                      Unlock all Campusly features and connect with verified
+                      students
+                    </Text>
+                  </View>
+
+                  <View style={styles.benefitItem}>
+                    <Text style={styles.benefitIcon}>🏆</Text>
+                    <Text
+                      style={[
+                        styles.benefitText,
+                        { color: colors.onBackground },
+                      ]}
+                    >
+                      Get your verified badge and build trust with the community
+                    </Text>
+                  </View>
+
+                  <View style={styles.benefitItem}>
+                    <Text style={styles.benefitIcon}>🎯</Text>
+                    <Text
+                      style={[
+                        styles.benefitText,
+                        { color: colors.onBackground },
+                      ]}
+                    >
+                      Access exclusive events, clubs, and opportunities at your
+                      school
+                    </Text>
+                  </View>
+
+                  <View style={styles.benefitItem}>
+                    <Text style={styles.benefitIcon}>🔒</Text>
+                    <Text
+                      style={[
+                        styles.benefitText,
+                        { color: colors.onBackground },
+                      ]}
+                    >
+                      Secure your account and prevent unauthorized access
+                    </Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.continueButton,
+                    { backgroundColor: Colors.PRIMARY },
+                  ]}
+                  onPress={() => setShowInfo(false)}
+                >
+                  <Text style={styles.continueButtonText}>
+                    Got it! Let's verify 🎓
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           {!selectedSchool && (
             <View style={{ width: "100%" }}>
               <Text style={[styles.title, { color: colors.onBackground }]}>
@@ -624,5 +717,91 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
     color: "#1F2937",
+  },
+  // Info Modal Styles
+  modalOverlay: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1000,
+  },
+  infoModal: {
+    marginHorizontal: 20,
+    padding: 24,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(42, 157, 143, 0.2)",
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    maxWidth: 400,
+    width: "90%",
+  },
+  infoHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  infoTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    flex: 1,
+    marginRight: 12,
+  },
+  infoCloseButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: "rgba(0, 0, 0, 0.1)",
+  },
+  benefitsList: {
+    marginBottom: 24,
+  },
+  benefitItem: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 16,
+  },
+  benefitIcon: {
+    fontSize: 18,
+    marginRight: 12,
+    marginTop: 1,
+    width: 20,
+    textAlign: "center",
+  },
+  benefitText: {
+    flex: 1,
+    fontSize: 15,
+    lineHeight: 22,
+    fontWeight: "500",
+  },
+  continueButton: {
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 14,
+    alignItems: "center",
+    shadowColor: Colors.PRIMARY,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  continueButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
   },
 });

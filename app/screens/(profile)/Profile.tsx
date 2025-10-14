@@ -87,6 +87,7 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
   const [pullSuggestionText, setPullSuggestionText] = useState("");
   const [isPulling, setIsPulling] = useState(false);
   const [showPullSuggestion, setShowPullSuggestion] = useState(false); // Declare the variable
+  const [educationExpanded, setEducationExpanded] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const pullProgress = useRef(new Animated.Value(0)).current;
@@ -591,14 +592,30 @@ const Profile = ({ navigation, route }: { navigation: any; route: any }) => {
                 >
                   {displayUserData?.firstname} {displayUserData?.lastname}
                 </Text>
-                {displayUserData?.studentstatusverified && (
+                {displayUserData?.studentstatusverified ? (
                   <Ionicons
                     name="checkmark-circle"
                     size={RFValue(20)}
                     color={Colors.PRIMARY}
                     style={styles.verificationCheckmark}
                   />
-                )}
+                ) : !displayUserData?.studentstatusverified &&
+                  !isViewingOtherUser ? (
+                  <TouchableOpacity
+                    style={styles.getVerifiedButton}
+                    onPress={() => {
+                      navigation.navigate("VerificationScreen");
+                    }}
+                  >
+                    <Ionicons
+                      name="school-outline"
+                      size={RFValue(16)}
+                      color={Colors.PRIMARY}
+                      style={styles.verificationIcon}
+                    />
+                    <Text style={styles.getVerifiedText}>Get Verified</Text>
+                  </TouchableOpacity>
+                ) : null}
               </View>
               <Text style={[styles.profileHandle]}>
                 {" "}
@@ -1016,9 +1033,35 @@ Friend requests welcome, but beware… they might already have 3 group projects 
               </View>
               {Array.isArray(displayEducation) &&
               displayEducation.length > 0 ? (
-                displayEducation.map((edu: any, index: number) => (
-                  <EducationCard key={index} education={edu} />
-                ))
+                <>
+                  {/* Show first 2 entries, or all if expanded */}
+                  {(educationExpanded
+                    ? displayEducation
+                    : displayEducation.slice(0, 2)
+                  ).map((edu: any, index: number) => (
+                    <EducationCard key={index} education={edu} />
+                  ))}
+
+                  {/* Show "Show more" button if there are more than 2 entries */}
+                  {displayEducation.length > 2 && (
+                    <TouchableOpacity
+                      onPress={() => setEducationExpanded(!educationExpanded)}
+                      style={styles.showMoreButton}
+                    >
+                      <Text style={styles.showMoreText}>
+                        {educationExpanded
+                          ? `Show less (${displayEducation.length - 2} hidden)`
+                          : `Show ${displayEducation.length - 2} more`}
+                      </Text>
+                      <Ionicons
+                        name={educationExpanded ? "chevron-up" : "chevron-down"}
+                        size={RFValue(16)}
+                        color={Colors.PRIMARY}
+                        style={styles.showMoreIcon}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </>
               ) : (
                 <Text
                   style={[styles.eduItem, { color: colors.onSurfaceVariant }]}
@@ -1032,53 +1075,50 @@ Friend requests welcome, but beware… they might already have 3 group projects 
 
             {/* Skills & Interests Section */}
             <View style={styles.skillsSection}>
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: RFValue(16),
-                }}
-              >
-                <Text
-                  style={[styles.skillsTitle, { color: colors.onBackground }]}
-                >
-                  Skills & Interests
-                </Text>
-                {!isViewingOtherUser && (
-                  <TouchableOpacity
-                    onPress={() =>
-                      navigation.navigate("EditProfile", {
-                        userEmail: displayUserData?.email,
-                        sectionToEdit: "skills",
-                      })
-                    }
-                  >
-                    <Ionicons
-                      name="pencil-outline"
-                      size={RFValue(16)}
-                      color={Colors.PRIMARY}
-                    />
-                  </TouchableOpacity>
-                )}
-              </View>
-
               {/* Skills Subsection */}
               <View style={styles.subsection}>
-                <Text
-                  style={[
-                    styles.subsectionTitle,
-                    { color: colors.onBackground },
-                  ]}
-                >
-                  Skills{" "}
-                  {!isViewingOtherUser ? `(${(skills || []).length}/5)` : ""}
-                </Text>
+                <View style={styles.subsectionHeader}>
+                  <View style={styles.subsectionTitleContainer}>
+                    <Ionicons
+                      name="star"
+                      size={RFValue(18)}
+                      color={Colors.PRIMARY}
+                      style={styles.subsectionIcon}
+                    />
+                    <Text
+                      style={[
+                        styles.subsectionTitle,
+                        { color: colors.onBackground },
+                      ]}
+                    >
+                      Skills
+                      {!isViewingOtherUser
+                        ? ` (${(skills || []).length}/5)`
+                        : ""}
+                    </Text>
+                  </View>
+                  {!isViewingOtherUser && (
+                    <TouchableOpacity
+                      onPress={() =>
+                        navigation.navigate("EditProfile", {
+                          userEmail: displayUserData?.email,
+                          sectionToEdit: "skills",
+                        })
+                      }
+                    >
+                      <Ionicons
+                        name="pencil-outline"
+                        size={RFValue(16)}
+                        color={Colors.PRIMARY}
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
                 <View style={styles.skillsWrapper}>
                   {(skills || []).length <= 0 && (
                     <Text
                       style={[
-                        styles.skillText,
+                        styles.emptyStateText,
                         { color: colors.onSurfaceVariant },
                       ]}
                     >
@@ -1097,20 +1137,48 @@ Friend requests welcome, but beware… they might already have 3 group projects 
 
               {/* Interests Subsection */}
               <View style={styles.subsection}>
-                <Text
-                  style={[
-                    styles.subsectionTitle,
-                    { color: colors.onBackground },
-                  ]}
-                >
-                  Interests{" "}
-                  {!isViewingOtherUser ? `(${(interests || []).length}/5)` : ""}
-                </Text>
+                <View style={styles.subsectionHeader}>
+                  <View style={styles.subsectionTitleContainer}>
+                    <Ionicons
+                      name="heart"
+                      size={RFValue(18)}
+                      color="#E91E63"
+                      style={styles.subsectionIcon}
+                    />
+                    <Text
+                      style={[
+                        styles.subsectionTitle,
+                        { color: colors.onBackground },
+                      ]}
+                    >
+                      Interests
+                      {!isViewingOtherUser
+                        ? ` (${(interests || []).length}/5)`
+                        : ""}
+                    </Text>
+                  </View>
+                  {!isViewingOtherUser && (
+                    <TouchableOpacity
+                      onPress={() =>
+                        navigation.navigate("EditProfile", {
+                          userEmail: displayUserData?.email,
+                          sectionToEdit: "interests",
+                        })
+                      }
+                    >
+                      <Ionicons
+                        name="pencil-outline"
+                        size={RFValue(16)}
+                        color="#E91E63"
+                      />
+                    </TouchableOpacity>
+                  )}
+                </View>
                 <View style={styles.interestsWrapper}>
                   {(interests || []).length <= 0 && (
                     <Text
                       style={[
-                        styles.interestText,
+                        styles.emptyStateText,
                         { color: colors.onSurfaceVariant },
                       ]}
                     >
@@ -1260,6 +1328,25 @@ const styles = StyleSheet.create({
   verificationCheckmark: {
     marginLeft: RFValue(8),
   },
+  getVerifiedButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(42, 157, 143, 0.1)",
+    paddingHorizontal: RFValue(12),
+    paddingVertical: RFValue(6),
+    borderRadius: RFValue(16),
+    marginLeft: RFValue(8),
+    borderWidth: 1,
+    borderColor: Colors.PRIMARY,
+  },
+  verificationIcon: {
+    marginRight: RFValue(4),
+  },
+  getVerifiedText: {
+    color: Colors.PRIMARY,
+    fontSize: RFValue(12),
+    fontWeight: "600",
+  },
   profileHandle: {
     color: "#8B98A5",
     fontSize: 16,
@@ -1370,7 +1457,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   interestTag: {
-    backgroundColor: Colors.PRIMARY,
+    backgroundColor: "#E91E63",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -1384,10 +1471,28 @@ const styles = StyleSheet.create({
   subsection: {
     marginBottom: RFValue(20),
   },
+  subsectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: RFValue(8),
+  },
+  subsectionTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  subsectionIcon: {
+    marginRight: RFValue(8),
+  },
   subsectionTitle: {
     fontSize: RFValue(18),
     fontWeight: "600",
-    marginBottom: RFValue(8),
+  },
+  emptyStateText: {
+    fontSize: RFValue(14),
+    fontStyle: "italic",
+    textAlign: "center",
+    paddingVertical: RFValue(8),
   },
 
   skillInput: {
@@ -1459,6 +1564,23 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
+  },
+  showMoreButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: RFValue(12),
+    paddingHorizontal: RFValue(16),
+    marginTop: RFValue(8),
+  },
+  showMoreText: {
+    color: Colors.PRIMARY,
+    fontSize: RFValue(14),
+    fontWeight: "600",
+    marginRight: RFValue(4),
+  },
+  showMoreIcon: {
+    marginLeft: RFValue(4),
   },
 });
 

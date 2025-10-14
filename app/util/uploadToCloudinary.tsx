@@ -1,5 +1,16 @@
 import * as ImageManipulator from "expo-image-manipulator";
 import * as VideoThumbnails from "expo-video-thumbnails";
+import * as Crypto from "expo-crypto";
+
+// Generate Cloudinary signature for authenticated requests
+const generateSignature = async (params: string): Promise<string> => {
+  const secret = process.env.EXPO_PUBLIC_CLOUD_API_SECRET!;
+  return await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA1,
+    params + secret,
+    { encoding: Crypto.CryptoEncoding.HEX }
+  );
+};
 
 // Get file size for logging
 const getFileSize = async (fileUri: string): Promise<string> => {
@@ -46,7 +57,7 @@ const compressVideo = async (
     // Note: Client-side video compression is complex and not easily achievable with current Expo setup
     // We rely on Cloudinary's server-side compression for videos
     console.log("Video processing completed (using server-side compression)");
-    return { videoUri: fileUri, thumbnailUri };
+    return { videoUri: fileUri, thumbnailUri: thumbnailUri || undefined };
   } catch (error) {
     console.error("Video processing failed:", error);
     return { videoUri: fileUri }; // Return original if processing fails
@@ -188,7 +199,7 @@ const uploadToCloudinary = async (
     console.log(`${type} upload successful:`, data.secure_url);
 
     return data.secure_url; // Cloudinary URL
-  } catch (err) {
+  } catch (err: any) {
     if (err.name === "AbortError") {
       console.error(
         "Upload timeout:",
@@ -342,6 +353,98 @@ const uploadMultipleMedia = async (
   }
 };
 
+// Delete image from Cloudinary
+const deleteFromCloudinary = async (publicId: string): Promise<boolean> => {
+  try {
+    // Debug: Log environment variables
+    console.log("Environment variables check:", {
+      EXPO_PUBLIC_CLOUD_NAME: process.env.EXPO_PUBLIC_CLOUD_NAME
+        ? "***set***"
+        : "undefined",
+      EXPO_PUBLIC_CLOUD_API_KEY: process.env.EXPO_PUBLIC_CLOUD_API_KEY
+        ? "***set***"
+        : "undefined",
+      EXPO_PUBLIC_CLOUD_API_SECRET: process.env.EXPO_PUBLIC_CLOUD_API_SECRET
+        ? "***set***"
+        : "undefined",
+    });
+
+    // Check if required environment variables are available
+    if (
+      !process.env.EXPO_PUBLIC_CLOUD_API_KEY ||
+      !process.env.EXPO_PUBLIC_CLOUD_API_SECRET ||
+      !process.env.EXPO_PUBLIC_CLOUD_NAME
+    ) {
+      console.warn(
+        "Cloudinary API credentials not configured - skipping image deletion"
+      );
+      return false;
+    }
+
+    console.log("Deleting image from Cloudinary:", publicId);
+
+    const timestamp = Math.round(new Date().getTime() / 1000);
+    const signature = await generateSignature(
+      `public_id=${publicId}&timestamp=${timestamp}`
+    );
+
+    const formData = new FormData();
+    formData.append("public_id", publicId);
+    formData.append("timestamp", timestamp.toString());
+    formData.append("signature", signature);
+    formData.append("api_key", process.env.EXPO_PUBLIC_CLOUD_API_KEY);
+
+    const deleteUrl = `https://api.cloudinary.com/v1_1/${process.env.EXPO_PUBLIC_CLOUD_NAME}/image/destroy`;
+
+    const response = await fetch(deleteUrl, {
+      method: "POST",
+      body: formData,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    const result = await response.json();
+
+    if (result.result === "ok") {
+      console.log("Image deleted successfully from Cloudinary");
+      return true;
+    } else {
+      console.error("Failed to delete image from Cloudinary:", result);
+      return false;
+    }
+  } catch (error) {
+    console.error("Error deleting image from Cloudinary:", error);
+    return false;
+  }
+};
+
+// Extract public ID from Cloudinary URL
+const extractPublicId = (cloudinaryUrl: string): string | null => {
+  try {
+    // Cloudinary URL format: http://res.cloudinary.com/{cloud_name}/{type}/upload/v{version}/{public_id}.{format}
+    const urlParts = cloudinaryUrl.split("/");
+    const uploadIndex = urlParts.findIndex((part) => part === "upload");
+
+    if (uploadIndex === -1 || uploadIndex + 2 >= urlParts.length) {
+      console.error("Invalid Cloudinary URL format");
+      return null;
+    }
+
+    // Get the public ID (everything after upload/v{version}/)
+    const publicIdWithFormat = urlParts.slice(uploadIndex + 2).join("/");
+
+    // Remove file extension if present
+    const publicId = publicIdWithFormat.replace(/\.[^/.]+$/, "");
+
+    console.log("Extracted public ID:", publicId);
+    return publicId;
+  } catch (error) {
+    console.error("Error extracting public ID:", error);
+    return null;
+  }
+};
+
 // Legacy function for backward compatibility
 const uploadImageToCloudinary = async (
   uri: string,
@@ -353,5 +456,10 @@ const uploadImageToCloudinary = async (
   return uploadToCloudinary(uri, type);
 };
 
-export { uploadToCloudinary, uploadMultipleMedia };
+export {
+  uploadToCloudinary,
+  uploadMultipleMedia,
+  deleteFromCloudinary,
+  extractPublicId,
+};
 export default uploadImageToCloudinary;

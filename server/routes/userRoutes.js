@@ -4,6 +4,8 @@ import {
   getUserById,
   createUser,
   updateUser,
+  updateProfileImage,
+  updateCoverImage,
   checkUsernameAvailability,
 } from "../controllers/userController.js";
 
@@ -14,5 +16,7 @@ router.get("/id/:userId", getUserById);
 router.get("/check-username/:username", checkUsernameAvailability);
 router.post("/", createUser);
 router.put("/:email", updateUser);
+router.put("/:email/profile-image", updateProfileImage);
+router.put("/:email/cover-image", updateCoverImage);
 
 export default router;

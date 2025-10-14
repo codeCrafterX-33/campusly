@@ -212,3 +212,63 @@ export const updateUser = async (req, res) => {
     });
   }
 };
+
+export const updateProfileImage = async (req, res) => {
+  const { email } = req.params;
+  const { image } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE USERS 
+       SET image = $1, updated_at = NOW()
+       WHERE email = $2
+       RETURNING *`,
+      [image, email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Profile image updated successfully",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Profile image update error:", error);
+    res.status(500).json({
+      message: "Profile image update failed",
+      error: error.message,
+    });
+  }
+};
+
+export const updateCoverImage = async (req, res) => {
+  const { email } = req.params;
+  const { coverImage } = req.body;
+
+  try {
+    const result = await pool.query(
+      `UPDATE USERS 
+       SET cover_image = $1, updated_at = NOW()
+       WHERE email = $2
+       RETURNING *`,
+      [coverImage, email]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({
+      message: "Cover image updated successfully",
+      data: result.rows[0],
+    });
+  } catch (error) {
+    console.error("Cover image update error:", error);
+    res.status(500).json({
+      message: "Cover image update failed",
+      error: error.message,
+    });
+  }
+};

@@ -36,11 +36,13 @@ import { defaultDegrees, defaultFields } from "../../util/defaultValues";
 import axios from "axios";
 import CampuslyAlert from "../../components/CampuslyAlert";
 import { LinearGradient } from "expo-linear-gradient";
+import { useThemeContext } from "../../context/ThemeContext";
 
 export default function EditEducation({ route }: { route: any }) {
   const navigation = useNavigation();
   const { userEmail } = route.params;
   const { colors } = useTheme();
+  const { isDarkMode } = useThemeContext();
   const { userData, setUserData, education, setEducation } =
     useContext(AuthContext);
 
@@ -643,7 +645,7 @@ export default function EditEducation({ route }: { route: any }) {
             ]}
           >
             <LinearGradient
-              colors={[Colors.PRIMARY, colors.onBackground, Colors.PRIMARY]}
+              colors={[Colors.PRIMARY, "#1a7a6e", Colors.PRIMARY]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.heroGradient}
@@ -715,7 +717,12 @@ export default function EditEducation({ route }: { route: any }) {
                   <TouchableOpacity
                     style={[
                       styles.ultraModernCard,
-                      { backgroundColor: colors.surface },
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: isDarkMode
+                          ? colors.outline || "rgba(255, 255, 255, 0.1)"
+                          : "transparent",
+                      },
                     ]}
                     onPress={() => openEditModal(edu, index)}
                     activeOpacity={0.7}
@@ -822,7 +829,16 @@ export default function EditEducation({ route }: { route: any }) {
 
                     {/* Card Footer with Dates */}
                     {(edu.start_date || edu.end_date) && (
-                      <View style={styles.cardFooter}>
+                      <View
+                        style={[
+                          styles.cardFooter,
+                          {
+                            borderTopColor: isDarkMode
+                              ? colors.outline || "rgba(255, 255, 255, 0.1)"
+                              : "transparent",
+                          },
+                        ]}
+                      >
                         <View style={styles.dateInfo}>
                           <Ionicons
                             name="calendar"
@@ -2567,6 +2583,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+    borderWidth: 1,
   },
   cardHeader: {
     flexDirection: "row",
@@ -2609,7 +2626,7 @@ const styles = StyleSheet.create({
     opacity: 0.8,
   },
   ultraModernActionButtons: {
-    flexDirection: "row",
+    flexDirection: "column",
     alignItems: "center",
     gap: RFValue(8),
   },
@@ -2631,7 +2648,6 @@ const styles = StyleSheet.create({
   },
   cardFooter: {
     borderTopWidth: 1,
-    borderTopColor: "rgba(0, 0, 0, 0.05)",
     paddingTop: RFValue(12),
     marginTop: RFValue(8),
   },

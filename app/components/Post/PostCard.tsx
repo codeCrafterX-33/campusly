@@ -143,31 +143,46 @@ const PostCard = ({
       <View style={styles.headerContainer}>
         <View style={styles.userInfoContainer}>
           <TouchableOpacity
-            onPress={(e) => {
-              e.stopPropagation();
-              if (post.user_id) {
+            activeOpacity={0.7}
+            onPress={() => {
+              console.log("Avatar clicked! Post data:", {
+                user_id: post.user_id,
+
+                username: post.username,
+                firstname: post.firstname,
+                lastname: post.lastname,
+              });
+              console.log("Navigation object:", navigation);
+
+              // Try different user ID fields that might be available
+              const userId = post.user_id;
+              console.log("Resolved user ID:", userId);
+
+              if (userId) {
                 // Check if we have cached complete profile data first
-                const cachedUser = getCachedUser(post.user_id.toString());
+                const cachedUser = getCachedUser(userId.toString());
 
                 if (cachedUser) {
                   console.log(
                     "🟢 PostCard - Using cached complete profile data for post author:",
-                    post.user_id,
+                    userId,
                     "Source: PostCard_Cached"
                   );
                   // If we have cached data, pass minimal params since Profile will use cached data
+                  console.log("Navigating with cached user data");
                   navigation.navigate("Profile", {
-                    user_id: post.user_id,
+                    user_id: userId,
                   });
                 } else {
                   console.log(
                     "🟡 PostCard - No cached data, passing post data for immediate display:",
-                    post.user_id,
+                    userId,
                     "Source: PostCard_Fresh"
                   );
                   // Pass post data for immediate display while fetching complete data
+                  console.log("Navigating with fresh user data");
                   navigation.navigate("Profile", {
-                    user_id: post.user_id,
+                    user_id: userId,
                     firstname: post.firstname,
                     lastname: post.lastname,
                     username: post.username,
@@ -183,6 +198,8 @@ const PostCard = ({
                     interests: post.interests,
                   });
                 }
+              } else {
+                console.log("No user_id found in post data");
               }
             }}
             style={styles.clickableAvatar}

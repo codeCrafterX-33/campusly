@@ -13,6 +13,7 @@ const CommunityScreen = ({ club_id }: { club_id: number }) => {
     []
   );
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [hasInitialLoad, setHasInitialLoad] = useState(false);
   const { colors } = useTheme();
 
   const fetchPosts = async () => {
@@ -25,12 +26,16 @@ const CommunityScreen = ({ club_id }: { club_id: number }) => {
     if (clubPosts.length > 0) {
       // console.log(clubPosts);
     }
+    setHasInitialLoad(true);
   };
 
   useFocusEffect(
     useCallback(() => {
-      fetchPosts();
-    }, [])
+      // Only fetch on initial load or if no posts cached
+      if (!hasInitialLoad || clubPosts.length === 0) {
+        fetchPosts();
+      }
+    }, [club_id, clubPosts, setClubPosts, hasInitialLoad])
   );
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>

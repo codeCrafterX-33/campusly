@@ -397,8 +397,8 @@ export default function EditProfile({ route }: { route: any }) {
         headline: headline || userData?.bio,
         country: country || userData?.country,
         city: city || userData?.city,
-        firstName: firstName || userData?.firstname,
-        lastName: lastName || userData?.lastname,
+        firstname: firstName ? firstName.trim() : userData?.firstname,
+        lastname: lastName ? lastName.trim() : userData?.lastname,
         school: school || userData?.school,
       };
 
@@ -412,8 +412,8 @@ export default function EditProfile({ route }: { route: any }) {
         headline: updatedUserData.headline,
         country: updatedUserData.country,
         city: updatedUserData.city,
-        firstName: updatedUserData.firstName,
-        lastName: updatedUserData.lastName,
+        firstName: updatedUserData.firstname,
+        lastName: updatedUserData.lastname,
         school: updatedUserData.school,
       };
 
@@ -487,6 +487,13 @@ export default function EditProfile({ route }: { route: any }) {
         onOpenCityModal={() => setIsCityModalVisible(true)}
         onOpenSection={(section) => {
           setActiveSection(section);
+          if (section === "skills") {
+            setIsEditingSkills(true);
+            setIsEditingInterests(false);
+          } else if (section === "interests") {
+            setIsEditingInterests(true);
+            setIsEditingSkills(false);
+          }
           setIsModalVisible(true);
         }}
         // Error states for validation
@@ -521,12 +528,15 @@ export default function EditProfile({ route }: { route: any }) {
             {renderSection()}
           </ScrollView>
 
-          {/* Save Button - Sticks to bottom */}
-          {sectionToEdit && (
+          {/* Save Button - Sticks to bottom - Only show when modal is closed */}
+          {!isModalVisible && sectionToEdit && (
             <View
               style={[
                 styles.saveButtonContainer,
-                { backgroundColor: colors.background },
+                {
+                  backgroundColor: colors.background,
+                  zIndex: isModalVisible ? -1 : 1000, // Hide behind modal when modal is open
+                },
               ]}
             >
               <ProfileSaveButton
@@ -535,7 +545,9 @@ export default function EditProfile({ route }: { route: any }) {
                   sectionToEdit === "about"
                     ? aboutText
                     : sectionToEdit === "skills"
-                    ? { skills: skills, interests: interests }
+                    ? { skills: skills }
+                    : sectionToEdit === "interests"
+                    ? { interests: interests }
                     : sectionToEdit === "intro"
                     ? {
                         firstName: firstName,
@@ -563,138 +575,277 @@ export default function EditProfile({ route }: { route: any }) {
         visible={isModalVisible}
         animationType="slide"
         onRequestClose={() => setIsModalVisible(false)}
+        style={{ zIndex: 2000 }} // Ensure modal appears above save button
       >
-        <KeyboardAvoidingView
-          style={{ flex: 1, backgroundColor: colors.background }}
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 20}
+        <View
+          style={[styles.fullScreenModal, { backgroundColor: colors.surface }]}
         >
-          <View style={styles.fullScreenModal}>
-            <View style={styles.modalHeader}>
-              <TouchableOpacity
-                onPress={() => {
-                  setIsModalVisible(false);
-                  setIsEditingSkills(false);
-                  setIsEditingInterests(false);
-                  setNewSkill("");
-                  setNewInterest("");
-                }}
-              >
-                <Ionicons
-                  name="arrow-back"
-                  size={RFValue(24)}
-                  color={Colors.PRIMARY}
-                />
-              </TouchableOpacity>
-              <Text style={[styles.modalTitle]}>Edit Skills & Interests</Text>
-              <View style={{ width: RFValue(24) }} />
-            </View>
-
-            {/* Tab Navigation */}
-            <View style={styles.tabContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.tabButton,
-                  activeSection === "skills" && styles.activeTabButton,
-                ]}
-                onPress={() => setActiveSection("skills")}
-              >
-                <Text
-                  style={[
-                    styles.tabText,
-                    activeSection === "skills" && styles.activeTabText,
-                  ]}
-                >
-                  Skills ({(skills || []).length}/5)
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.tabButton,
-                  activeSection === "interests" && styles.activeTabButton,
-                ]}
-                onPress={() => setActiveSection("interests")}
-              >
-                <Text
-                  style={[
-                    styles.tabText,
-                    activeSection === "interests" && styles.activeTabText,
-                  ]}
-                >
-                  Interests ({(interests || []).length}/5)
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            <ScrollView
-              style={[
-                styles.modalScrollView,
-                { backgroundColor: colors.background },
-              ]}
-              keyboardShouldPersistTaps="handled"
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                backgroundColor:
+                  sectionToEdit === "skills" ? Colors.PRIMARY : "#E91E63",
+              },
+            ]}
+          >
+            <TouchableOpacity
+              onPress={() => {
+                setIsModalVisible(false);
+                setIsEditingSkills(false);
+                setIsEditingInterests(false);
+                setNewSkill("");
+                setNewInterest("");
+              }}
             >
-              {activeSection === "skills" ? (
-                /* Skills Section */
-                <View style={styles.modalSection}>
-                  <View style={styles.modalSectionHeader}>
+              <Ionicons name="arrow-back" size={RFValue(24)} color="#fff" />
+            </TouchableOpacity>
+            <View style={styles.modalTitleContainer}>
+              <Ionicons
+                name={sectionToEdit === "skills" ? "star" : "heart"}
+                size={RFValue(20)}
+                color="#fff"
+                style={styles.modalTitleIcon}
+              />
+              <Text style={[styles.modalTitle]}>
+                {sectionToEdit === "skills" ? "Edit Skills" : "Edit Interests"}
+              </Text>
+            </View>
+            <View style={{ width: RFValue(24) }} />
+          </View>
+
+          {/* Section-specific content will be shown below */}
+
+          <ScrollView
+            style={[
+              styles.modalScrollView,
+              { backgroundColor: colors.surface },
+            ]}
+            keyboardShouldPersistTaps="handled"
+          >
+            {sectionToEdit === "skills" ? (
+              /* Skills Section */
+              <View style={styles.modalSection}>
+                <View style={styles.modalSectionHeader}>
+                  <Text
+                    style={[
+                      styles.modalSectionTitle,
+                      { color: colors.onBackground },
+                    ]}
+                  >
+                    Your Skills
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (isEditingSkills) {
+                        // Done button - close modal
+                        setIsModalVisible(false);
+                        setIsEditingSkills(false);
+                        setNewSkill("");
+                      } else {
+                        // Pencil button - start editing
+                        setIsEditingSkills(true);
+                      }
+                    }}
+                  >
+                    {isEditingSkills ? (
+                      <Text
+                        style={{
+                          color: Colors.PRIMARY,
+                          fontSize: RFValue(16),
+                        }}
+                      >
+                        Done
+                      </Text>
+                    ) : (
+                      <Ionicons
+                        name="pencil-outline"
+                        size={RFValue(20)}
+                        color={Colors.PRIMARY}
+                      />
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.modalSectionSubHeader}>
+                  <Text style={[styles.modalSectionSubHeaderText]}>
+                    {isEditingSkills
+                      ? "Remove or add your skills below"
+                      : "Show off your top skills — add up to 5 things you want to be known for. They'll shine here and in your Skills section ✨"}
+                  </Text>
+                </View>
+
+                {/* Skills List */}
+                {(skills || []).length <= 0 && (
+                  <View style={styles.placeholderContainer}>
                     <Text
                       style={[
-                        styles.modalSectionTitle,
+                        styles.placeholderText,
                         { color: colors.onBackground },
                       ]}
                     >
-                      Your Skills
+                      No skills added yet… what are you waiting for? 💼
                     </Text>
-                    <TouchableOpacity
-                      onPress={() => setIsEditingSkills(!isEditingSkills)}
-                    >
-                      {isEditingSkills ? (
-                        <Text
-                          style={{
-                            color: Colors.PRIMARY,
-                            fontSize: RFValue(16),
-                          }}
+                  </View>
+                )}
+                <View style={styles.modalListContainer}>
+                  {(skills || []).map((skill, index) => (
+                    <View key={index} style={styles.modalListItem}>
+                      {isEditingSkills && (
+                        <TouchableOpacity
+                          onPress={() =>
+                            setSkills((prev) =>
+                              prev.filter((_, i) => i !== index)
+                            )
+                          }
+                          style={styles.deleteButton}
                         >
-                          Done
-                        </Text>
-                      ) : (
-                        <Ionicons
-                          name="pencil-outline"
-                          size={RFValue(20)}
-                          color={Colors.PRIMARY}
-                        />
+                          <Ionicons
+                            name="close-circle"
+                            size={RFValue(20)}
+                            color="#ff4444"
+                          />
+                        </TouchableOpacity>
                       )}
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.modalSectionSubHeader}>
-                    <Text style={[styles.modalSectionSubHeaderText]}>
-                      {isEditingSkills
-                        ? "Remove or add your skills below"
-                        : "Show off your top skills — add up to 5 things you want to be known for. They'll shine here and in your Skills section ✨"}
-                    </Text>
-                  </View>
-
-                  {/* Skills List */}
-                  {(skills || []).length <= 0 && (
-                    <View style={styles.placeholderContainer}>
                       <Text
                         style={[
-                          styles.placeholderText,
+                          styles.modalListItemText,
                           { color: colors.onBackground },
                         ]}
                       >
-                        No skills added yet… what are you waiting for? 🚀
+                        {skill}
                       </Text>
                     </View>
-                  )}
+                  ))}
+                </View>
+
+                {/* Add Skill Section */}
+                {isEditingSkills && (
+                  <View style={styles.addSection}>
+                    <TextInput
+                      placeholder="Add a skill..."
+                      value={newSkill}
+                      onChangeText={(text) => setNewSkill(text)}
+                      placeholderTextColor={colors.onSurfaceVariant}
+                      style={[
+                        styles.modalInput,
+                        {
+                          backgroundColor: colors.surface,
+                          borderColor: colors.outline,
+                          color: colors.onBackground,
+                        },
+                      ]}
+                      onSubmitEditing={() => {
+                        if (
+                          newSkill.trim() &&
+                          !(skills || []).includes(newSkill.trim()) &&
+                          (skills || []).length < 5
+                        ) {
+                          setSkills([...(skills || []), newSkill.trim()]);
+                          setNewSkill("");
+                        }
+                      }}
+                    />
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (
+                          newSkill.trim() &&
+                          !(skills || []).includes(newSkill.trim()) &&
+                          (skills || []).length < 5
+                        ) {
+                          setSkills([...(skills || []), newSkill.trim()]);
+                          setNewSkill("");
+                        }
+                      }}
+                      disabled={(skills || []).length >= 5}
+                      style={[
+                        styles.addButton,
+                        {
+                          backgroundColor:
+                            (skills || []).length >= 5
+                              ? colors.onSurfaceVariant
+                              : Colors.PRIMARY,
+                        },
+                      ]}
+                    >
+                      <Ionicons name="add" size={RFValue(20)} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Maximum Limit Message */}
+                {isEditingSkills && (skills || []).length >= 5 && (
+                  <Text
+                    style={[
+                      styles.maxLimitText,
+                      { color: colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Maximum 5 skills reached
+                  </Text>
+                )}
+              </View>
+            ) : sectionToEdit === "interests" ? (
+              /* Interests Section */
+              <View style={styles.modalSection}>
+                <View style={styles.modalSectionHeader}>
+                  <Text
+                    style={[
+                      styles.modalSectionTitle,
+                      { color: colors.onBackground },
+                    ]}
+                  >
+                    Your Interests
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => {
+                      if (isEditingInterests) {
+                        // Done button - close modal
+                        setIsModalVisible(false);
+                        setIsEditingInterests(false);
+                        setNewInterest("");
+                      } else {
+                        // Pencil button - start editing
+                        setIsEditingInterests(true);
+                      }
+                    }}
+                  >
+                    {isEditingInterests ? (
+                      <Text
+                        style={{
+                          color: "#E91E63",
+                          fontSize: RFValue(16),
+                        }}
+                      >
+                        Done
+                      </Text>
+                    ) : (
+                      <Ionicons
+                        name="pencil-outline"
+                        size={RFValue(16)}
+                        color="#E91E63"
+                      />
+                    )}
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.modalSectionSubHeader}>
+                  <Text style={[styles.modalSectionSubHeaderText]}>
+                    {isEditingInterests
+                      ? "Remove or add your interests below"
+                      : "Share up to 5 interests — the things that keep you curious, inspired, or awake at 3AM 🌙"}
+                  </Text>
+                </View>
+
+                {/* Interests List */}
+                {(interests || []).length > 0 ? (
                   <View style={styles.modalListContainer}>
-                    {(skills || []).map((skill, index) => (
+                    {(interests || []).map((interest, index) => (
                       <View key={index} style={styles.modalListItem}>
-                        {isEditingSkills && (
+                        {isEditingInterests && (
                           <TouchableOpacity
                             onPress={() =>
-                              setSkills((prev) =>
+                              setInterests((prev) =>
                                 prev.filter((_, i) => i !== index)
                               )
                             }
@@ -713,242 +864,100 @@ export default function EditProfile({ route }: { route: any }) {
                             { color: colors.onBackground },
                           ]}
                         >
-                          {skill}
+                          {interest}
                         </Text>
                       </View>
                     ))}
                   </View>
-
-                  {/* Add Skill Section */}
-                  {isEditingSkills && (
-                    <View style={styles.addSection}>
-                      <TextInput
-                        placeholder="Add a skill..."
-                        value={newSkill}
-                        onChangeText={(text) => setNewSkill(text)}
-                        placeholderTextColor={colors.onSurfaceVariant}
-                        style={[
-                          styles.modalInput,
-                          {
-                            backgroundColor: colors.surface,
-                            borderColor: colors.outline,
-                            color: colors.onBackground,
-                          },
-                        ]}
-                        onSubmitEditing={() => {
-                          if (
-                            newSkill.trim() &&
-                            !(skills || []).includes(newSkill.trim()) &&
-                            (skills || []).length < 5
-                          ) {
-                            setSkills([...(skills || []), newSkill.trim()]);
-                            setNewSkill("");
-                          }
-                        }}
-                      />
-                      <TouchableOpacity
-                        onPress={() => {
-                          if (
-                            newSkill.trim() &&
-                            !(skills || []).includes(newSkill.trim()) &&
-                            (skills || []).length < 5
-                          ) {
-                            setSkills([...(skills || []), newSkill.trim()]);
-                            setNewSkill("");
-                          }
-                        }}
-                        disabled={(skills || []).length >= 5}
-                        style={[
-                          styles.addButton,
-                          {
-                            backgroundColor:
-                              (skills || []).length >= 5
-                                ? colors.onSurfaceVariant
-                                : Colors.PRIMARY,
-                          },
-                        ]}
-                      >
-                        <Ionicons name="add" size={RFValue(20)} color="#fff" />
-                      </TouchableOpacity>
-                    </View>
-                  )}
-
-                  {/* Maximum Limit Message */}
-                  {isEditingSkills && (skills || []).length >= 5 && (
+                ) : (
+                  <View style={styles.placeholderContainer}>
                     <Text
                       style={[
-                        styles.maxLimitText,
-                        { color: colors.onSurfaceVariant },
-                      ]}
-                    >
-                      Maximum 5 skills reached
-                    </Text>
-                  )}
-                </View>
-              ) : (
-                /* Interests Section */
-                <View style={styles.modalSection}>
-                  <View style={styles.modalSectionHeader}>
-                    <Text
-                      style={[
-                        styles.modalSectionTitle,
+                        styles.placeholderText,
                         { color: colors.onBackground },
                       ]}
                     >
-                      Your Interests
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => setIsEditingInterests(!isEditingInterests)}
-                    >
-                      {isEditingInterests ? (
-                        <Text
-                          style={{
-                            color: Colors.PRIMARY,
-                            fontSize: RFValue(16),
-                          }}
-                        >
-                          Done
-                        </Text>
-                      ) : (
-                        <Ionicons
-                          name="pencil-outline"
-                          size={RFValue(16)}
-                          color={Colors.PRIMARY}
-                        />
-                      )}
-                    </TouchableOpacity>
-                  </View>
-
-                  <View style={styles.modalSectionSubHeader}>
-                    <Text style={[styles.modalSectionSubHeaderText]}>
-                      {isEditingInterests
-                        ? "Remove or add your interests below"
-                        : "Share up to 5 interests — the things that keep you curious, inspired, or awake at 3AM 🌙"}
+                      {/* No Interests Message */}
+                      No interests added yet… are you secretly a robot? 🤖
                     </Text>
                   </View>
+                )}
 
-                  {/* Interests List */}
-                  {(interests || []).length > 0 ? (
-                    <View style={styles.modalListContainer}>
-                      {(interests || []).map((interest, index) => (
-                        <View key={index} style={styles.modalListItem}>
-                          {isEditingInterests && (
-                            <TouchableOpacity
-                              onPress={() =>
-                                setInterests((prev) =>
-                                  prev.filter((_, i) => i !== index)
-                                )
-                              }
-                              style={styles.deleteButton}
-                            >
-                              <Ionicons
-                                name="close-circle"
-                                size={RFValue(20)}
-                                color="#ff4444"
-                              />
-                            </TouchableOpacity>
-                          )}
-                          <Text
-                            style={[
-                              styles.modalListItemText,
-                              { color: colors.onBackground },
-                            ]}
-                          >
-                            {interest}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  ) : (
-                    <View style={styles.placeholderContainer}>
-                      <Text
-                        style={[
-                          styles.placeholderText,
-                          { color: colors.onBackground },
-                        ]}
-                      >
-                        {/* No Interests Message */}
-                        No interests added yet… are you secretly a robot? 🤖
-                      </Text>
-                    </View>
-                  )}
-
-                  {/* Add Interest Section */}
-                  {isEditingInterests && (
-                    <View style={styles.addSection}>
-                      <TextInput
-                        placeholder="Add an interest..."
-                        value={newInterest}
-                        onChangeText={(text) => setNewInterest(text)}
-                        placeholderTextColor={colors.onSurfaceVariant}
-                        style={[
-                          styles.modalInput,
-                          {
-                            backgroundColor: colors.surface,
-                            borderColor: colors.outline,
-                            color: colors.onBackground,
-                          },
-                        ]}
-                        onSubmitEditing={() => {
-                          if (
-                            newInterest.trim() &&
-                            !(interests || []).includes(newInterest.trim()) &&
-                            (interests || []).length < 5
-                          ) {
-                            setInterests([
-                              ...(interests || []),
-                              newInterest.trim(),
-                            ]);
-                            setNewInterest("");
-                          }
-                        }}
-                      />
-                      <TouchableOpacity
-                        onPress={() => {
-                          if (
-                            newInterest.trim() &&
-                            !(interests || []).includes(newInterest.trim()) &&
-                            (interests || []).length < 5
-                          ) {
-                            setInterests([
-                              ...(interests || []),
-                              newInterest.trim(),
-                            ]);
-                            setNewInterest("");
-                          }
-                        }}
-                        disabled={(interests || []).length >= 5}
-                        style={[
-                          styles.addButton,
-                          {
-                            backgroundColor:
-                              (interests || []).length >= 5
-                                ? colors.onSurfaceVariant
-                                : Colors.PRIMARY,
-                          },
-                        ]}
-                      >
-                        <Ionicons name="add" size={RFValue(20)} color="#fff" />
-                      </TouchableOpacity>
-                    </View>
-                  )}
-
-                  {/* Maximum Limit Message */}
-                  {isEditingInterests && (interests || []).length >= 5 && (
-                    <Text
+                {/* Add Interest Section */}
+                {isEditingInterests && (
+                  <View style={styles.addSection}>
+                    <TextInput
+                      placeholder="Add an interest..."
+                      value={newInterest}
+                      onChangeText={(text) => setNewInterest(text)}
+                      placeholderTextColor={colors.onSurfaceVariant}
                       style={[
-                        styles.maxLimitText,
-                        { color: colors.onSurfaceVariant },
+                        styles.modalInput,
+                        {
+                          backgroundColor: colors.surface,
+                          borderColor: colors.outline,
+                          color: colors.onBackground,
+                        },
+                      ]}
+                      onSubmitEditing={() => {
+                        if (
+                          newInterest.trim() &&
+                          !(interests || []).includes(newInterest.trim()) &&
+                          (interests || []).length < 5
+                        ) {
+                          setInterests([
+                            ...(interests || []),
+                            newInterest.trim(),
+                          ]);
+                          setNewInterest("");
+                        }
+                      }}
+                    />
+                    <TouchableOpacity
+                      onPress={() => {
+                        if (
+                          newInterest.trim() &&
+                          !(interests || []).includes(newInterest.trim()) &&
+                          (interests || []).length < 5
+                        ) {
+                          setInterests([
+                            ...(interests || []),
+                            newInterest.trim(),
+                          ]);
+                          setNewInterest("");
+                        }
+                      }}
+                      disabled={(interests || []).length >= 5}
+                      style={[
+                        styles.addButton,
+                        {
+                          backgroundColor:
+                            (interests || []).length >= 5
+                              ? colors.onSurfaceVariant
+                              : Colors.PRIMARY,
+                        },
                       ]}
                     >
-                      Maximum 5 interests reached
-                    </Text>
-                  )}
-                </View>
-              )}
-            </ScrollView>
-          </View>
-        </KeyboardAvoidingView>
+                      <Ionicons name="add" size={RFValue(20)} color="#fff" />
+                    </TouchableOpacity>
+                  </View>
+                )}
+
+                {/* Maximum Limit Message */}
+                {isEditingInterests && (interests || []).length >= 5 && (
+                  <Text
+                    style={[
+                      styles.maxLimitText,
+                      { color: colors.onSurfaceVariant },
+                    ]}
+                  >
+                    Maximum 5 interests reached
+                  </Text>
+                )}
+              </View>
+            ) : null}
+          </ScrollView>
+        </View>
       </Modal>
 
       {/* school Selection Modal */}
@@ -1556,7 +1565,7 @@ const styles = StyleSheet.create({
     borderRadius: RFValue(10),
     marginRight: RFValue(8),
     borderWidth: 1,
-    borderColor: Colors.PRIMARY,
+    borderColor: "#E91E63",
   },
   // Modal Styles
   modalOverlay: {
@@ -1584,6 +1593,13 @@ const styles = StyleSheet.create({
     fontSize: RFValue(20),
     fontWeight: "bold",
     color: "#fff",
+  },
+  modalTitleContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  modalTitleIcon: {
+    marginRight: RFValue(8),
   },
   modalScrollView: {
     flex: 1,
@@ -1629,7 +1645,7 @@ const styles = StyleSheet.create({
     marginBottom: RFValue(12),
   },
   modalInterestTag: {
-    backgroundColor: Colors.PRIMARY,
+    backgroundColor: "#E91E63",
     paddingHorizontal: RFValue(12),
     paddingVertical: RFValue(6),
     borderRadius: RFValue(20),

@@ -46,9 +46,11 @@ function Home() {
   const [gestureEnabled, setGestureEnabled] = useState(true);
   const { userData, getUser } = useContext(AuthContext);
   const { colors } = useTheme();
-  const { posts, getPosts } = useContext(PostContext);
+  const { posts, getPosts, onRefresh } = useContext(PostContext);
   const navigation = useNavigation<DrawerNavigationProp<any>>();
   const [isLoading, setIsLoading] = useState(false);
+  const [hasInitialLoad, setHasInitialLoad] = useState(false);
+  const [hasSilentRefreshed, setHasSilentRefreshed] = useState(false);
   const { visibleIn, setVisibleIn } = useContext(PostContext);
 
   const flatListRef = useRef(null);
@@ -56,7 +58,14 @@ function Home() {
 
   useFocusEffect(
     useCallback(() => {
-    const onSwipeRight = (event: any) => {
+      // Background refresh only on initial focus after first load
+      if (hasInitialLoad && userData && !hasSilentRefreshed) {
+        // Silently refresh posts in background without showing loading
+        onRefresh([0]);
+        setHasSilentRefreshed(true);
+      }
+
+      const onSwipeRight = (event: any) => {
         if (
           event.nativeEvent.translationX > 100 &&
           event.nativeEvent.state === State.END
@@ -69,20 +78,23 @@ function Home() {
           navigation.navigate("following");
         }
       };
-    }, [])
+    }, [hasInitialLoad, userData, onRefresh, hasSilentRefreshed])
   );
 
   useEffect(() => {
     // Fetch posts when the component mounts or user changes
-
     const fetchPosts = async () => {
-      setIsLoading(true);
+      // Only show loading on initial load
+      if (!hasInitialLoad) {
+        setIsLoading(true);
+      }
       try {
         await getPosts();
       } catch (error) {
         console.log(error);
       } finally {
         setIsLoading(false);
+        setHasInitialLoad(true);
       }
     };
 
@@ -99,13 +111,13 @@ function Home() {
 
   useEffect(() => {
     if (userData) {
-      if (posts.length === 0) {
+      if (posts.length === 0 && !hasInitialLoad) {
         getPosts(0);
       }
       return;
     }
     getUser();
-  }, [userData]);
+  }, [userData, hasInitialLoad]);
 
   useEffect(() => {
     const backHandler = BackHandler.addEventListener(

@@ -6,6 +6,11 @@ import axios from "axios";
 import usePersistedState from "../util/PersistedState";
 import { Toast } from "react-native-toast-message/lib/src/Toast";
 import { FirebaseError } from "firebase/app";
+import {
+  uploadToCloudinary,
+  deleteFromCloudinary,
+  extractPublicId,
+} from "../util/uploadToCloudinary";
 // Removed expo-router import - using React Navigation
 
 const AuthContext = createContext<any>({
@@ -21,6 +26,7 @@ const AuthContext = createContext<any>({
   getCachedUser: () => {},
   preloadUserData: () => {},
   onLogout: () => {},
+  uploadProfilePicture: () => {},
 });
 
 function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -430,6 +436,87 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [preloadQueue, isProcessingQueue, processPreloadQueue]);
 
+  // Upload profile picture to Cloudinary and update database
+  const uploadProfilePicture = useCallback(
+    async (imageUri: string) => {
+      try {
+        console.log("Starting profile picture upload...");
+
+        // Store old image URL for deletion
+        const oldImageUrl = userData?.image;
+
+        // Upload to Cloudinary
+        const cloudinaryUrl = await uploadToCloudinary(
+          imageUri,
+          "image",
+          "profile-images"
+        );
+        console.log("Profile picture uploaded to Cloudinary:", cloudinaryUrl);
+
+        // Update user data in database
+        if (userData?.email && cloudinaryUrl) {
+          const response = await axios.put(
+            `${process.env.EXPO_PUBLIC_SERVER_URL}/user/${userData.email}/profile-image`,
+            { image: cloudinaryUrl }
+          );
+
+          if (response.status === 200) {
+            console.log("Profile picture updated in database");
+
+            // Update local user data
+            setUserData((prev: any) => ({
+              ...prev,
+              image: cloudinaryUrl,
+            }));
+
+            // Delete old image from Cloudinary (non-blocking)
+            if (oldImageUrl && oldImageUrl !== cloudinaryUrl) {
+              const publicId = extractPublicId(oldImageUrl);
+              if (publicId) {
+                deleteFromCloudinary(publicId)
+                  .then((deleted) => {
+                    if (deleted) {
+                      console.log(
+                        "Old profile picture deleted from Cloudinary"
+                      );
+                    } else {
+                      console.warn(
+                        "Failed to delete old profile picture from Cloudinary"
+                      );
+                    }
+                  })
+                  .catch((error) => {
+                    console.error("Error deleting old profile picture:", error);
+                  });
+              }
+            }
+
+            Toast.show({
+              type: "success",
+              text1: "Success! 🎉",
+              text2: "Profile picture updated successfully!",
+            });
+
+            return { success: true, imageUrl: cloudinaryUrl };
+          } else {
+            throw new Error("Failed to update profile picture in database");
+          }
+        } else {
+          throw new Error("User email not found");
+        }
+      } catch (error: any) {
+        console.error("Profile picture upload failed:", error);
+        Toast.show({
+          type: "error",
+          text1: "Upload Failed",
+          text2: "Failed to update profile picture. Please try again.",
+        });
+        return { success: false, error: error.message };
+      }
+    },
+    [userData?.email, userData?.image, setUserData]
+  );
+
   const value = {
     userData: userData,
     setUserData: setUserData,
@@ -444,6 +531,7 @@ function AuthProvider({ children }: { children: React.ReactNode }) {
     getCachedUser: getCachedUser,
     preloadUserData: preloadUserData,
     onLogout: onLogout,
+    uploadProfilePicture: uploadProfilePicture,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

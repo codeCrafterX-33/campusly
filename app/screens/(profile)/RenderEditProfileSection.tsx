@@ -11,9 +11,16 @@ import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "react-native-paper";
 import { RFValue } from "react-native-responsive-fontsize";
 import Colors from "../../constants/Colors";
+import { useThemeContext } from "../../context/ThemeContext";
 
 type Props = {
-  sectionToEdit: "intro" | "about" | "education" | "skills" | string;
+  sectionToEdit:
+    | "intro"
+    | "about"
+    | "education"
+    | "skills"
+    | "interests"
+    | string;
   skills: string[];
   interests: string[];
   aboutText?: string;
@@ -74,6 +81,7 @@ export default function RenderEditProfileSection({
   cityError = "",
 }: Props) {
   const { colors } = useTheme();
+  const { isDarkMode } = useThemeContext();
   const aboutRef = useRef<TextInput>(null);
 
   // Animation values
@@ -213,7 +221,12 @@ export default function RenderEditProfileSection({
             <Animated.View
               style={[
                 styles.formCard,
-                { backgroundColor: colors.surface },
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: isDarkMode
+                    ? colors.outline || "rgba(255, 255, 255, 0.1)"
+                    : "transparent",
+                },
                 {
                   opacity: fadeAnim,
                   transform: [{ translateY: slideAnim }],
@@ -260,7 +273,11 @@ export default function RenderEditProfileSection({
                     styles.ultraModernInput,
                     {
                       backgroundColor: colors.background,
-                      borderColor: firstNameError ? "#ff4444" : "transparent",
+                      borderColor: firstNameError
+                        ? "#ff4444"
+                        : isDarkMode
+                        ? colors.outline || "rgba(255, 255, 255, 0.1)"
+                        : "transparent",
                       color: colors.onBackground,
                     },
                   ]}
@@ -289,7 +306,11 @@ export default function RenderEditProfileSection({
                     styles.ultraModernInput,
                     {
                       backgroundColor: colors.background,
-                      borderColor: lastNameError ? "#ff4444" : "transparent",
+                      borderColor: lastNameError
+                        ? "#ff4444"
+                        : isDarkMode
+                        ? colors.outline || "rgba(255, 255, 255, 0.1)"
+                        : "transparent",
                       color: colors.onBackground,
                     },
                   ]}
@@ -305,7 +326,12 @@ export default function RenderEditProfileSection({
             <Animated.View
               style={[
                 styles.formCard,
-                { backgroundColor: colors.surface },
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: isDarkMode
+                    ? colors.outline || "rgba(255, 255, 255, 0.1)"
+                    : "transparent",
+                },
                 {
                   opacity: fadeAnim,
                   transform: [{ translateY: slideAnim }],
@@ -356,7 +382,11 @@ export default function RenderEditProfileSection({
                     styles.ultraModernTextArea,
                     {
                       backgroundColor: colors.background,
-                      borderColor: headlineError ? "#ff4444" : "transparent",
+                      borderColor: headlineError
+                        ? "#ff4444"
+                        : isDarkMode
+                        ? colors.outline || "rgba(255, 255, 255, 0.1)"
+                        : "transparent",
                       color: colors.onBackground,
                     },
                   ]}
@@ -382,7 +412,12 @@ export default function RenderEditProfileSection({
             <Animated.View
               style={[
                 styles.formCard,
-                { backgroundColor: colors.surface },
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: isDarkMode
+                    ? colors.outline || "rgba(255, 255, 255, 0.1)"
+                    : "transparent",
+                },
                 {
                   opacity: fadeAnim,
                   transform: [{ translateY: slideAnim }],
@@ -425,7 +460,11 @@ export default function RenderEditProfileSection({
                     styles.ultraModernSelect,
                     {
                       backgroundColor: colors.background,
-                      borderColor: countryError ? "#ff4444" : "transparent",
+                      borderColor: countryError
+                        ? "#ff4444"
+                        : isDarkMode
+                        ? colors.outline || "rgba(255, 255, 255, 0.1)"
+                        : "transparent",
                     },
                   ]}
                   onPress={onOpenCountryModal}
@@ -467,7 +506,11 @@ export default function RenderEditProfileSection({
                     styles.ultraModernSelect,
                     {
                       backgroundColor: colors.background,
-                      borderColor: cityError ? "#ff4444" : "transparent",
+                      borderColor: cityError
+                        ? "#ff4444"
+                        : isDarkMode
+                        ? colors.outline || "rgba(255, 255, 255, 0.1)"
+                        : "transparent",
                     },
                   ]}
                   onPress={onOpenCityModal}
@@ -500,7 +543,12 @@ export default function RenderEditProfileSection({
             <Animated.View
               style={[
                 styles.formCard,
-                { backgroundColor: colors.surface },
+                {
+                  backgroundColor: colors.surface,
+                  borderColor: isDarkMode
+                    ? colors.outline || "rgba(255, 255, 255, 0.1)"
+                    : "transparent",
+                },
                 {
                   opacity: fadeAnim,
                   transform: [{ translateY: slideAnim }],
@@ -543,7 +591,9 @@ export default function RenderEditProfileSection({
                     styles.ultraModernSelect,
                     {
                       backgroundColor: colors.background,
-                      borderColor: "transparent",
+                      borderColor: isDarkMode
+                        ? colors.outline || "rgba(255, 255, 255, 0.1)"
+                        : "transparent",
                     },
                   ]}
                   onPress={() =>
@@ -625,7 +675,12 @@ export default function RenderEditProfileSection({
           <Animated.View
             style={[
               styles.formCard,
-              { backgroundColor: colors.surface },
+              {
+                backgroundColor: colors.surface,
+                borderColor: isDarkMode
+                  ? colors.outline || "rgba(255, 255, 255, 0.1)"
+                  : "transparent",
+              },
               {
                 opacity: fadeAnim,
                 transform: [{ translateY: slideAnim }],
@@ -668,7 +723,9 @@ export default function RenderEditProfileSection({
                   styles.ultraModernTextArea,
                   {
                     backgroundColor: colors.background,
-                    borderColor: "transparent",
+                    borderColor: isDarkMode
+                      ? colors.outline || "rgba(255, 255, 255, 0.1)"
+                      : "transparent",
                     color: colors.onBackground,
                     minHeight: RFValue(120),
                     maxHeight: RFValue(200),
@@ -709,14 +766,21 @@ export default function RenderEditProfileSection({
     case "skills":
       return (
         <View style={styles.sectionContainer}>
-          {/* Skills preview */}
           <View style={styles.skillsSection}>
             <View style={styles.rowBetween}>
-              <Text
-                style={[styles.skillsTitle, { color: colors.onBackground }]}
-              >
-                Skills ({skills.length}/5)
-              </Text>
+              <View style={styles.sectionHeader}>
+                <Ionicons
+                  name="star"
+                  size={RFValue(20)}
+                  color={Colors.PRIMARY}
+                  style={styles.sectionIcon}
+                />
+                <Text
+                  style={[styles.skillsTitle, { color: colors.onBackground }]}
+                >
+                  Skills ({skills.length}/5)
+                </Text>
+              </View>
               <TouchableOpacity onPress={() => onOpenSection("skills")}>
                 <Ionicons
                   name="pencil-outline"
@@ -733,7 +797,7 @@ export default function RenderEditProfileSection({
               ]}
             >
               Show off your top skills — add up to 5 things you want to be known
-              for ✨
+              for professionally ✨
             </Text>
 
             {skills.length <= 0 && (
@@ -743,7 +807,7 @@ export default function RenderEditProfileSection({
                   { color: colors.onSurfaceVariant, marginTop: RFValue(15) },
                 ]}
               >
-                No skills added yet… what are you waiting for? 🚀
+                No skills added yet… what are you waiting for? 💼
               </Text>
             )}
 
@@ -755,20 +819,35 @@ export default function RenderEditProfileSection({
               ))}
             </View>
           </View>
+        </View>
+      );
 
-          {/* Interests preview */}
+    case "interests":
+      return (
+        <View style={styles.sectionContainer}>
           <View style={styles.interestsSection}>
             <View style={styles.rowBetween}>
-              <Text
-                style={[styles.interestsTitle, { color: colors.onBackground }]}
-              >
-                Interests ({interests.length}/5)
-              </Text>
+              <View style={styles.sectionHeader}>
+                <Ionicons
+                  name="heart"
+                  size={RFValue(20)}
+                  color="#E91E63"
+                  style={styles.sectionIcon}
+                />
+                <Text
+                  style={[
+                    styles.interestsTitle,
+                    { color: colors.onBackground },
+                  ]}
+                >
+                  Interests ({interests.length}/5)
+                </Text>
+              </View>
               <TouchableOpacity onPress={() => onOpenSection("interests")}>
                 <Ionicons
                   name="pencil-outline"
                   size={RFValue(16)}
-                  color={Colors.PRIMARY}
+                  color="#E91E63"
                 />
               </TouchableOpacity>
             </View>
@@ -779,8 +858,8 @@ export default function RenderEditProfileSection({
                 { color: colors.onSurfaceVariant, marginBottom: RFValue(16) },
               ]}
             >
-              Share up to 5 interests — the things that keep you curious and
-              inspired 🌙
+              Share your passions — add up to 5 things you love doing in your
+              free time ❤️
             </Text>
 
             {interests.length <= 0 && (
@@ -790,9 +869,10 @@ export default function RenderEditProfileSection({
                   { color: colors.onSurfaceVariant, marginTop: RFValue(15) },
                 ]}
               >
-                No interests added yet… are you secretly a robot? 🤖
+                No interests added yet… what makes you tick? 🎯
               </Text>
             )}
+
             <View style={styles.interestsWrapper}>
               {interests.map((interest, index) => (
                 <View key={`${interest}-${index}`} style={styles.interestTag}>
@@ -1044,6 +1124,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 3,
+    borderWidth: 1,
   },
   cardHeader: {
     flexDirection: "row",
@@ -1094,6 +1175,7 @@ const styles = StyleSheet.create({
     fontSize: RFValue(16),
     fontWeight: "400",
     minHeight: RFValue(48),
+    borderWidth: 1,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -1112,6 +1194,7 @@ const styles = StyleSheet.create({
     minHeight: RFValue(80),
     maxHeight: RFValue(120),
     textAlignVertical: "top",
+    borderWidth: 1,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -1129,6 +1212,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: RFValue(16),
     paddingVertical: RFValue(14),
     minHeight: RFValue(48),
+    borderWidth: 1,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -1153,5 +1237,12 @@ const styles = StyleSheet.create({
     fontSize: RFValue(11),
     fontWeight: "500",
     opacity: 0.7,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  sectionIcon: {
+    marginRight: RFValue(8),
   },
 });

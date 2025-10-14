@@ -30,7 +30,7 @@ interface ProfileHeaderProps {
 
 const ProfileHeader = ({ scrollY, user_id, userimage }: ProfileHeaderProps) => {
   console.log("user_id", user_id);
-  const { userData } = useContext(AuthContext);
+  const { userData, uploadProfilePicture } = useContext(AuthContext);
   const loggedInUser = user_id === userData?.email;
   const { isDarkMode } = useContext(ThemeContext);
   const navigation = useNavigation<any>();
@@ -38,6 +38,7 @@ const ProfileHeader = ({ scrollY, user_id, userimage }: ProfileHeaderProps) => {
   const [isUploading, setIsUploading] = useState(false);
   const [profilePictureAlertVisible, setProfilePictureAlertVisible] =
     useState(false);
+  const [selectedImageUri, setSelectedImageUri] = useState<string | null>(null);
 
   const profileImageScale = scrollY.interpolate({
     inputRange: [0, COVER_HEIGHT / 2, COVER_HEIGHT],
@@ -113,16 +114,23 @@ const ProfileHeader = ({ scrollY, user_id, userimage }: ProfileHeaderProps) => {
         const selectedImage = result.assets[0];
         console.log("Selected image:", selectedImage.uri);
 
-        // TODO: Upload image to server/cloud storage
-        // For now, just show success message
-        Alert.alert("Success", "Profile picture updated successfully!");
+        // Set the selected image URI to show in modal immediately
+        setSelectedImageUri(selectedImage.uri);
 
-        // TODO: Update user profile with new image URL
-        // This would typically involve:
-        // 1. Upload image to cloud storage (Cloudinary, AWS S3, etc.)
-        // 2. Get the uploaded image URL
-        // 3. Update user profile in database
-        // 4. Refresh the UI with new image
+        // Upload to Cloudinary and update database
+        const uploadResult = await uploadProfilePicture(selectedImage.uri);
+
+        if (uploadResult.success) {
+          console.log(
+            "Profile picture uploaded successfully:",
+            uploadResult.imageUrl
+          );
+          // The image will be updated in the modal automatically via the userData context
+        } else {
+          console.error("Upload failed:", uploadResult.error);
+          // Reset the selected image on failure
+          setSelectedImageUri(null);
+        }
       }
     } catch (error) {
       console.error("Error picking image:", error);
@@ -201,9 +209,12 @@ const ProfileHeader = ({ scrollY, user_id, userimage }: ProfileHeaderProps) => {
       {/* Profile Picture Modal */}
       <ProfilePictureModal
         visible={isModalVisible}
-        imageUri={userimage}
+        imageUri={selectedImageUri || userimage}
         isOwnProfile={loggedInUser}
-        onClose={() => setIsModalVisible(false)}
+        onClose={() => {
+          setIsModalVisible(false);
+          setSelectedImageUri(null);
+        }}
         onChangePicture={handleChangePicture}
       />
 
