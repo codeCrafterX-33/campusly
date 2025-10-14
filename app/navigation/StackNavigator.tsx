@@ -5,7 +5,6 @@ import Home from "../screens/Home";
 import { NavigationContainer, useNavigation } from "@react-navigation/native";
 import SignIn from "../screens/(auth)/SignIn";
 import SignUp from "../screens/(auth)/SignUp";
-import TabLayout from "./TabLayout";
 import AddPost from "../screens/AddPost";
 import DrawerNavigator from "./DrawerNavigator";
 import Event from "../screens/(tab)/Event";
