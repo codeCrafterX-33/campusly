@@ -97,12 +97,12 @@ const PostCard = ({
   } = useLikeCache();
   const carouselRef = useRef<FlatList>(null);
 
-  // Like state - use cached values or fallback to post data
+  // Like state - use cached values only
   const [isLiked, setIsLiked] = useState(
     () => getCachedLikeStatus(post.id) ?? false
   );
   const [likeCount, setLikeCount] = useState(
-    () => getCachedLikeCount(post.id) ?? post.like_count ?? 0
+    () => getCachedLikeCount(post.id) ?? 0
   );
 
   // Preload user data when post becomes visible (handled by parent FlatList)
@@ -125,38 +125,44 @@ const PostCard = ({
     if (cachedCount !== null) {
       setLikeCount(cachedCount);
     } else {
-      // Use post data as fallback and cache it
-      const count = post.like_count || 0;
-      setLikeCount(count);
-      setCachedLikeCount(post.id, count);
+      // Start with 0, fresh data will be fetched from server
+      setLikeCount(0);
     }
-  }, [
-    post.id,
-    post.like_count,
-    getCachedLikeStatus,
-    getCachedLikeCount,
-    setCachedLikeCount,
-  ]);
+  }, [post.id, getCachedLikeStatus, getCachedLikeCount]);
 
-  // Background check for like status when cache is empty
+  // Background check for like status and count when cache is empty
   useEffect(() => {
-    const checkInitialLikeStatus = async () => {
+    const checkInitialLikeData = async () => {
       const cachedLiked = getCachedLikeStatus(post.id);
+      const cachedCount = getCachedLikeCount(post.id);
 
       // Only check server if we don't have cached data
-      if (cachedLiked === null && userData?.id) {
+      if ((cachedLiked === null || cachedCount === null) && userData?.id) {
         try {
-          const isLiked = await checkLikeStatus(post.id);
+          // Fetch both like status and count from server
+          const [isLiked, count] = await Promise.all([
+            checkLikeStatus(post.id),
+            getLikeCount(post.id),
+          ]);
+
           setIsLiked(isLiked);
+          setLikeCount(count);
         } catch (error) {
-          // Silently fail - we'll default to false
-          console.warn("Could not fetch initial like status:", error);
+          // Silently fail - we'll use default values
+          console.warn("Could not fetch initial like data:", error);
         }
       }
     };
 
-    checkInitialLikeStatus();
-  }, [post.id, userData?.id, getCachedLikeStatus, checkLikeStatus]);
+    checkInitialLikeData();
+  }, [
+    post.id,
+    userData?.id,
+    getCachedLikeStatus,
+    getCachedLikeCount,
+    checkLikeStatus,
+    getLikeCount,
+  ]);
 
   const handleLike = async () => {
     if (!userData?.id) return;
@@ -173,6 +179,15 @@ const PostCard = ({
     }
     if (cachedCount !== null) {
       setLikeCount(cachedCount);
+    }
+
+    // Notify parent component of the update for cross-screen sync
+    if (onPostUpdate) {
+      onPostUpdate({
+        ...post,
+        like_count: cachedCount !== null ? cachedCount : 0,
+        is_liked: cachedLiked !== null ? cachedLiked : false,
+      });
     }
   };
 

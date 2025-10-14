@@ -178,7 +178,16 @@ export const LikeCacheProvider: React.FC<LikeCacheProviderProps> = ({
 
         return false;
       } catch (error: any) {
-        console.error("Error checking like status:", error);
+        // Don't log network errors as they're expected when server is down
+        if (
+          error.code === "NETWORK_ERROR" ||
+          error.message?.includes("Network Error") ||
+          error.response?.status === 403
+        ) {
+          console.warn("Server not available for like status check");
+        } else {
+          console.error("Error checking like status:", error);
+        }
         return false;
       }
     },
@@ -202,8 +211,17 @@ export const LikeCacheProvider: React.FC<LikeCacheProviderProps> = ({
         const count = response.data.likeCount;
         setCachedLikeCount(postId, count);
         return count;
-      } catch (error) {
-        console.error("Error getting like count:", error);
+      } catch (error: any) {
+        // Don't log network errors as they're expected when server is down
+        if (
+          error.code === "NETWORK_ERROR" ||
+          error.message?.includes("Network Error") ||
+          error.response?.status === 403
+        ) {
+          console.warn("Server not available for like count check");
+        } else {
+          console.error("Error getting like count:", error);
+        }
         return 0;
       }
     },

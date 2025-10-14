@@ -9,7 +9,7 @@ import {
   Modal,
   ActivityIndicator,
 } from "react-native";
-import React, { useState, useContext } from "react";
+import React, { useState, useContext, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "react-native-paper";
 import { VideoView, useVideoPlayer } from "expo-video";
@@ -123,7 +123,12 @@ const CommentCard = ({
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { userData, getCachedUser } = useContext(AuthContext);
-  const { getCachedLikeStatus, getCachedLikeCount } = useLikeCache();
+  const {
+    getCachedLikeStatus,
+    getCachedLikeCount,
+    checkLikeStatus,
+    getLikeCount,
+  } = useLikeCache();
   const [optionsModalVisible, setOptionsModalVisible] = useState(false);
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -135,8 +140,40 @@ const CommentCard = ({
   const cachedCount = getCachedLikeCount(comment.id);
 
   const displayLiked = cachedLiked !== null ? cachedLiked : isLiked;
-  const displayCount =
-    cachedCount !== null ? cachedCount : comment.like_count || 0;
+  const displayCount = cachedCount !== null ? cachedCount : 0;
+
+  // Background check for comment like data when cache is empty
+  useEffect(() => {
+    const checkInitialCommentLikeData = async () => {
+      const cachedLiked = getCachedLikeStatus(comment.id);
+      const cachedCount = getCachedLikeCount(comment.id);
+
+      // Only check server if we don't have cached data
+      if ((cachedLiked === null || cachedCount === null) && userData?.id) {
+        try {
+          // Fetch both like status and count from server
+          const [isLiked, count] = await Promise.all([
+            checkLikeStatus(comment.id),
+            getLikeCount(comment.id),
+          ]);
+
+          // The cache will be updated by the LikeCacheContext functions
+        } catch (error) {
+          // Silently fail - we'll use default values
+          console.warn("Could not fetch initial comment like data:", error);
+        }
+      }
+    };
+
+    checkInitialCommentLikeData();
+  }, [
+    comment.id,
+    userData?.id,
+    getCachedLikeStatus,
+    getCachedLikeCount,
+    checkLikeStatus,
+    getLikeCount,
+  ]);
 
   const [showReplies, setShowReplies] = useState(false);
   // No depth restrictions - allow infinite nesting like Twitter
