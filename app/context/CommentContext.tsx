@@ -269,12 +269,14 @@ export const CommentProvider: React.FC<CommentProviderProps> = ({
       try {
         setError(null);
 
-        await axios.post(
+        const response = await axios.post(
           `${process.env.EXPO_PUBLIC_SERVER_URL}/comment/${commentId}/like`,
           { user_id }
         );
 
-        // Update like count in state (optimistic update)
+        const wasLiked = response.data.liked;
+
+        // Update like count in state based on server response
         setComments((prev) => {
           const newComments = { ...prev };
           Object.keys(newComments).forEach((postId) => {
@@ -283,7 +285,9 @@ export const CommentProvider: React.FC<CommentProviderProps> = ({
                 if (comment.id === commentId) {
                   return {
                     ...comment,
-                    like_count: comment.like_count + 1,
+                    like_count: wasLiked
+                      ? comment.like_count + 1
+                      : Math.max(comment.like_count - 1, 0),
                   };
                 }
                 return comment;

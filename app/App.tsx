@@ -23,6 +23,7 @@ import ThemedStatusBar from "./components/ThemedStatusBar";
 import ClubProvider from "./context/ClubContext";
 import EventProvider from "./context/EventContext";
 import { PreloaderProvider } from "./context/PreloaderContext";
+import { LikeProvider } from "./context/LikeContext";
 import {
   configureReanimatedLogger,
   ReanimatedLogLevel,
@@ -84,17 +85,19 @@ export default function App() {
                       <ClubProvider>
                         <EventProvider>
                           <PostProvider>
-                            <CommentProvider>
-                              <PostHistoryProvider>
-                                {isTryingLogin ? (
-                                  <LoadingScreen />
-                                ) : user ? (
-                                  <AuthenticatedStack />
-                                ) : (
-                                  <StackNavigator />
-                                )}
-                              </PostHistoryProvider>
-                            </CommentProvider>
+                            <LikeProvider>
+                              <CommentProvider>
+                                <PostHistoryProvider>
+                                  {isTryingLogin ? (
+                                    <LoadingScreen />
+                                  ) : user ? (
+                                    <AuthenticatedStack />
+                                  ) : (
+                                    <StackNavigator />
+                                  )}
+                                </PostHistoryProvider>
+                              </CommentProvider>
+                            </LikeProvider>
                           </PostProvider>
                         </EventProvider>
                       </ClubProvider>

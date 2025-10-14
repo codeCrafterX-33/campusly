@@ -19,6 +19,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { VideoView, useVideoPlayer } from "expo-video";
 import { AuthContext } from "../../context/AuthContext";
 import { PostContext } from "../../context/PostContext";
+import { useLikeContext } from "../../context/LikeContext";
 import CampuslyAlert from "../CampuslyAlert";
 import { useNavigation } from "@react-navigation/native";
 import { NativeStackNavigationProp } from "@react-navigation/native-stack";
@@ -83,10 +84,72 @@ const PostCard = ({
 
   const { userData, getUserById, getCachedUser } = useContext(AuthContext);
   const { getPosts, deletePost } = useContext(PostContext);
+  const { toggleLike, isLiking } = useLikeContext();
   const carouselRef = useRef<FlatList>(null);
+
+  // Like state
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(post.like_count || 0);
 
   // Preload user data when post becomes visible (handled by parent FlatList)
   // This useEffect is removed - preloading is now handled by onViewableItemsChanged
+
+  // Check initial like status and sync like count
+  useEffect(() => {
+    const checkLikeStatus = async () => {
+      if (userData?.id) {
+        try {
+          const response = await fetch(
+            `${process.env.EXPO_PUBLIC_SERVER_URL}/like/${post.id}/status?userId=${userData.id}`
+          );
+          const data = await response.json();
+          setIsLiked(data.isLiked);
+        } catch (error) {
+          console.error("Error checking like status:", error);
+        }
+      }
+    };
+
+    // Sync like count with post data
+    setLikeCount(post.like_count || 0);
+    checkLikeStatus();
+  }, [post.id, post.like_count, userData?.id]);
+
+  const handleLike = async () => {
+    if (!userData?.id) return;
+
+    // Optimistic update
+    const newIsLiked = !isLiked;
+    const newLikeCount = newIsLiked ? likeCount + 1 : likeCount - 1;
+
+    setIsLiked(newIsLiked);
+    setLikeCount(newLikeCount);
+
+    // Make API call
+    const serverIsLiked = await toggleLike(post.id);
+
+    if (serverIsLiked !== null) {
+      // Update with server response
+      setIsLiked(serverIsLiked);
+
+      // Refresh post data in background to get updated like_count
+      try {
+        const response = await fetch(
+          `${process.env.EXPO_PUBLIC_SERVER_URL}/post/post?postId=${post.id}`
+        );
+        const data = await response.json();
+        if (data.data && data.data[0]) {
+          setLikeCount(data.data[0].like_count || 0);
+        }
+      } catch (error) {
+        console.error("Error refreshing post data:", error);
+      }
+    } else {
+      // Revert if failed
+      setIsLiked(!newIsLiked);
+      setLikeCount(likeCount);
+    }
+  };
 
   const handleDelete = (postId: number) => {
     if (!userData?.id) return;
@@ -544,11 +607,23 @@ const PostCard = ({
           style={styles.footerItem}
           onPress={(e) => {
             e.stopPropagation();
-            // TODO: Add like functionality
+            handleLike();
           }}
+          disabled={isLiking}
         >
-          <Ionicons name="heart-outline" size={20} color={Colors.GRAY} />
-          <Text style={styles.footerText}>{post.likes || 0}</Text>
+          <Ionicons
+            name={isLiked ? "heart" : "heart-outline"}
+            size={20}
+            color={isLiked ? "#EF4444" : Colors.GRAY}
+          />
+          <Text
+            style={[
+              styles.footerText,
+              { color: isLiked ? "#EF4444" : Colors.GRAY },
+            ]}
+          >
+            {likeCount}
+          </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={styles.footerItem}

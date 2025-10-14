@@ -42,15 +42,7 @@ export default function VerificationScreen() {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSchool, setSelectedSchool] = useState<{
-    name: string;
-    logo: string;
-    country: string;
-    web_pages: string;
-    domains: string[];
-  } | null>(null);
   const [results, setResults] = useState<any[]>([]);
-  const [email, setEmail] = useState("");
   const [isAlertVisible, setIsAlertVisible] = useState(false);
   const [alertType, setAlertType] = useState<string>("");
   const [showInfo, setShowInfo] = useState(true);
@@ -125,55 +117,6 @@ export default function VerificationScreen() {
     setLoading(false);
   };
 
-  const verifyEmail = async () => {
-    setLoading(true);
-    Keyboard.dismiss();
-    const SchoolEmail = email.trim();
-
-    if (!SchoolEmail.includes("@")) {
-      setAlertMessage({
-        ...alertMessage,
-        error: {
-          icon: "📧",
-          title: "Invalid Email",
-          message:
-            "Looks like you forgot the '@' — even professors get it wrong sometimes!😁\n\nTry entering a valid school email to continue. 🎓",
-        },
-      });
-      setIsAlertVisible(true);
-      setAlertType("error");
-      return;
-    }
-
-    const domainFromEmail = SchoolEmail.split("@")[1];
-    const schoolDomains = selectedSchool?.domains || [];
-    let isValid = false;
-
-    if (SchoolEmail.includes("@")) {
-      isValid = schoolDomains.some((domain: string) =>
-        domainFromEmail.endsWith(domain)
-      );
-    }
-
-    if (isValid) {
-      const response = await axios.post(
-        `${process.env.EXPO_PUBLIC_SERVER_URL}/otp/send-otp`,
-        { email: SchoolEmail }
-      );
-      if (response.status === 200) {
-        navigation.navigate("OTPVerificationScreen", { email: SchoolEmail });
-      }
-    } else {
-      setAlertMessage({
-        ...alertMessage,
-        error: { ...messages.error },
-      });
-      setIsAlertVisible(true);
-      setAlertType("error");
-    }
-    setLoading(false);
-  };
-
   return (
     <SafeAreaView style={{ flex: 1 }}>
       <KeyboardAvoidingView
@@ -184,28 +127,50 @@ export default function VerificationScreen() {
         <View
           style={[styles.container, { backgroundColor: colors.background }]}
         >
-          <DynamicHeader selectedSchool={selectedSchool} />
+          <DynamicHeader selectedSchool={null} />
 
           {/* Verification Benefits Info Modal */}
-          {showInfo && !selectedSchool && (
-            <View style={styles.modalOverlay}>
+          {showInfo && (
+            <View
+              style={[
+                styles.modalOverlay,
+                {
+                  backgroundColor: isDarkMode
+                    ? "rgba(0, 0, 0, 0.7)"
+                    : "rgba(0, 0, 0, 0.5)",
+                },
+              ]}
+            >
               <View
-                style={[styles.infoModal, { backgroundColor: colors.surface }]}
+                style={[
+                  styles.infoModal,
+                  { backgroundColor: isDarkMode ? "#ffffff" : "#1a1a1a" },
+                ]}
               >
                 <View style={styles.infoHeader}>
                   <Text
-                    style={[styles.infoTitle, { color: colors.onBackground }]}
+                    style={[
+                      styles.infoTitle,
+                      { color: isDarkMode ? "#000000" : "#ffffff" },
+                    ]}
                   >
                     🎓 Why Get Verified?
                   </Text>
                   <TouchableOpacity
                     onPress={() => setShowInfo(false)}
-                    style={styles.infoCloseButton}
+                    style={[
+                      styles.infoCloseButton,
+                      {
+                        backgroundColor: isDarkMode
+                          ? "rgba(255, 255, 255, 0.1)"
+                          : "rgba(0, 0, 0, 0.1)",
+                      },
+                    ]}
                   >
                     <Ionicons
                       name="close"
                       size={20}
-                      color={colors.onSurfaceVariant}
+                      color={isDarkMode ? "#000000" : "#ffffff"}
                     />
                   </TouchableOpacity>
                 </View>
@@ -216,7 +181,7 @@ export default function VerificationScreen() {
                     <Text
                       style={[
                         styles.benefitText,
-                        { color: colors.onBackground },
+                        { color: isDarkMode ? "#000000" : "#ffffff" },
                       ]}
                     >
                       Unlock all Campusly features and connect with verified
@@ -229,7 +194,7 @@ export default function VerificationScreen() {
                     <Text
                       style={[
                         styles.benefitText,
-                        { color: colors.onBackground },
+                        { color: isDarkMode ? "#000000" : "#ffffff" },
                       ]}
                     >
                       Get your verified badge and build trust with the community
@@ -241,7 +206,7 @@ export default function VerificationScreen() {
                     <Text
                       style={[
                         styles.benefitText,
-                        { color: colors.onBackground },
+                        { color: isDarkMode ? "#000000" : "#ffffff" },
                       ]}
                     >
                       Access exclusive events, clubs, and opportunities at your
@@ -254,7 +219,7 @@ export default function VerificationScreen() {
                     <Text
                       style={[
                         styles.benefitText,
-                        { color: colors.onBackground },
+                        { color: isDarkMode ? "#000000" : "#ffffff" },
                       ]}
                     >
                       Secure your account and prevent unauthorized access
@@ -277,20 +242,18 @@ export default function VerificationScreen() {
             </View>
           )}
 
-          {!selectedSchool && (
-            <View style={{ width: "100%" }}>
-              <Text style={[styles.title, { color: colors.onBackground }]}>
-                What school do you attend?
-              </Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.background }]}
-                placeholder="🔍 Search for your school"
-                placeholderTextColor="gray"
-                value={query}
-                onChangeText={setQuery}
-              />
-            </View>
-          )}
+          <View style={{ width: "100%" }}>
+            <Text style={[styles.title, { color: colors.onBackground }]}>
+              What school do you attend?
+            </Text>
+            <TextInput
+              style={[styles.input, { backgroundColor: colors.background }]}
+              placeholder="🔍 Search for your school"
+              placeholderTextColor="gray"
+              value={query}
+              onChangeText={setQuery}
+            />
+          </View>
 
           {loading && <ActivityIndicator size="small" color="#555" />}
           {error && <Text style={styles.errorText}>{error}</Text>}
@@ -301,142 +264,42 @@ export default function VerificationScreen() {
             </Text>
           )}
 
-          {!selectedSchool && (
-            <View style={{ flex: 1 }}>
-              <FlatList
-                data={results}
-                keyExtractor={(item) => item.name + item.domains[0]}
-                renderItem={({ item }) => {
-                  const logoUrl = `https://logo.clearbit.com/${item.domains[0]}`;
-                  return (
-                    <TouchableOpacity
-                      onPress={() =>
-                        setSelectedSchool({
+          <View style={{ flex: 1 }}>
+            <FlatList
+              data={results}
+              keyExtractor={(item) => item.name + item.domains[0]}
+              renderItem={({ item }) => {
+                const logoUrl = `https://logo.clearbit.com/${item.domains[0]}`;
+                return (
+                  <TouchableOpacity
+                    onPress={() =>
+                      navigation.navigate("EmailVerificationScreen", {
+                        selectedSchool: {
                           name: item.name,
                           logo: logoUrl,
                           country: item.country,
                           web_pages: item.web_pages[0],
                           domains: item.domains,
-                        })
-                      }
-                    >
-                      <View style={styles.schoolItem}>
-                        <Image source={{ uri: logoUrl }} style={styles.logo} />
-                        <Text style={{ color: colors.onBackground }}>
-                          {item.name}
-                        </Text>
-                      </View>
-                    </TouchableOpacity>
-                  );
-                }}
-                style={{ flex: 1 }}
-              />
-              <TouchableOpacity
-                onPress={() => navigation.navigate("DrawerNavigator")}
-              >
-                <Text style={styles.clearText}>Skip</Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {/* Ultra Modern Selected School Section */}
-          {selectedSchool && (
-            <View style={styles.modernSchoolContainer}>
-              {/* Header with Close Button */}
-              <View style={styles.modernHeader}>
-                <View style={styles.modernHeaderContent}>
-                  <View style={styles.modernLogoContainer}>
-                    <Image
-                      source={{ uri: selectedSchool.logo }}
-                      style={styles.modernLogo}
-                      defaultSource={require("../../assets/images/image.png")}
-                    />
-                  </View>
-                  <View style={styles.modernSchoolInfo}>
-                    <Text style={styles.modernSchoolName}>
-                      {selectedSchool.name}
-                    </Text>
-                    <View style={styles.modernBadge}>
-                      <Text style={styles.modernBadgeText}>
-                        🎓 {selectedSchool.country}
+                        },
+                      })
+                    }
+                  >
+                    <View style={styles.schoolItem}>
+                      <Image source={{ uri: logoUrl }} style={styles.logo} />
+                      <Text style={{ color: colors.onBackground }}>
+                        {item.name}
                       </Text>
                     </View>
-                  </View>
-                </View>
-                <TouchableOpacity
-                  style={styles.modernCloseButton}
-                  onPress={() => setSelectedSchool(null)}
-                >
-                  <Ionicons name="close-circle" size={28} color="#EF4444" />
-                </TouchableOpacity>
-              </View>
+                  </TouchableOpacity>
+                );
+              }}
+              style={{ flex: 1 }}
+            />
+            <TouchableOpacity onPress={() => navigation.goBack()}>
+              <Text style={styles.clearText}>Skip</Text>
+            </TouchableOpacity>
+          </View>
 
-              {/* Modern Info Cards */}
-              <View style={styles.modernInfoGrid}>
-                <View style={styles.modernInfoCard}>
-                  <View style={styles.modernInfoIcon}>
-                    <Text style={styles.modernInfoIconText}>🌍</Text>
-                  </View>
-                  <View style={styles.modernInfoContent}>
-                    <Text style={styles.modernInfoLabel}>Country</Text>
-                    <Text style={styles.modernInfoValue}>
-                      {selectedSchool.country}
-                    </Text>
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.modernInfoCard}
-                  onPress={() => Linking.openURL(selectedSchool.web_pages)}
-                >
-                  <View style={styles.modernInfoIcon}>
-                    <Text style={styles.modernInfoIconText}>🔗</Text>
-                  </View>
-                  <View style={styles.modernInfoContent}>
-                    <Text style={styles.modernInfoLabel}>Website</Text>
-                    <Text style={styles.modernInfoValue} numberOfLines={1}>
-                      {selectedSchool.web_pages}
-                    </Text>
-                  </View>
-                  <Ionicons
-                    name="open-outline"
-                    size={16}
-                    color={Colors.PRIMARY}
-                  />
-                </TouchableOpacity>
-              </View>
-            </View>
-          )}
-          {selectedSchool && (
-            <View style={{ width: "100%", marginTop: 20 }}>
-              <Text
-                style={{
-                  color: colors.onBackground,
-                  fontSize: RFValue(16),
-                  marginBottom: 7,
-                }}
-              >
-                Enter your school email
-              </Text>
-              <TextInput
-                style={[styles.input, { backgroundColor: colors.background }]}
-                placeholder="codecrafterx@wtu.edu.cn"
-                placeholderTextColor="gray"
-                value={email}
-                onChangeText={setEmail}
-              />
-
-              <TouchableOpacity
-                style={[!email ? styles.disabledButton : styles.button]}
-                disabled={!email}
-                onPress={() => verifyEmail()}
-              >
-                <Text style={styles.buttonText}>
-                  {loading ? "Verifying..." : "Verify school email"}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
           <CampuslyAlert
             isVisible={isAlertVisible}
             type={alertType}
@@ -725,7 +588,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 1000,
@@ -762,7 +624,6 @@ const styles = StyleSheet.create({
   infoCloseButton: {
     padding: 8,
     borderRadius: 20,
-    backgroundColor: "rgba(0, 0, 0, 0.1)",
   },
   benefitsList: {
     marginBottom: 24,

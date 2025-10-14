@@ -24,6 +24,19 @@ export const sendOtp = async (req, res) => {
   const hashedOtp = hashOtp(otp);
 
   try {
+    // Check if this school email has already been successfully verified
+    const existingVerification = await pool.query(
+      `SELECT status FROM email_verifications WHERE email = $1 AND status = 'verified'`,
+      [email]
+    );
+
+    if (existingVerification.rows.length > 0) {
+      console.log("School email already used for verification");
+      return res.status(409).json({
+        message: "This school email has already been used to verify an account",
+      });
+    }
+
     // Throttle: 60s cooldown
     const checkCooldown = await pool.query(
       `SELECT created_at FROM email_verifications WHERE email = $1`,
@@ -41,9 +54,9 @@ export const sendOtp = async (req, res) => {
 
     // Insert or update OTP
     await pool.query(
-      `INSERT INTO email_verifications (email, otp, expires_at, failed_attempts, created_at)
-       VALUES ($1, $2, $3, 0, NOW())
-       ON CONFLICT (email) DO UPDATE SET otp = $2, expires_at = $3, failed_attempts = 0, created_at = NOW()`,
+      `INSERT INTO email_verifications (email, otp, expires_at, failed_attempts, created_at, status)
+       VALUES ($1, $2, $3, 0, NOW(), 'pending')
+       ON CONFLICT (email) DO UPDATE SET otp = $2, expires_at = $3, failed_attempts = 0, created_at = NOW(), status = 'pending'`,
       [email, hashedOtp, expiresAt]
     );
 
@@ -69,8 +82,26 @@ export const verifyOtp = async (req, res) => {
   const hashedOtp = hashOtp(OTP);
 
   try {
+    // First, check if this school email has already been successfully verified
+    const existingVerification = await pool.query(
+      `SELECT status FROM email_verifications WHERE email = $1 AND status = 'verified'`,
+      [SchoolEmail]
+    );
+
+    console.log(existingVerification.rows);
+
+    if (existingVerification.rows.length > 0) {
+      console.log(
+        "School email already used for verification by another account"
+      );
+      return res.status(409).json({
+        message:
+          "This school email has already been used to verify another account",
+      });
+    }
+
     const result = await pool.query(
-      `SELECT * FROM email_verifications WHERE email = $1`,
+      `SELECT * FROM email_verifications WHERE email = $1 AND status = 'pending'`,
       [SchoolEmail]
     );
 
@@ -100,16 +131,17 @@ export const verifyOtp = async (req, res) => {
       return res.status(400).json({ message: "Invalid OTP" });
     }
 
-    // Mark as verified
+    // Mark as verified in users table
     await pool.query(
       `UPDATE users SET studentstatusverified = TRUE WHERE email = $1`,
       [UserEmail]
     );
 
-    // Remove OTP after success
-    await pool.query(`DELETE FROM email_verifications WHERE email = $1`, [
-      SchoolEmail,
-    ]);
+    // Mark email verification as verified instead of deleting
+    await pool.query(
+      `UPDATE email_verifications SET status = 'verified' WHERE email = $1`,
+      [SchoolEmail]
+    );
 
     res.status(200).json({ message: "Email verified" });
   } catch (err) {

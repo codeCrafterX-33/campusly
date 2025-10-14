@@ -9,6 +9,7 @@ import eventRoutes from "./routes/eventRoutes.js";
 import otpRoutes from "./routes/otpRoutes.js";
 import educationRoutes from "./routes/educationRoutes.js";
 import commentRoutes from "./routes/commentRoutes.js";
+import likeRoutes from "./routes/likeRoutes.js";
 import pool from "./db.js"; // Import the pool for graceful shutdown
 dotenv.config();
 
@@ -58,6 +59,7 @@ app.use("/user", userRoutes);
 app.use("/otp", otpRoutes);
 app.use("/comment", commentRoutes);
 app.use("/education", educationRoutes);
+app.use("/like", likeRoutes);
 
 // Environment logging
 console.log("Environment:", process.env.NODE_ENV || "development");

@@ -370,22 +370,22 @@ export const toggleCommentLike = async (req, res) => {
   const { user_id } = req.body;
 
   try {
-    // Check if user already liked this comment
+    // Check if user already liked this comment (comments are also posts in our system)
     const existingLike = await pool.query(
-      `SELECT id FROM comment_likes WHERE user_id = $1 AND comment_id = $2`,
+      `SELECT id FROM likes WHERE user_id = $1 AND post_id = $2`,
       [user_id, commentId]
     );
 
     if (existingLike.rows.length > 0) {
       // Unlike: Remove the like
       await pool.query(
-        `DELETE FROM comment_likes WHERE user_id = $1 AND comment_id = $2`,
+        `DELETE FROM likes WHERE user_id = $1 AND post_id = $2`,
         [user_id, commentId]
       );
 
       // Decrease like count
       await pool.query(
-        `UPDATE posts SET like_count = like_count - 1 WHERE id = $1`,
+        `UPDATE posts SET like_count = GREATEST(like_count - 1, 0) WHERE id = $1`,
         [commentId]
       );
 
@@ -395,14 +395,14 @@ export const toggleCommentLike = async (req, res) => {
       });
     } else {
       // Like: Add the like
-      await pool.query(
-        `INSERT INTO comment_likes (user_id, comment_id) VALUES ($1, $2)`,
-        [user_id, commentId]
-      );
+      await pool.query(`INSERT INTO likes (user_id, post_id) VALUES ($1, $2)`, [
+        user_id,
+        commentId,
+      ]);
 
       // Increase like count
       await pool.query(
-        `UPDATE posts SET like_count = like_count + 1 WHERE id = $1`,
+        `UPDATE posts SET like_count = COALESCE(like_count, 0) + 1 WHERE id = $1`,
         [commentId]
       );
 

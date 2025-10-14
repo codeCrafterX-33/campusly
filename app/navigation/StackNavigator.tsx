@@ -24,6 +24,7 @@ import AllActivityScreen from "../screens/allActivityScreen/AllActivityScreen";
 import Colors from "../constants/Colors";
 import { RFValue } from "react-native-responsive-fontsize";
 import VerificationScreen from "../screens/(verificationScreen)/VerificationScreen";
+import EmailVerificationScreen from "../screens/(verificationScreen)/EmailVerificationScreen";
 import EditProfile from "../screens/(profile)/EditProfile";
 import { useContext, useEffect } from "react";
 import { AuthContext } from "../context/AuthContext";
@@ -71,6 +72,7 @@ export type RootStackParamList = {
     user_id?: string;
   };
   VerificationScreen: undefined;
+  EmailVerificationScreen: { selectedSchool: any };
   ProfileSetupScreen: undefined;
   OTPVerificationScreen: { email: string };
   EditProfile: {
@@ -307,6 +309,26 @@ export const AuthenticatedStack = () => {
         name="VerificationScreen"
         component={VerificationScreen}
         options={{ headerShown: false }}
+      />
+
+      <Stack.Screen
+        name="EmailVerificationScreen"
+        component={EmailVerificationScreen}
+        options={{
+          headerShown: true,
+          headerStyle: {
+            backgroundColor: Colors.PRIMARY,
+            elevation: 0,
+            shadowOpacity: 0,
+          },
+          headerTintColor: "white",
+          headerTitle: "✨ Prove you're campus royalty!",
+          headerTitleStyle: {
+            color: "white",
+            fontSize: RFValue(16),
+            fontWeight: "600",
+          },
+        }}
       />
 
       <Stack.Screen

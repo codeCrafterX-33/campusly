@@ -12,6 +12,7 @@ import { Ionicons } from "@expo/vector-icons";
 import Colors from "../../constants/Colors";
 import CommentCard from "./CommentCard";
 import { useCommentContext } from "../../context/CommentContext";
+import { useLikeContext } from "../../context/LikeContext";
 import axios from "axios";
 
 interface Comment {
@@ -62,8 +63,42 @@ const CommentsList = ({
     deleteComment: contextDeleteComment,
   } = useCommentContext();
 
+  const { checkLikeStatus } = useLikeContext();
+
+  // State to track like status for comments
+  const [commentLikeStatus, setCommentLikeStatus] = useState<{
+    [key: number]: boolean;
+  }>({});
+
   // Get cached comments for this post
   const cachedComments = contextComments[postId] || [];
+
+  // Check like status for all comments when they load
+  useEffect(() => {
+    const checkAllCommentLikeStatus = async () => {
+      if (cachedComments.length > 0 && currentUserId) {
+        const newLikeStatus: { [key: number]: boolean } = {};
+
+        for (const comment of cachedComments) {
+          try {
+            const isLiked = await checkLikeStatus(comment.id);
+            newLikeStatus[comment.id] = isLiked;
+          } catch (error) {
+            console.error(
+              `Error checking like status for comment ${comment.id}:`,
+              error
+            );
+            newLikeStatus[comment.id] = false;
+          }
+        }
+
+        setCommentLikeStatus(newLikeStatus);
+      }
+    };
+
+    checkAllCommentLikeStatus();
+  }, [cachedComments, currentUserId, checkLikeStatus]);
+
   console.log(
     "CommentsList: Rendering comments for post",
     postId,
@@ -150,10 +185,22 @@ const CommentsList = ({
   const handleLike = async (commentId: number) => {
     if (!currentUserId) return;
 
+    // Optimistic update
+    const currentLiked = commentLikeStatus[commentId] || false;
+    setCommentLikeStatus((prev) => ({
+      ...prev,
+      [commentId]: !currentLiked,
+    }));
+
     try {
       await contextLikeComment(commentId, currentUserId);
     } catch (err) {
       console.error("Error liking comment:", err);
+      // Revert on error
+      setCommentLikeStatus((prev) => ({
+        ...prev,
+        [commentId]: currentLiked,
+      }));
     }
   };
 
@@ -215,7 +262,7 @@ const CommentsList = ({
           onReply={onReplyPress}
           onDelete={handleDelete}
           isOwner={isOwner}
-          isLiked={false} // TODO: Implement liked state
+          isLiked={commentLikeStatus[item.id] || false}
           onCommentPress={onCommentPress}
         />
       </View>

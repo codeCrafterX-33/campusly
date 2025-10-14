@@ -21,7 +21,7 @@ const OTPVerificationScreen = ({
   route: any;
   navigation: any;
 }) => {
-  const { userData } = useContext(AuthContext);
+  const { userData, getUser } = useContext(AuthContext);
 
   const { email } = route.params; // Or phone, whatever you sent OTP to
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(""));
@@ -40,7 +40,7 @@ const OTPVerificationScreen = ({
       icon: "🏅",
       title: "You're Verified! 🎉",
       message:
-        "Your school email is on point! You’ve earned your Campusly badge and unlocked full access. Time to explore, connect, and shine! 🚀",
+        "Your school email is on point! You’ve earned your Campusly badge and unlocked full access. Time to explore, connect, and shine! 🔑",
     },
     error: {
       icon: "🤔",
@@ -98,6 +98,9 @@ const OTPVerificationScreen = ({
       );
 
       console.log("✅ Success:", response.data);
+
+      // Refetch user data to get updated verification status
+      getUser();
 
       setAlertMessage({ ...alertMessage, success: { ...messages.success } });
       setIsAlertVisible(true);
